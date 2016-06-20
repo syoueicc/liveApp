@@ -8,7 +8,7 @@ const server = require('http').createServer(app.callback());
 const io = require('socket.io')(server);
 const _ = require('lodash');
 const moment = require("moment");
-"use strict";
+
 render(app, {
 	root: path.join(__dirname, '../views'),
 	layout: false
@@ -19,7 +19,7 @@ app.use( router.routes() );
 server.listen('9191', () => console.log('server is runing on port: 9191'));
 
 const rooms = {};
-let top1 = null;
+var top1 = null;
 const top23 = [];
 io.on('connection', function(socket) {
 	"use strict";
