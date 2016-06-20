@@ -8,7 +8,7 @@ const server = require('http').createServer(app.callback());
 const io = require('socket.io')(server);
 const _ = require('lodash');
 const moment = require("moment");
-
+"use strict";
 render(app, {
 	root: path.join(__dirname, '../views'),
 	layout: false
