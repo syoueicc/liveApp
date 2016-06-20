@@ -1,0 +1,1242 @@
+@charset "UTF-8";
+.i-y-bar, .icon-people {
+    vertical-align: -2px;
+    width: 14px
+}
+
+.photoAlbum .title, .photoAlbum .title-d {
+    position: absolute;
+    height: 33px;
+    z-index: 4
+}
+
+.Charts h2 a, .Hot-live .title, .arr, .i-y-bar, .icn-srh, .icon-app, .icon-people, .link i, .live, .paying, .qq-img, .refresh, .s-Q, .search-box, .side .link, .side .pay-with, .slide-next, .slide-prev, .sub_bn1, .sub_bn3, .t-img-1, .t-img-10, .t-img-12, .t-img-2, .t-img-3, .t-img-4, .t-img-5, .t-img-6, .t-img-7, .t-img-8, .t-img-9, .t-img-g-1 {
+    background: url(/images/home/sprite-2.png?v=20151023) no-repeat;
+    display: inline-block;
+    vertical-align: middle
+}
+
+.icon-people {
+    height: 15px;
+    background-position: -374px 0
+}
+
+.i-y-bar {
+    height: 15px;
+    background-position: -360px -92px
+}
+
+.wd {
+    width: 1000px
+}
+
+.g-0 {
+    width: 100%
+}
+
+.g-b1 {
+    width: 500px
+}
+
+.g-c1 {
+    width: 600px
+}
+
+.wd-25 {
+    width: 24.99%
+}
+
+.wd-33 {
+    width: 33%
+}
+
+.wd-half {
+    width: 49.99%
+}
+
+.Hot-live {
+    background-color: #f1e8e8;
+    padding: 25px 0
+}
+
+.photoAlbum {
+    position: relative
+}
+
+.photoAlbum .title-d {
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    line-height: 300;
+    background-position: -240px -587px;
+    width: 180px
+}
+
+.photoAlbum .title {
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    line-height: 300;
+    width: 126px;
+    background-position: -240px -657px
+}
+
+.photoAlbum .title-1 .s-Q {
+    display: none
+}
+
+.photoAlbum .s-Q {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    background-position: -335px -90px;
+    position: absolute;
+    top: 6px;
+    right: 5px
+}
+
+.photoAlbum .photo1 {
+    oveflow: hidden;
+    float: left;
+    width: 375px;
+    height: 301px
+}
+
+.photoAlbum a {
+    position: relative;
+    display: block;
+    float: left;
+    overflow: hidden;
+    color: #fff
+}
+
+.photoAlbum .num, .photoAlbum .t-num {
+    width: 30px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    background-color: rgba(124, 133, 133, .8)!important;
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    right: 0;
+    font-size: 16px
+}
+
+.photoAlbum .t-num, .photoAlbum a:hover .num-d {
+    background-color: rgba(242, 92, 148, .8)!important
+}
+
+.photoAlbum .refresh {
+    cursor: pointer;
+    bottom: 0;
+    right: -35px;
+    width: 35px;
+    height: 35px;
+    line-height: 300;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, .4)!important;
+    background-position: -299px -55px;
+    display: block;
+    position: absolute;
+    font-size: 16px
+}
+
+.photoAlbum .refresh:hover {
+    background-color: rgba(0, 0, 0, .8)!important
+}
+
+.photoAlbum .photo1 img {
+    width: 375px;
+    height: 301px;
+    display: block
+}
+
+.photoAlbum .global-photo-inner a {
+    width: 200px;
+    height: 150px;
+    margin-bottom: 1px;
+    margin-left: 1px
+}
+
+.photoAlbum .global-photo-inner img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.photoAlbum a strong {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    width: 100%;
+    text-align: right
+}
+
+.photoAlbum a .p-bg {
+    position: absolute;
+    bottom: -1px;
+    right: 0;
+    width: 100%;
+    height: 60px;
+    background-image: url(/images/home/pub-bg.png?v=20150630);
+    background-position: 0 bottom
+}
+
+.photoAlbum a:hover .name {
+    position: absolute;
+    bottom: 5px;
+    left: 10px;
+    font-size: 18px
+}
+
+.photoAlbum a .name .al {
+    display: block;
+    margin-bottom: 5px
+}
+
+.global-photo-inner a .name, .global-photo-inner a:hover .name {
+    font-size: 14px
+}
+
+.photoAlbum .photo1:hover .p-bg {
+    background-image: url(/images/home/pub-bg-3.png?v=20150630)
+}
+
+.advert-column {
+    margin-top: 10px;
+    margin-bottom: 40px
+}
+
+.advert-column .carousel-diagram {
+    float: left;
+    width: 575px;
+    position: relative
+}
+
+.advert-column .carousel-diagram-wrap {
+    position: relative;
+    width: 575px;
+    overflow: hidden;
+    height: 132px
+}
+
+.advert-column .carousel-diagram-wrap ul {
+    width: 1000em;
+    position: absolute;
+    top: 0;
+    left: 0
+}
+
+.advert-column .carousel-diagram-wrap li {
+    float: left;
+    width: 575px
+}
+
+.slide-next, .slide-prev {
+    width: 28px;
+    height: 48px;
+    position: absolute;
+    top: 40px
+}
+
+.slide-prev {
+    left: 20px;
+    background-position: -206px -255px
+}
+
+.slide-next {
+    right: 20px;
+    background-position: -230px -255px
+}
+
+.advert-column .points {
+    text-align: center;
+    width: 100%;
+    position: absolute;
+    bottom: 5px
+}
+
+.advert-column .points a {
+    width: 4px;
+    height: 4px;
+    margin: 3px;
+    background-color: #fff;
+    display: inline-block
+}
+
+.advert-column .points a.cur {
+    background-color: #999;
+    height: 10px;
+    width: 10px;
+    margin: 0
+}
+
+.advert-column .side {
+    float: left;
+    width: 604px
+}
+
+.advert-column .link, .advert-column .pay-with {
+    display: inline-block;
+    height: 132px
+}
+
+.advert-column .pay-with em {
+    font-size: 30px
+}
+
+.advert-column .pay-with {
+    width: 400px;
+    background-position: 1px -123px;
+    text-align: center;
+    line-height: 2em;
+    height: 92px;
+    padding: 30px 0 10px;
+    font-size: 18px;
+    color: #fff
+}
+
+.advert-column .link {
+    width: 200px;
+    background-position: 0 -255px;
+    font-size: 18px;
+    color: #fff;
+    line-height: 132px;
+    text-align: center
+}
+
+.advert-column .link i {
+    height: 30px;
+    width: 28px;
+    overflow: hidden;
+    background-position: -267px -255px;
+    display: inline-block;
+    vertical-align: middle
+}
+
+.right-side {
+    width: 280px;
+    float: right
+}
+
+.right-side .title {
+    height: 22px;
+    line-height: 22px;
+    padding: 20px 0;
+    background: url(/images/home/line.png?v=20150630) right center repeat-x
+}
+
+.t-img-4, .t-img-5, .t-img-6, .t-img-7 {
+    background-color: #fff;
+    padding-right: 10px
+}
+
+.t-img-1, .t-img-2, .t-img-3 {
+    line-height: 300
+}
+
+.icn-srh, .t-img-1, .t-img-2, .t-img-3 {
+    height: 30px
+}
+
+.icn-srh {
+    background-position: -345px -25px;
+    width: 30px;
+    display: inline-block;
+    vertical-align: middle
+}
+
+.Charts h2 a, .right-side .Game-zone img {
+    display: block
+}
+
+.t-img-1 {
+    width: 124px;
+    background-position: -92px 0;
+    overflow: hidden
+}
+
+.t-img-2 {
+    width: 123px;
+    background-position: -94px -30px;
+    overflow: hidden
+}
+
+.t-img-3 {
+    width: 150px;
+    background-position: -92px -60px;
+    overflow: hidden
+}
+
+.t-img-4, .t-img-5, .t-img-6, .t-img-7 {
+    width: 80px;
+    height: 22px;
+    line-height: 300;
+    overflow: hidden
+}
+
+.t-img-4 {
+    background-position: 0 0;
+    width: 45px
+}
+
+.t-img-5 {
+    background-position: -1px -22px
+}
+
+.t-img-6 {
+    background-position: -2px -44px
+}
+
+.t-img-7 {
+    background-position: -2px -68px
+}
+
+.right-side .search-bar {
+    float: none;
+    border-bottom: 1px solid #f53595;
+    margin-bottom: 10px;
+    height: 24px;
+    margin-top: 0;
+    padding-bottom: 10px
+}
+
+.right-side .search-bar input {
+    height: 20px;
+    padding: 0;
+    border: 0 solid #ccc;
+    vertical-align: middle;
+    width: 85%;
+    font-family: "微软雅黑", "Arial Black";
+    color: #959595
+}
+
+.right-side .search-bar .icn-srh {
+    top: 8px;
+    right: 10px;
+    background-position: -382px -27px;
+    width: 21px;
+    height: 21px
+}
+
+.right-side .Game-zone .txt {
+    overflow: hidden;
+    height: 24px;
+    display: block;
+    line-height: 24px;
+    padding: 0 10px;
+    background-color: #e5e5e5;
+    margin-top: 3px
+}
+
+.right-side .Game-zone .txt .person {
+    float: right
+}
+
+.Charts {
+    padding: 10px 0 30px
+}
+
+.Family-bar {
+    padding-bottom: 0
+}
+
+.Charts h2 {
+    height: 40px;
+    width: 100%
+}
+
+.Charts h2 a {
+    line-height: 36px;
+    height: 36px;
+    overflow: hidden;
+    float: left;
+    text-align: center;
+    width: 140px;
+    font-size: 18px;
+    background-position: -144px -461px;
+    font-weight: 400
+}
+
+.Charts h2 a.cur {
+    color: #fff;
+    background-position: 0 -461px;
+    font-size: 24px
+}
+
+.Charts .tab-t {
+    border-bottom: 0;
+    height: auto;
+    line-height: normal;
+    position: relative;
+    padding-left: 0;
+    width: 100%;
+    font-size: 14px
+}
+
+.Charts .tab-t a {
+    display: inline-block;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    color: #666;
+    border: 2px solid #37aeab;
+    border-width: 0 0 2px;
+    float: left;
+    padding: 10px 0
+}
+
+.Charts .tab-t a.cur {
+    background: 0 0;
+    height: auto;
+    _bottom: -1px;
+    font-weight: 700;
+    color: #333;
+    border-bottom: 2px solid #f53595
+}
+
+.Charts .tab-t a:hover {
+    text-decoration: none
+}
+
+.Charts .tab-c {
+    padding: 15px 0 0
+}
+
+.Charts .list {
+    margin: auto;
+    display: none
+}
+
+.Charts .list dl {
+    background: url(/images/home/num.png?v=20150630) no-repeat;
+    padding: 10px 0 20px 50px;
+    overflow: hidden;
+    position: relative
+}
+
+.Charts .list dt {
+    float: left;
+    width: 40px
+}
+
+.Charts .list dt img {
+    width: 35px;
+    height: 35px;
+    border-radius: 35px
+}
+
+.Charts .list dd {
+    float: left;
+    width: 170px;
+    padding-top: 8px
+}
+
+.Charts dd .name .xz-pos {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    text-align: left
+}
+
+.Charts .list-other .lis1 dd, .Charts .list-other dl dd {
+    width: 200px
+}
+
+.right-side .Charts .list dd a:hover {
+    color: #E94581
+}
+
+.right-side .Charts .list dd a {
+    color: #313131
+}
+
+.right-side .Charts .list dd .name {
+    position: relative
+}
+
+.right-side .Charts .list dd p.gray9 {
+    visibility: hidden;
+    display: none
+}
+
+.Charts .list dd .name a {
+    display: inline-block;
+    width: 79px;
+    height: 16px;
+    line-height: 16px;
+    overflow: hidden
+}
+
+.Charts .list .lis1 dt img {
+    width: 60px;
+    height: 60px;
+    border: 3px solid #ffd200
+}
+
+.Charts .lis1 dt {
+    width: 60px;
+    margin-right: 10px
+}
+
+.Charts .lis1 dd {
+    width: 140px;
+    padding-top: 16px
+}
+
+.Charts .paying {
+    display: inline-block;
+    width: 16px;
+    height: 14px;
+    position: absolute;
+    top: 20px;
+    left: 25px;
+    z-index: 2;
+    background-position: -409px -27px
+}
+
+.Charts .lis1 .paying {
+    top: 30px
+}
+
+.Charts .tab-family .list dl dd, .Charts .tab-family .list dl.lis1 dd {
+    width: 210px;
+    height: 35px
+}
+
+.Charts .Badge-f {
+    float: right
+}
+
+.right-side .Charts .list dl.lis1 {
+    background-position: 0 22px
+}
+
+.right-side .Charts .list dl.lis2 {
+    background-position: 0 -65px
+}
+
+.right-side .Charts .list dl.lis3 {
+    background-position: 0 -132px
+}
+
+.right-side .Charts .list dl.lis4 {
+    background-position: 0 -200px
+}
+
+.right-side .Charts .list dl.lis5 {
+    background-position: 0 -262px
+}
+
+.right-side .Charts .list dl.lis6 {
+    background-position: 0 -328px
+}
+
+.right-side .Charts .list dl.lis7 {
+    background-position: 0 -396px
+}
+
+.right-side .Charts .list dl.lis8 {
+    background-position: 0 -464px
+}
+
+.top-bar .lis1 dt {
+    width: 40px;
+    margin-right: 0
+}
+
+.top-bar .lis1 dd {
+    width: 170px;
+    padding-top: 8px
+}
+
+.top-bar .list .lis1 dt img {
+    width: 35px;
+    height: 35px;
+    border: 0 solid #ffd200
+}
+
+.right-side .top-bar .list dd .name {
+    margin-top: -12px;
+    line-height: 1.5em
+}
+
+.top-bar dd .name .xz-pos {
+    white-space: nowrap;
+    font-size: 18px;
+    color: #DF3232;
+    top: 12px;
+    position: inherit
+}
+
+.right-side .top-bar .list dl.lis1 {
+    background-position: 0 12px
+}
+
+.top-bar .list .size {
+    white-space: nowrap;
+    font-size: 18px;
+    color: #DF3232;
+    right: 0;
+    top: 12px;
+    position: absolute;
+    text-align: left
+}
+
+.right-side .Game-zone .bd, .right-side .Notice .bd {
+    padding: 0 0 20px;
+    line-height: 2.5em
+}
+
+.Game-zone {
+    margin-bottom: 20px
+}
+
+.right-side .Notice li {
+    padding-left: 0;
+    list-style-type: disc;
+    list-style-position: inside;
+    color: #f63da5
+}
+
+.right-side .Help a, .right-side .Hot-line a, .right-side .Notice li a {
+    color: #434343
+}
+
+.right-side .Help, .right-side .Hot-line {
+    padding-bottom: 30px;
+    line-height: 2.5em;
+    color: #434343
+}
+
+.right-side .Help {
+    padding-bottom: 60px
+}
+
+.Hot-line .qq-img {
+    display: inline-block;
+    width: 16px;
+    height: 17px;
+    background-position: -355px 0
+}
+
+.Waterfall {
+    float: left;
+    width: 865px
+}
+
+.Waterfall .cap {
+    height: 40px;
+    padding: 0 0 20px;
+    z-index: 3
+}
+
+.Waterfall .cap .trade {
+    float: right;
+    margin: 3px 4px 0 0;
+    line-height: 30px;
+    font-size: 14px
+}
+
+.Waterfall .cap dt {
+    float: left;
+    margin-right: 20px
+}
+
+.Square-area dd, .Waterfall .cap dd {
+    float: left;
+    line-height: 20px;
+    font-size: 14px;
+    margin: 5px 0;
+    padding: 0 20px;
+    border-left: 1px dotted #ccc;
+    cursor: pointer;
+    color: #959595
+}
+
+.Square-area .cap dd em, .Square-area dd.curr, .Waterfall .cap .trade, .Waterfall .cap dd em, .Waterfall .cap dd.curr {
+    color: #f53595
+}
+
+.cap .opt .arr, .header .user-panel .pers .arr {
+    width: 10px;
+    height: 6px;
+    overflow: hidden;
+    background-position: -331px 0;
+    display: inline-block;
+    margin-left: 10px;
+    cursor: pointer
+}
+
+.cap .opt .cur .arr {
+    background-position: -339px -57px
+}
+
+.cap .opt {
+    float: right
+}
+
+.cap .opt li {
+    float: left;
+    margin: 3px 4px 0 10px;
+    line-height: 30px;
+    font-size: 14px;
+    position: relative;
+    text-indent: 10px;
+    padding-right: 10px
+}
+
+.cap .opt li div {
+    padding: 0;
+    position: absolute;
+    z-index: 3;
+    right: 0;
+    width: 100%;
+    text-indent: 0;
+    display: none
+}
+
+.cap .opt li div a {
+    display: block;
+    line-height: 1.5em;
+    white-space: nowrap;
+    padding: 5px 10px;
+    color: #fff
+}
+
+.cap .opt li div, .cap .opt li div a.cur, .cap .opt li.cur {
+    background-color: #f53595;
+    color: #fff
+}
+
+.cap .opt li div a.cur, .cap .opt li div a:hover {
+    color: #fff;
+    background-color: #959595
+}
+
+.cap .opt li.cur .sub-block {
+    display: block
+}
+
+.cap .link {
+    float: right;
+    color: #f53595;
+    margin: 10px 0 0
+}
+
+.cap .link-tips {
+    position: absolute;
+    width: 260px;
+    background: #333;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px #000;
+    right: 5px;
+    top: 30px;
+    padding: 10px;
+    line-height: 20px;
+    color: #FFF;
+    opacity: .95;
+    filter: Alpha(Opacity=95)
+}
+
+.an-list li, .an-list li .img {
+    width: 200px;
+    position: relative
+}
+
+.Waterfall .look {
+    margin: 0 0 40px;
+    text-align: center
+}
+
+.an-list {
+    margin: 0 0 40px;
+    width: 880px
+}
+
+.an-list li {
+    float: left;
+    z-index: 2;
+    margin: 6px 20px 20px 0
+}
+
+.an-list li .img {
+    height: 150px;
+    background: #fff;
+    overflow: hidden
+}
+
+.an-list li .img img {
+    width: 200px;
+    height: 150px
+}
+
+.an-list li .icon-people {
+    background-position: -386px -2px;
+    margin-right: 5px;
+    vertical-align: -3px
+}
+
+.an-list li .tag {
+    float: right
+}
+
+.an-list li .c-c1 {
+    color: #e89534;
+    margin-left: 5px
+}
+
+.an-list li .c-c2 {
+    color: #f6c;
+    margin-left: 5px
+}
+
+.an-list li .c-c3 {
+    color: #6bc0eb;
+    margin-left: 5px
+}
+
+.an-list li .c-c4 {
+    color: #8eb007;
+    margin-left: 5px
+}
+
+.an-list a:hover .mark, .photoAlbum a:hover .mark {
+    background: url(/images/home/mark.png?v=20150630);
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+}
+
+.an-list a:hover .pay, .photoAlbum a:hover .pay {
+    display: block;
+    width: 39px;
+    height: 44px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: -20px 0 0 -20px;
+    z-index: 0;
+    background: url(/images/home/pay.png?v=20150630) no-repeat
+}
+
+.an-list li a:hover img {
+    transform: scale(1.2)
+}
+
+.an-list li p {
+    color: #959595
+}
+
+.an-list li .name {
+    font-size: 14px;
+    height: 22px;
+    line-height: 22px;
+    overflow: hidden;
+    margin: 10px 0
+}
+
+.an-list li .name a {
+    color: #434343;
+    display: inline-block;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 140px
+}
+
+.an-list .sub_bn2 {
+    display: inline-block;
+    left: 2px;
+    top: 2px;
+    z-index: 2;
+    overflow: hidden;
+    position: absolute
+}
+
+.an-list .sub_bn1, .an-list .sub_bn3 {
+    display: inline-block;
+    height: 19px;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    top: -6px;
+    width: 52px;
+    z-index: 4;
+    background-position: -376px -58px
+}
+
+.an-list .al {
+    float: right;
+    margin-top: 3px
+}
+
+.an-list a:hover .time {
+    color: #fff;
+    position: absolute;
+    z-index: 4;
+    border: 0 solid #fff;
+    width: 100%;
+    text-align: left;
+    top: 130px;
+    left: 10px
+}
+
+.Square-area .tab-box, .Waterfall .tab-box {
+    overflow: hidden;
+    width: 880px;
+    height: 218px;
+    padding-top: 0
+}
+
+.Square-area .tab-an-list, .Waterfall .tab-an-list, .Waterfall .tab-box .list {
+    width: 1000em;
+    position: absolute
+}
+
+.Waterfall .an-list, .Waterfall .cap {
+    position: relative
+}
+
+.Square-area .slide-next, .Square-area .slide-prev, .Waterfall .slide-next, .Waterfall .slide-prev {
+    top: 55px;
+    width: 28px;
+    height: 48px;
+    position: absolute;
+    z-index: 3;
+    background-color: rgba(0, 0, 0, .2)!important
+}
+
+.Square-area .slide-prev, .Waterfall .slide-prev {
+    background-position: -206px -255px;
+    left: 0
+}
+
+.Square-area .slide-next, .Waterfall .slide-next {
+    background-position: -230px -255px;
+    right: 20px
+}
+
+.Square-area .points, .Waterfall .points {
+    text-align: right;
+    position: absolute;
+    top: 12px;
+    right: 0
+}
+
+.Square-area .points a, .Waterfall .points a {
+    width: 4px;
+    height: 4px;
+    margin: 3px;
+    background-color: #000;
+    display: inline-block
+}
+
+.Square-area .points a.cur, .Waterfall .points a.cur {
+    background-color: #999;
+    height: 10px;
+    width: 10px;
+    margin: 0 3px
+}
+
+.s-g-btn1, .s-g-btn2, .s-g-btn3, .s-g-btn4 {
+    display: inline-block;
+    height: 22px;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    top: -5px;
+    width: 49px;
+    z-index: 4;
+    background-image: url(/images/room/hot1.gif)
+}
+
+.s-g-btn2 {
+    background-image: url(/images/room/hot2.gif)
+}
+
+.s-g-btn3 {
+    background-image: url(/images/room/hot3.gif)
+}
+
+.s-g-btn4 {
+    background-image: url(/images/room/hot4.gif)
+}
+
+.t-img-g-1 {
+    line-height: 300;
+    height: 30px;
+    display: inline-block;
+    width: 130px;
+    background-position: 0 -654px;
+    overflow: hidden;
+    vertical-align: middle
+}
+
+#domCar, #domSupper, #domgiftEffect {
+    pointer-events: none
+}
+
+.adv-hd {
+    background-image: url(/images/home/hm-bg.jpg);
+    height: 300px;
+    margin-bottom: 5px
+}
+
+.adv-hd h2 {
+    color: #fff;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 30px;
+    height: 30px;
+    padding: 20px 0 0
+}
+
+.adv-hd .txt {
+    height: 105px;
+    color: #fff;
+    text-align: center
+}
+
+.adv-hd .txt p {
+    font-size: 22px;
+    padding: 10px 0
+}
+
+.adv-hd ul li {
+    float: left;
+    color: #efae5e
+}
+
+.adv-hd ul.lst1 li {
+    padding: 20px 10px 5px 36px;
+    width: 190px
+}
+
+.adv-hd ul li img {
+    float: left;
+    width: 60px;
+    border-radius: 50%;
+    margin-right: 10px
+}
+
+.adv-hd ul li span {
+    display: block
+}
+
+.adv-hd ul li .name, .adv-hd ul li .nub {
+    color: #ffc25f;
+    font-size: 14px
+}
+
+.adv-hd ul li .nub {
+    font-style: italic
+}
+
+.adv-hd ul li .name {
+    overflow: hidden;
+    width: 120px;
+    height: 20px;
+    line-height: 20px;
+    white-space: nowrap;
+    text-overflow: ellipsis
+}
+
+.adv-hd ul li .fen {
+    color: #8459b2;
+    margin: 10px 0 0
+}
+
+.adv-hd .lst2 li {
+    width: 120px;
+    text-align: center;
+    padding: 30px 10px 5px 60px
+}
+
+.adv-hd .lst2 li img {
+    float: none;
+    width: 76px;
+    height: 76px;
+    margin-right: 0
+}
+
+.adv-hd .lst2 li .nub {
+    color: #ffc25f;
+    margin: 10px 0 7px
+}
+
+.adv-hd .lst3 {
+    padding-top: 8px
+}
+
+.adv-hd .lst3 .band {
+    display: none
+}
+
+.adv-hd .lst3 li.d-1 .band, .adv-hd .lst3 li.d-2 .band, .adv-hd .lst3 li.d-3 .band {
+    display: block
+}
+
+.adv-hd .lst3 li.d-1 {
+    margin-left: 200px
+}
+
+.adv-hd .lst3 li.d-3 {
+    margin-right: 200px
+}
+
+.adv-hd .lst3 .nub {
+    margin-top: 3px
+}
+
+.adv-hd li.d-1 img, .adv-hd li.d-2 img, .adv-hd li.d-3 img, .adv-hd li.d-4 img {
+    width: 80px;
+    height: 80px
+}
+
+.adv-hd .lst3 li .name {
+    width: 100px
+}
+
+.adv-hd .lst3 li {
+    width: 64px;
+    margin: 0 3px 5px 28px;
+    padding: 10px 10px 5px
+}
+
+.adv-hd .lst3 li.d-1, .adv-hd .lst3 li.d-2, .adv-hd .lst3 li.d-3 {
+    width: 200px
+}
+
+.adv-hd .lst4 .nub {
+    margin-top: 3px
+}
+
+.adv-hd .lst4 li .name {
+    width: 120px
+}
+
+.adv-hd .lst4 li.d-1, .adv-hd .lst4 li.d-2, .adv-hd .lst4 li.d-3, .adv-hd .lst4 li.d-4 {
+    width: 220px;
+    padding: 50px 0 0 60px
+}
+
+.adv-hd .lst5 li {
+    padding-left: 17px
+}
+
+.adv-hd ul li .fen s {
+    width: 15px;
+    height: 12px;
+    margin-right: 3px;
+    background-image: url(/images/room/active/icon-2.png);
+    vertical-align: middle;
+    display: inline-block
+}

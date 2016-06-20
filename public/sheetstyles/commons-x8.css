@@ -1,0 +1,6058 @@
+@charset "UTF-8";
+.ui-dialog-grid, table {
+    border-spacing: 0
+}
+
+.f-pre, .f-wwb {
+    word-break: break-all
+}
+
+.ui-dialog-grid, table {
+    border-collapse: collapse
+}
+
+.f-toe, .header .user-panel .pers {
+    word-wrap: normal;
+    text-overflow: ellipsis
+}
+
+.f-usn, .ui-dialog-footer button {
+    -ms-user-select: none;
+    -o-user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none
+}
+
+.f-vhd, .g-foot .box .logo img, .header .logo img {
+    visibility: hidden
+}
+
+blockquote, body, button, caption, dd, div, dl, dt, fieldset, figure, form, h1, h2, h3, h4, h5, h6, hr, html, input, legend, li, menu, ol, p, pre, table, td, textarea, th, ul {
+    margin: 0;
+    padding: 0
+}
+
+address, article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+    display: block
+}
+
+caption, th {
+    text-align: left;
+    font-weight: 400
+}
+
+abbr, body, fieldset, html, iframe, img {
+    border: 0
+}
+
+address, cite, dfn, em, i, var {
+    font-style: normal
+}
+
+[hidefocus], summary {
+    outline: 0
+}
+
+li {
+    list-style: none
+}
+
+h1, h2, h3, h4, h5, h6, small {
+    font-size: 100%
+}
+
+sub, sup {
+    font-size: 83%
+}
+
+code, kbd, pre, samp {
+    font-family: inherit
+}
+
+q:after, q:before {
+    content: none
+}
+
+textarea {
+    overflow: auto;
+    resize: none
+}
+
+.arrow, .f-oh, .f-pre, .f-ti, .f-toe, .header .user-panel .pers, .u-opt, .ui-dialog-title {
+    overflow: hidden
+}
+
+label, summary {
+    cursor: default
+}
+
+.f-csp, a, button {
+    cursor: pointer
+}
+
+b, em, h1, h2, h3, h4, h5, h6, strong {
+    font-weight: 700
+}
+
+a, a:hover, del, ins, s, u {
+    text-decoration: none
+}
+
+body, button, input, keygen, legend, select, textarea {
+    font: 12px/1.14 arial, \5b8b\4f53;
+    color: #333;
+    outline: 0
+}
+
+a, a:hover {
+    color: #333
+}
+
+.clearfix:after, .f-cb:after, .f-cbli li:after {
+    display: block;
+    clear: both;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+    content: "."
+}
+
+.clearfix, .f-cb, .f-cbli li {
+    zoom: 1
+}
+
+.f-ib {
+    display: inline-block;
+    *display: inline;
+    *zoom: 1
+}
+
+.f-ff0 {
+    font-family: arial, \5b8b\4f53
+}
+
+.f-ff1 {
+    font-family: "Microsoft YaHei", \5fae\8f6f\96c5\9ed1, arial, \5b8b\4f53
+}
+
+.f-taj {
+    text-align: justify;
+    text-justify: inter-ideograph
+}
+
+.f-pre, .t-l {
+    text-align: left
+}
+
+.f-vam, .f-vama * {
+    vertical-align: middle
+}
+
+.f-wsn {
+    word-wrap: normal;
+    white-space: nowrap
+}
+
+.f-pre, .f-wwb {
+    word-wrap: break-word
+}
+
+.f-pre {
+    white-space: pre-wrap
+}
+
+.f-wwb {
+    white-space: normal
+}
+
+.f-ti {
+    text-indent: -30000px
+}
+
+.f-ti2, .t2 {
+    text-indent: 2em
+}
+
+.f-lhn {
+    line-height: normal
+}
+
+.f-tdu, .f-tdu:hover {
+    text-decoration: underline
+}
+
+.f-tdn, .f-tdn:hover {
+    text-decoration: none
+}
+
+.login-module .reg-left p .u-line:hover, .logonbox .userinfo .tc a:hover, .unl {
+    text-decoration: underline
+}
+
+.f-toe {
+    white-space: nowrap
+}
+
+.f-csd {
+    cursor: default
+}
+
+.f-csh {
+    cursor: help
+}
+
+.f-csm {
+    cursor: move
+}
+
+.f-usn {
+    user-select: none
+}
+
+.f-fwn {
+    font-weight: 400
+}
+
+.f-fwb, .fb, .ui-dialog-title {
+    font-weight: 700
+}
+
+.t-c {
+    text-align: center
+}
+
+.t-r {
+    text-align: right
+}
+
+.f-l, .fl {
+    float: left
+}
+
+.f-r, .fr {
+    float: right
+}
+
+.f-n {
+    float: none
+}
+
+.clear {
+    clear: both
+}
+
+.f-dn {
+    display: none
+}
+
+.f-db {
+    display: block
+}
+
+.absolute {
+    position: absolute
+}
+
+.relative {
+    position: relative
+}
+
+.center {
+    max-width: 960px;
+    width: 960px\9;
+    margin-left: auto;
+    margin-right: auto
+}
+
+.c_gray {
+    color: #969696
+}
+
+.c_bf {
+    color: #bfbfbf
+}
+
+.c_62 {
+    color: #626262
+}
+
+.c_81b {
+    color: #81b81b
+}
+
+.c_e02 {
+    color: #e02e02
+}
+
+.c_red {
+    color: #b00
+}
+
+.c_blue {
+    color: #005aa0
+}
+
+.c_green {
+    color: green
+}
+
+.c_orange {
+    color: #ff6602
+}
+
+.c_purp {
+    color: #e510d3
+}
+
+.c_d02 {
+    color: #e1457b
+}
+
+.c_7d {
+    color: #7d7d7d
+}
+
+.c_80b {
+    color: #80bf00
+}
+
+.f12 {
+    font-size: 12px
+}
+
+.f14 {
+    font-size: 14px
+}
+
+.f16 {
+    font-size: 16px
+}
+
+.f20 {
+    font-size: 20px
+}
+
+.fn {
+    font-weight: 400
+}
+
+.no_unl {
+    text-decoration: none
+}
+
+.mt5 {
+    margin-top: 5px
+}
+
+.mt10 {
+    margin-top: 10px
+}
+
+.mt15 {
+    margin-top: 15px
+}
+
+.mr5 {
+    margin-right: 5px
+}
+
+.mr10 {
+    margin-right: 10px
+}
+
+.mr15 {
+    margin-right: 15px
+}
+
+.mb5 {
+    margin-bottom: 5px
+}
+
+.mb10 {
+    margin-bottom: 10px
+}
+
+.mb15 {
+    margin-bottom: 15px
+}
+
+.ml5 {
+    margin-left: 5px
+}
+
+.ml10 {
+    margin-left: 10px
+}
+
+.ml15 {
+    margin-left: 15px
+}
+
+.pt5 {
+    padding-top: 5px
+}
+
+.pt10 {
+    padding-top: 10px
+}
+
+.pt15 {
+    padding-top: 15px
+}
+
+.pr5 {
+    padding-right: 5px
+}
+
+.pr10 {
+    padding-right: 10px
+}
+
+.pr15 {
+    padding-right: 15px
+}
+
+.pb5 {
+    padding-bottom: 5px
+}
+
+.pb10 {
+    padding-bottom: 10px
+}
+
+.pb15 {
+    padding-bottom: 15px
+}
+
+.pl5 {
+    padding-left: 5px
+}
+
+.pl10 {
+    padding-left: 10px
+}
+
+.pl15 {
+    padding-left: 15px
+}
+
+.wd {
+    width: 1000px
+}
+
+.g-0 {
+    width: 100%
+}
+
+.g-b1 {
+    width: 500px
+}
+
+.g-c1 {
+    width: 600px
+}
+
+.g-mn {
+    width: 480px
+}
+
+.g-sd {
+    width: 260px;
+    margin-right: 10px
+}
+
+.g-mn, .g-sd {
+    position: relative;
+    float: left;
+    display: inline
+}
+
+.g-r-area {
+    width: 100%;
+    margin-left: -800px;
+    float: right;
+    display: inline
+}
+
+.g-r-area .g-marg {
+    margin-left: 760px;
+    *margin-left: 759px
+}
+
+.g-bd:after, .g-ft:after, .g-hd:after {
+    display: block;
+    visibility: hidden;
+    overflow: hidden;
+    clear: both;
+    height: 0;
+    content: "."
+}
+
+.g-bd, .g-ft, .g-hd {
+    zoom: 1
+}
+
+.g-content:after, .g-foot:after, .g-head:after {
+    display: block;
+    visibility: hidden;
+    overflow: hidden;
+    clear: both;
+    height: 0;
+    content: "."
+}
+
+.g-content, .g-foot, .g-head {
+    zoom: 1
+}
+
+.g-box, .g-content .box, .g-foot .box, .g-head .box {
+    width: 1180px;
+    margin-left: auto;
+    margin-right: auto
+}
+
+.g-head {
+    border-bottom: 3px solid #f53595;
+    padding: 15px 0;
+    background-color: #fff
+}
+
+.header li a {
+    color: #959595
+}
+
+.header .nav li.cur a {
+    color: #f53595
+}
+
+.header .nav {
+    float: left
+}
+
+.header .nav li {
+    float: left;
+    line-height: 2em;
+    padding: 0 13px;
+    font-size: 18px
+}
+
+.header .pc-down i, .header li.pc-down span, .ui-dialog {
+    font-size: 14px
+}
+
+.header .nav .app-down {
+    padding-right: 0;
+    padding-left: 5px
+}
+
+.header .nav .pc-down {
+    padding-right: 0
+}
+
+.header .app-down span {
+    border-radius: 0 12px 12px 0;
+    padding: 0 10px;
+    font-size: 14px
+}
+
+.header .app-down .icon-app {
+    position: relative;
+    margin-right: -5px;
+    z-index: 3;
+    margin-top: -3px
+}
+
+.header .logo {
+    float: left;
+    margin: 0 10px 0 0;
+    width: 99px;
+    height: 41px;
+    background: url(/images/home/x8-logo.png?v=20150630) no-repeat
+}
+
+.header .user-panel {
+    float: right;
+    padding-right: 0;
+    position: relative;
+    z-index: 4;
+    color: #959595
+}
+
+.header .user-panel li {
+    float: left;
+    margin: 5px 0 0 5px;
+    line-height: 28px;
+    height: 28px;
+    position: relative;
+    z-index: 5
+}
+
+.header .user-panel li.curr .dlg-merber {
+    display: block
+}
+
+.header .user-panel li .ul {
+    vertical-align: -5px;
+    *vertical-align: 0;
+    margin-top: 4px\9
+}
+
+.header .user-panel .live {
+    display: inline-block;
+    width: 100px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    background-position: -163px -90px;
+    color: #fff
+}
+
+.header .user-panel li.first {
+    max-width: 130px
+}
+
+.header .user-panel .pers {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    padding: 0 5px 4px;
+    height: 26px;
+    _margin-top: 5px;
+    max-width: 120px;
+    white-space: nowrap
+}
+
+.header .user-panel .pers img {
+    vertical-align: middle;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #b7b7b7;
+    margin-right: 3px
+}
+
+.header .user-panel .curr .pers {
+    z-index: 5;
+    color: #fff
+}
+
+.header .user-panel .pers .arr {
+    width: 10px;
+    height: 6px;
+    overflow: hidden;
+    background-position: -331px 0;
+    display: inline-block;
+    margin-left: 10px;
+    cursor: pointer
+}
+
+.header .user-panel .curr .pers, .header .user-panel li.curr .dlg-merber {
+    background-color: rgba(0, 0, 0, .6)!important;
+    background-color: #000 \9
+}
+
+.header .icon-2 {
+    display: none
+}
+
+.header-top .user-panel li.curr .dlg-merber {
+    display: block
+}
+
+.header-top .dlg-merber {
+    position: absolute;
+    z-index: 4;
+    background: #000
+}
+
+.dlg-merber {
+    top: 30px;
+    right: 0;
+    position: absolute;
+    z-index: 4
+}
+
+.dlg-merber .d-con {
+    width: 180px;
+    padding: 10px;
+    color: #fff;
+    _zoom: 1
+}
+
+.dlg-merber .d-con li {
+    float: left;
+    padding-right: 18px;
+    margin: 0;
+    color: #fff
+}
+
+.dlg-merber .d-con li i {
+    margin-right: 2px
+}
+
+.dlg-merber .d-con a {
+    color: #fff
+}
+
+.dlg-merber .d-con a:hover {
+    color: #cf3f71
+}
+
+.dlg-merber .btnbox {
+    height: 28px;
+    padding: 5px
+}
+
+.dlg-merber .btnbox .u-btn-2 {
+    height: 28px;
+    line-height: 28px;
+    width: 100%;
+    display: inline-block;
+    text-align: center;
+    border: 0;
+    color: #fff;
+    background-color: #eb9200;
+    border-radius: 3px;
+    box-shadow: 0 2px 0 #A66700
+}
+
+.dlg-merber .btnbox .u-btn-2:hover {
+    color: #fff;
+    background-color: #b37000
+}
+
+.dlg-merber p {
+    padding: 10px 5px 5px
+}
+
+.dlg-tips {
+    position: absolute;
+    top: 33px;
+    left: 60px;
+    _width: 120px;
+    z-index: 4
+}
+
+.dlg-tips .arrow-t {
+    display: inline-block;
+    height: 7px;
+    width: 10px;
+    position: absolute;
+    left: 100px;
+    top: -6px;
+    background-position: -208px -100px
+}
+
+.dlg-tips .d-con {
+    background-color: #fff;
+    border: 1px solid #d5d5d5;
+    color: #000;
+    padding: 10px;
+    line-height: 1em;
+    min-height: 14px
+}
+
+.header .arr, .header .icon-app, .header .live {
+    background-image: url(/images/home/sprite-2.png?v=20150630);
+    display: inline-block;
+    vertical-align: middle
+}
+
+.header .icon-app, .header .pc-down i {
+    background-image: url(/images/home/down-icon.png)
+}
+
+.header .icon-app {
+    width: 24px;
+    height: 28px;
+    background-position: 0 2px
+}
+
+.header .pc-down i {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-position: 0 -27px;
+    margin-right: 5px;
+    vertical-align: middle
+}
+
+.arrow, .arrow-b {
+    width: 5px;
+    height: 3px
+}
+
+.arrow, .d-close, .icon, .rank-1, .u-wait img {
+    display: inline-block;
+    vertical-align: middle;
+    background-image: url(/images/room/other.png?v=20150630)
+}
+
+.arrow {
+    display: inline-block
+}
+
+.arrow-b {
+    display: inline-block;
+    margin-left: 5px;
+    background-position: -95px 0
+}
+
+.u-crown {
+    width: 23px;
+    height: 18px;
+    background-position: -34px 0
+}
+
+.u-opt {
+    height: 3px;
+    width: 5px;
+    background-position: -95px 0
+}
+
+.u-CLS, .u-lock, .u-roll {
+    height: 17px
+}
+
+.u-CLS {
+    width: 13px;
+    background-position: -135px -104px
+}
+
+.u-roll {
+    width: 13px;
+    background-position: -118px -104px
+}
+
+.u-lock {
+    width: 13px;
+    background-position: -103px -104px
+}
+
+.u-song {
+    width: 24px;
+    height: 22px;
+    background-position: -143px -22px;
+    margin-right: 5px
+}
+
+.u-PackIcon {
+    width: 68px;
+    height: 47px;
+    background-position: -90px -47px
+}
+
+.u-resize {
+    width: 7px;
+    height: 7px;
+    background-position: -75px -9px
+}
+
+.u-i-1, .u-i-2, .u-i-3, .u-i-4, .u-i-5, .u-i-6, .u-quit {
+    height: 19px;
+    width: 19px
+}
+
+.u-quit {
+    background-position: -286px -82px
+}
+
+.u-i-1 {
+    background-position: -172px -82px
+}
+
+.u-i-2 {
+    background-position: -191px -82px
+}
+
+.u-i-3 {
+    background-position: -210px -82px
+}
+
+.u-i-4 {
+    background-position: -229px -82px
+}
+
+.u-i-5 {
+    background-position: -248px -82px
+}
+
+.u-i-6 {
+    background-position: -267px -82px
+}
+
+a:hover .u-quit {
+    background-position: -114px -287px
+}
+
+a:hover .u-i-1 {
+    background-position: 0 -287px
+}
+
+a:hover .u-i-2 {
+    background-position: -19px -287px
+}
+
+a:hover .u-i-3 {
+    background-position: -38px -287px
+}
+
+a:hover .u-i-4 {
+    background-position: -57px -287px
+}
+
+a:hover .u-i-5 {
+    background-position: -76px -287px
+}
+
+a:hover .u-i-6 {
+    background-position: -95px -287px
+}
+
+.ui-dialog {
+    *zoom: 1;
+    _float: left;
+    position: relative;
+    background-color: #FFF;
+    border: 1px solid #a09f9f;
+    border-radius: 0;
+    outline: 0;
+    background-clip: padding-box;
+    font-family: Helvetica, arial, sans-serif;
+    line-height: 1.428571429;
+    color: #333;
+    opacity: 0;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    -webkit-transition: -webkit-transform .15s ease-in-out, opacity .15s ease-in-out;
+    transition: transform .15s ease-in-out, opacity .15s ease-in-out
+}
+
+.ui-popup-show .ui-dialog {
+    opacity: 1;
+    -webkit-transform: scale(1);
+    transform: scale(1)
+}
+
+.ui-popup-focus .ui-dialog {
+    box-shadow: 0 0 8px rgba(0, 0, 0, .1)
+}
+
+.ui-popup-modal .ui-dialog {
+    box-shadow: 0 0 8px rgba(0, 0, 0, .1), 0 0 256px rgba(255, 255, 255, .3)
+}
+
+.ui-dialog-grid {
+    width: auto;
+    margin: 0;
+    border: 0;
+    background: 0 0
+}
+
+.ui-dialog-body, .ui-dialog-footer, .ui-dialog-header {
+    padding: 0;
+    border: 0;
+    text-align: left;
+    background: 0 0
+}
+
+.ui-dialog-header {
+    white-space: nowrap;
+    border-bottom: 1px solid #E5E5E5
+}
+
+.ui-dialog-close {
+    position: relative;
+    _position: absolute;
+    float: right;
+    _height: 26px;
+    padding: 0 4px;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #FFF;
+    opacity: .2;
+    filter: alpha(opacity=20);
+    cursor: pointer;
+    background: 0 0;
+    _background: #FFF;
+    border: 0;
+    -webkit-appearance: none;
+    right: 2px;
+    top: 2px
+}
+
+.ui-popup-bottom-right .ui-dialog-arrow-a, .ui-popup-bottom-right .ui-dialog-arrow-b, .ui-popup-top-right .ui-dialog-arrow-a, .ui-popup-top-right .ui-dialog-arrow-b {
+    right: 15px
+}
+
+.ui-dialog-close:focus, .ui-dialog-close:hover {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+    outline: 0;
+    opacity: .5;
+    filter: alpha(opacity=50)
+}
+
+.ui-dialog-title {
+    margin: 0;
+    line-height: 1.428571429;
+    min-height: 16.43px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: default;
+    padding: 6px 10px
+}
+
+.ui-dialog-body {
+    padding: 20px;
+    text-align: center
+}
+
+.ui-dialog-content {
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+    *zoom: 1;
+    *display: inline;
+    text-align: left
+}
+
+.ui-dialog-footer {
+    padding: 0 20px 20px;
+    text-align: center
+}
+
+.ui-dialog-statusbar {
+    padding: 6px 0;
+    line-height: 1.428571429;
+    font-size: 14px;
+    color: #888;
+    white-space: nowrap
+}
+
+.ui-dialog-statusbar label:hover {
+    color: #333
+}
+
+.ui-dialog-statusbar .label, .ui-dialog-statusbar input {
+    vertical-align: middle
+}
+
+.ui-dialog-button {
+    float: none;
+    white-space: nowrap
+}
+
+.ui-dialog-footer button+button {
+    margin-bottom: 0;
+    margin-left: 5px
+}
+
+.ui-dialog-footer button {
+    width: auto;
+    overflow: visible;
+    display: inline-block;
+    padding: 6px 12px;
+    _margin-left: 5px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.428571429;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 0;
+    user-select: none;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc
+}
+
+.ui-dialog-footer button:focus {
+    outline: #333 dotted thin;
+    outline: -webkit-focus-ring-color auto 5px;
+    outline-offset: -2px
+}
+
+.ui-dialog-footer button:focus, .ui-dialog-footer button:hover {
+    color: #333;
+    text-decoration: none
+}
+
+.ui-dialog-footer button:active {
+    outline: 0;
+    -webkit-box-shadow: inset 0 3px 5px rgba(0, 0, 0, .125);
+    box-shadow: inset 0 3px 5px rgba(0, 0, 0, .125);
+    background-image: none
+}
+
+.ui-dialog-footer button[disabled] {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: .65;
+    filter: alpha(opacity=65);
+    -webkit-box-shadow: none;
+    box-shadow: none
+}
+
+.ui-dialog-footer button:active, .ui-dialog-footer button:focus, .ui-dialog-footer button:hover {
+    color: #333;
+    background-color: #ebebeb;
+    border-color: #adadad
+}
+
+.ui-dialog-footer button[disabled], .ui-dialog-footer button[disabled]:active, .ui-dialog-footer button[disabled]:focus, .ui-dialog-footer button[disabled]:hover {
+    background-color: #fff;
+    border-color: #ccc
+}
+
+.ui-dialog-footer button.ui-dialog-autofocus {
+    color: #fff;
+    background-color: #e1457b;
+    border: 1px solid #e1457b;
+    border-radius: 0
+}
+
+.ui-dialog-footer button.ui-dialog-autofocus:active, .ui-dialog-footer button.ui-dialog-autofocus:focus, .ui-dialog-footer button.ui-dialog-autofocus:hover {
+    color: #fff;
+    border-color: #b70443;
+    background-color: #b70443;
+    border-radius: 0
+}
+
+.ui-dialog-footer button.ui-dialog-autofocus:active {
+    background-image: none
+}
+
+.ui-popup-top .ui-dialog, .ui-popup-top-left .ui-dialog, .ui-popup-top-right .ui-dialog {
+    top: -8px
+}
+
+.ui-popup-bottom .ui-dialog, .ui-popup-bottom-left .ui-dialog, .ui-popup-bottom-right .ui-dialog {
+    top: 8px
+}
+
+.ui-popup-left .ui-dialog, .ui-popup-left-bottom .ui-dialog, .ui-popup-left-top .ui-dialog {
+    left: -8px
+}
+
+.ui-popup-right .ui-dialog, .ui-popup-right-bottom .ui-dialog, .ui-popup-right-top .ui-dialog {
+    left: 8px
+}
+
+.ui-dialog-arrow-a, .ui-dialog-arrow-b {
+    position: absolute;
+    display: none;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    _color: #FF3FFF;
+    _filter: chroma(color=#FF3FFF);
+    border: 8px dashed transparent
+}
+
+.ui-popup-follow .ui-dialog-arrow-a, .ui-popup-follow .ui-dialog-arrow-b {
+    display: block
+}
+
+.ui-popup-top .ui-dialog-arrow-a, .ui-popup-top-left .ui-dialog-arrow-a, .ui-popup-top-right .ui-dialog-arrow-a {
+    bottom: -16px;
+    border-top: 8px solid #7C7C7C
+}
+
+.ui-popup-top .ui-dialog-arrow-b, .ui-popup-top-left .ui-dialog-arrow-b, .ui-popup-top-right .ui-dialog-arrow-b {
+    bottom: -15px;
+    border-top: 8px solid #fff
+}
+
+.ui-popup-left-bottom .ui-dialog-arrow-a, .ui-popup-left-bottom .ui-dialog-arrow-b, .ui-popup-right-bottom .ui-dialog-arrow-a, .ui-popup-right-bottom .ui-dialog-arrow-b {
+    bottom: 15px
+}
+
+.ui-popup-top-left .ui-dialog-arrow-a, .ui-popup-top-left .ui-dialog-arrow-b {
+    left: 15px
+}
+
+.ui-popup-top .ui-dialog-arrow-a, .ui-popup-top .ui-dialog-arrow-b {
+    left: 50%;
+    margin-left: -8px
+}
+
+.ui-popup-bottom .ui-dialog-arrow-a, .ui-popup-bottom-left .ui-dialog-arrow-a, .ui-popup-bottom-right .ui-dialog-arrow-a {
+    top: -16px;
+    border-bottom: 8px solid #7C7C7C
+}
+
+.ui-popup-bottom .ui-dialog-arrow-b, .ui-popup-bottom-left .ui-dialog-arrow-b, .ui-popup-bottom-right .ui-dialog-arrow-b {
+    top: -15px;
+    border-bottom: 8px solid #fff
+}
+
+.ui-popup-bottom-left .ui-dialog-arrow-a, .ui-popup-bottom-left .ui-dialog-arrow-b {
+    left: 15px
+}
+
+.ui-popup-bottom .ui-dialog-arrow-a, .ui-popup-bottom .ui-dialog-arrow-b {
+    margin-left: -8px;
+    left: 50%
+}
+
+.ui-popup-left .ui-dialog-arrow-a, .ui-popup-left-bottom .ui-dialog-arrow-a, .ui-popup-left-top .ui-dialog-arrow-a {
+    right: -16px;
+    border-left: 8px solid #7C7C7C
+}
+
+.ui-popup-left .ui-dialog-arrow-b, .ui-popup-left-bottom .ui-dialog-arrow-b, .ui-popup-left-top .ui-dialog-arrow-b {
+    right: -15px;
+    border-left: 8px solid #fff
+}
+
+.ui-popup-left-top .ui-dialog-arrow-a, .ui-popup-left-top .ui-dialog-arrow-b {
+    top: 15px
+}
+
+.ui-popup-left .ui-dialog-arrow-a, .ui-popup-left .ui-dialog-arrow-b {
+    margin-top: -8px;
+    top: 50%
+}
+
+.ui-popup-right .ui-dialog-arrow-a, .ui-popup-right-bottom .ui-dialog-arrow-a, .ui-popup-right-top .ui-dialog-arrow-a {
+    left: -16px;
+    border-right: 8px solid #7C7C7C
+}
+
+.ui-popup-right .ui-dialog-arrow-b, .ui-popup-right-bottom .ui-dialog-arrow-b, .ui-popup-right-top .ui-dialog-arrow-b {
+    left: -15px;
+    border-right: 8px solid #fff
+}
+
+.ui-popup-right-top .ui-dialog-arrow-a, .ui-popup-right-top .ui-dialog-arrow-b {
+    top: 15px
+}
+
+.ui-popup-right .ui-dialog-arrow-a, .ui-popup-right .ui-dialog-arrow-b {
+    margin-top: -8px;
+    top: 50%
+}
+
+@-webkit-keyframes ui-dialog-loading {
+    0% {
+        -webkit-transform: rotate(0)
+    }
+    100% {
+        -webkit-transform: rotate(360deg)
+    }
+}
+
+@keyframes ui-dialog-loading {
+    0% {
+        transform: rotate(0)
+    }
+    100% {
+        transform: rotate(360deg)
+    }
+}
+
+.ui-dialog-loading {
+    vertical-align: middle;
+    position: relative;
+    display: block;
+    *zoom: 1;
+    *display: inline;
+    overflow: hidden;
+    width: 32px;
+    height: 32px;
+    top: 50%;
+    margin: -16px auto 0;
+    font-size: 0;
+    text-indent: -999em;
+    color: #666;
+    width: 100% \9;
+    text-indent: 0\9;
+    line-height: 32px\9;
+    text-align: center\9;
+    font-size: 12px\9
+}
+
+.ui-dialog-loading::after {
+    position: absolute;
+    content: '';
+    width: 3px;
+    height: 3px;
+    margin: 14.5px 0 0 14.5px;
+    border-radius: 100%;
+    box-shadow: 0 -10px 0 1px #ccc, 10px 0 #ccc, 0 10px #ccc, -10px 0 #ccc, -7px -7px 0 .5px #ccc, 7px -7px 0 1.5px #ccc, 7px 7px #ccc, -7px 7px #ccc;
+    -webkit-transform: rotate(360deg);
+    -webkit-animation: ui-dialog-loading 1.5s infinite linear;
+    transform: rotate(360deg);
+    animation: ui-dialog-loading 1.5s infinite linear;
+    display: none\9
+}
+
+.al, .ul {
+    display: inline-block
+}
+
+.logonbox .d_menu.mail_hover .whitesj, .logonbox .default_wrap .search_box.hover .whitesj, .logonbox .info .name.menu_hover .whitesj {
+    -webkit-transform: rotate(180deg);
+    transform: rotate(180deg);
+    -moz-transform: rotate(180deg);
+    -o-transform: rotate(180deg);
+    -ms-transform: rotate(180deg)
+}
+
+.delayLayer, .login-module {
+    display: none;
+    position: fixed
+}
+
+.al {
+    width: 28px;
+    height: 16px;
+    vertical-align: middle;
+    background-image: url(/images/room/gif/anchor_1.png?v=20150630);
+    background-repeat: no-repeat
+}
+
+.al20, .al21, .al22, .al23, .al24, .al25, .al26, .al27, .al28, .al29, .al31, .al32, .al33, .al34, .al35, .al36, .al37, .al38, .al39, .al40 {
+    width: 36px
+}
+
+.al01 {
+    background-position: 0 0
+}
+
+.al02 {
+    background-position: 0 -20px
+}
+
+.al03 {
+    background-position: 0 -40px
+}
+
+.al04 {
+    background-position: 0 -60px
+}
+
+.al05 {
+    background-position: 0 -80px
+}
+
+.al06 {
+    background-position: 0 -100px
+}
+
+.al07 {
+    background-position: 0 -120px
+}
+
+.al08 {
+    background-position: 0 -140px
+}
+
+.al09 {
+    background-position: 0 -160px
+}
+
+.al10 {
+    background-position: 0 -180px
+}
+
+.al11, .login-module .weixin-btn {
+    background-position: 0 -200px
+}
+
+.al12 {
+    background-position: 0 -220px
+}
+
+.al13 {
+    background-position: 0 -240px
+}
+
+.al14 {
+    background-position: 0 -260px
+}
+
+.al15 {
+    background-position: 0 -280px
+}
+
+.al16 {
+    background-position: 0 -300px
+}
+
+.al17 {
+    background-position: 0 -320px
+}
+
+.al18 {
+    background-position: 0 -340px
+}
+
+.al19 {
+    background-position: 0 -360px
+}
+
+.al20 {
+    background: url(/images/room/gif/al_10.gif?v=20150630)
+}
+
+.al21 {
+    background: url(/images/room/gif/al_11.gif?v=20150630)
+}
+
+.al22 {
+    background: url(/images/room/gif/al_12.gif?v=20150630)
+}
+
+.al23 {
+    background: url(/images/room/gif/al_13.gif?v=20150630)
+}
+
+.al24 {
+    background: url(/images/room/gif/al_14.gif?v=20150630)
+}
+
+.al25 {
+    background: url(/images/room/gif/al_15.gif?v=20150630)
+}
+
+.al26 {
+    background: url(/images/room/gif/al_16.gif?v=20150630)
+}
+
+.al27 {
+    background: url(/images/room/gif/al_17.gif?v=20150630)
+}
+
+.al28 {
+    background: url(/images/room/gif/al_18.gif?v=20150630)
+}
+
+.al29 {
+    background: url(/images/room/gif/al_19.gif?v=20150630)
+}
+
+.al30 {
+    width: 36px;
+    background: url(/images/room/gif/al_20.gif?v=20150630)
+}
+
+.al31 {
+    background: url(/images/room/gif/al_21.gif?v=20150630)
+}
+
+.al32 {
+    background: url(/images/room/gif/al_22.gif?v=20150630)
+}
+
+.al33 {
+    background: url(/images/room/gif/al_23.gif?v=20150630)
+}
+
+.al34 {
+    background: url(/images/room/gif/al_24.gif?v=20150630)
+}
+
+.al35 {
+    background: url(/images/room/gif/al_25.gif)
+}
+
+.al36 {
+    background: url(/images/room/gif/al_26.gif)
+}
+
+.al37 {
+    background: url(/images/room/gif/al_27.gif)
+}
+
+.al38 {
+    background: url(/images/room/gif/al_28.gif)
+}
+
+.al39 {
+    background: url(/images/room/gif/al_29.gif)
+}
+
+.al40 {
+    background: url(/images/room/gif/al_30.gif)
+}
+
+.al20, .al21, .al22, .al23, .al24, .al25, .al26, .al27, .al28, .al29, .al30, .al31, .al32, .al33, .al34, .al35, .al36, .al37, .al38, .al39, .al40 {
+    background-position: 0 -2px
+}
+
+.ul {
+    height: 20px;
+    vertical-align: middle;
+    width: 52px;
+    background-image: url(/images/room/u-lev.png?v=20150630);
+    text-align: center
+}
+
+.ul00, .ul01, .ul02, .ul03, .ul04, .ul05, .ul06, .ul07, .ul08, .ul10, .ul11, .ul12, .ul13, .ul14, .ul15, .ul16, .ul17, .ul18 {
+    width: 48px
+}
+
+.ul00, .ul01 {
+    background-position: 0 -120px
+}
+
+.ul02 {
+    background-position: -106px -80px
+}
+
+.ul03 {
+    background-position: -48px -120px
+}
+
+.ul04 {
+    background-position: -96px -120px
+}
+
+.ul05 {
+    background-position: -159px 0
+}
+
+.ul06 {
+    background-position: -159px -20px
+}
+
+.ul07 {
+    background-position: -159px -40px
+}
+
+.ul08 {
+    background-position: -159px -60px
+}
+
+.ul09 {
+    width: 48px;
+    background-position: -159px -80px
+}
+
+.ul10 {
+    background-position: -159px -100px
+}
+
+.ul11 {
+    background-position: -159px -121px
+}
+
+.ul12 {
+    background-position: -106px -20px
+}
+
+.ul13 {
+    background-position: -106px -40px
+}
+
+.ul14 {
+    background-position: -106px -60px
+}
+
+.ul15 {
+    background-position: 0 -140px
+}
+
+.ul16 {
+    background-position: 0 -100px
+}
+
+.ul17 {
+    background-position: -48px -100px
+}
+
+.ul18 {
+    background-position: -96px -100px
+}
+
+.ul19 {
+    background-position: -53px -40px
+}
+
+.ul20 {
+    background-position: -53px 0
+}
+
+.ul21 {
+    background-position: -53px -20px
+}
+
+.ul22 {
+    background-position: 0 -40px
+}
+
+.ul23 {
+    background-position: 0 0
+}
+
+.ul24 {
+    background-position: 0 -60px
+}
+
+.ul25 {
+    background: url(/images/room/gif/ul_25.gif?v=20150630) center 0 no-repeat
+}
+
+.ul26 {
+    background: url(/images/room/gif/ul_26.gif?v=20150630) center 0 no-repeat
+}
+
+.ul27 {
+    background: url(/images/room/gif/ul_27.gif?v=20150630) center 0 no-repeat
+}
+
+.ul28 {
+    background: url(/images/room/gif/ul_28.gif?v=20150630) center 0 no-repeat
+}
+
+.ul29 {
+    background: url(/images/room/gif/ul_29.gif?v=20150630) center 0 no-repeat
+}
+
+.ul30 {
+    background: url(/images/room/gif/ul_30.gif?v=20150630) center 0 no-repeat
+}
+
+.ul31 {
+    background: url(/images/room/gif/ul_31.gif?v=20150630) center 0 no-repeat
+}
+
+.down, .go-top, .kf-down, .service {
+    background-image: url(/images/home/sider-img.png?v=201501103);
+    display: block;
+    vertical-align: middle;
+    text-align: center;
+    color: #fff;
+    line-height: 300;
+    overflow: hidden;
+    height: 33px;
+    padding: 1px
+}
+
+.room-side-menu {
+    position: fixed;
+    width: 34px;
+    border: 0 solid #ccc;
+    z-index: 3;
+    left: 50%;
+    top: 50%;
+    margin-left: 590px;
+    margin-top: -54px
+}
+
+.room-side-menu li {
+    position: relative;
+    margin-bottom: 2px;
+    background-color: #fff
+}
+
+.room-side-menu li.cur .down, .room-side-menu li.cur .service {
+    z-index: 3;
+    position: relative;
+    border: 1px solid #ccc;
+    border-left: 1px solid #fff;
+    padding: 0
+}
+
+.room-side-menu li a.down {
+    background-position: -75px -206px
+}
+
+.room-side-menu li a.service {
+    background-position: -40px -206px
+}
+
+.room-side-menu li a.go-top {
+    background-position: 1px -212px;
+    height: 20px
+}
+
+.room-side-menu .cur a.down, .room-side-menu li a.down:hover {
+    background-position: -75px -234px
+}
+
+.room-side-menu li a.service:hover {
+    background-position: -40px -234px
+}
+
+.room-side-menu li a.go-top:hover {
+    background-position: 1px -240px
+}
+
+.room-side-menu .sub-dlg {
+    position: absolute;
+    top: -36px;
+    right: 33px;
+    color: #000;
+    padding: 10px;
+    z-index: 2;
+    border: 1px solid #ccc;
+    border-bottom-width: 2px;
+    line-height: 1.5em;
+    background: #fff
+}
+
+.room-side-menu li.cur .sub-dlg {
+    display: block
+}
+
+.room-side-menu .kf-down {
+    background-position: -104px -207px
+}
+
+.room-side-menu a.kf-down:hover {
+    background-position: -104px -236px
+}
+
+.g-foot {
+    background-color: #303030;
+    color: #fff
+}
+
+.g-foot .box a {
+    margin: 0 10px;
+    color: #fff
+}
+
+.g-foot .box {
+    height: 88px;
+    background: url(/images/home/foot-bg.png?v=20150630) no-repeat
+}
+
+.g-foot .box .logo {
+    margin: 20px 50px 0 30px;
+    height: 50px;
+    width: 99px;
+    float: left;
+    background: url(/images/home/x8-logo-g.png?v=20150630) no-repeat
+}
+
+.g-foot .box .txt {
+    margin: 0 10px
+}
+
+.g-foot .right-mt {
+    float: left;
+    padding: 20px 0 0 20px;
+    line-height: 1.5em;
+    width: 770px
+}
+
+.g-foot .txt a {
+    margin: 0
+}
+
+.class-a, .class-b, .class-c, .class-e, .class-s {
+    background-image: url(/images/public/level_icon.png);
+    background-repeat: no-repeat;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    position: absolute;
+    right: 0;
+    top: -5px;
+    height: 22px;
+    width: 50px;
+    z-index: 4
+}
+
+.class-s {
+    background-position: 0 0
+}
+
+.class-a {
+    background-position: 0 -32px
+}
+
+.class-b {
+    background-position: 0 -64px
+}
+
+.class-c {
+    background-position: 0 -96px
+}
+
+.class-e {
+    background-position: 0 -128px
+}
+
+.delayLayer {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    opacity: .75;
+    filter: Alpha(Opacity=75);
+    z-index: 998
+}
+
+.Q-login .QQ-btn, .Q-login .bai-btn, .Q-login .xiu-btn, .login-module .close, .login-module .tps, .login-module .trans, .login-module .weixin-btn {
+    display: inline-block;
+    background-image: url(/images/room/log-kit.png)
+}
+
+.login-module {
+    top: 50%;
+    left: 50%;
+    margin: -185px 0 0 -250px;
+    z-index: 999;
+    width: 500px;
+    height: 375px;
+    border-radius: 6px;
+    color: #2c2c2e;
+    background-color: #dbdbe3
+}
+
+.login-module .loginError {
+    height: 16px;
+    padding-left: 20px;
+    color: #ff4d6b
+}
+
+.login-module .close {
+    background-position: 0 0;
+    width: 13px;
+    height: 11px;
+    opacity: 1;
+    filter: alpha(opacity=100);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    line-height: 300;
+    overflow: hidden
+}
+
+.login-module .close:hover {
+    background-position: -27px 0
+}
+
+.login-module .tps {
+    width: 64px;
+    height: 60px;
+    display: inline-block;
+    background-position: -112px 0;
+    position: absolute;
+    top: -59px;
+    right: 20px
+}
+
+.login-module .tab {
+    border-bottom: 1px solid #d4c9d0;
+    margin: 10px
+}
+
+.login-module .tab li {
+    font-size: 16px;
+    color: #555;
+    float: left;
+    padding: 12px;
+    margin-bottom: -1px;
+    cursor: pointer
+}
+
+.login-module .tab li:hover {
+    color: #ff58a3
+}
+
+.login-module .tab .curr {
+    color: #ff58a3;
+    border-bottom: 2px solid #ff58a3
+}
+
+.login-module .ipt-txt {
+    height: 16px;
+    border: 1px solid #fff;
+    border-radius: 3px;
+    width: 90%;
+    padding: 10px;
+    font-size: 14px;
+    letter-spacing: 1px
+}
+
+.login-module .code .trans {
+    background-position: 0 -27px;
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-left: 10px
+}
+
+.login-module .code .trans:hover {
+    background-position: -30px -27px
+}
+
+.login-module .code .ipt-txt {
+    width: 80px;
+    vertical-align: middle
+}
+
+.login-module .code img {
+    width: 85px;
+    height: 38px;
+    cursor: pointer;
+    vertical-align: middle
+}
+
+.login-module .bd {
+    padding: 0 20px
+}
+
+.login-module .reg-left {
+    float: left;
+    width: 100%;
+    padding: 0 0px 0 0;
+    border-right: 0px solid #ccc
+}
+
+.login-module .reg-left li {
+    position: relative
+}
+
+.login-module .reg-left .focus .lab {
+    display: none
+}
+
+.login-module .reg-left .err-txt {
+    border: 1px solid #ff3939;
+    box-shadow: 0 1px 3px #ff3939 inset
+}
+
+.login-module .reg-left .focus-txt {
+    border: 1px solid #ff58a3
+}
+
+.login-module .reg-left .lab {
+    position: absolute;
+    display: block;
+    line-height: 38px;
+    left: 12px;
+    top: 0;
+    cursor: inherit;
+    color: #B1AFAF;
+    font-size: 14px
+}
+
+.logonbox .info .mail .maillink, .logonbox .info .shelf .book, .tj_ticket {
+    cursor: pointer
+}
+
+.login-module .reg-left p a {
+    color: #0083e2
+}
+
+.login-module .reg-left .btn {
+    border-radius: 5px;
+    width: 100%;
+    height: 40px;
+    line-height: 40px;
+    font-size: 18px;
+    text-align: center;
+    background-color: #e1457b;
+    display: inline-block;
+    color: #fff
+}
+
+.logonbox .default_wrap .search_box_detail, .up_sure .con {
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px
+}
+
+.login-module .reg-left .btn:hover {
+    background-color: #ed5c8e
+}
+
+.login-module .Q-login {
+    float: right;
+    width: 120px;
+    color: #8b8388;
+    line-height: 2em
+}
+
+.login-module .js-vCode {
+    margin-left: 10px
+}
+
+.login-module .btn-wrap {
+    margin: 10px 0
+}
+
+.Q-login .QQ-btn, .Q-login .bai-btn, .Q-login .xiu-btn, .login-module .weixin-btn {
+    width: 100px;
+    height: 32px;
+    line-height: 300;
+    overflow: hidden;
+    margin: 5px 0 0;
+    text-align: center
+}
+
+.login-module .weixin-btn:hover {
+    background-position: -114px -200px
+}
+
+.Q-login .xiu-btn {
+    background-position: 0 -62px
+}
+
+.Q-login .xiu-btn:hover {
+    background-position: -114px -62px
+}
+
+.Q-login .bai-btn {
+    background-position: 0 -109px
+}
+
+.Q-login .bai-btn:hover {
+    background-position: -114px -109px
+}
+
+.Q-login .QQ-btn {
+    background-position: 0 -156px
+}
+
+.Q-login .QQ-btn:hover {
+    background-position: -114px -156px
+}
+
+.reg-tips {
+    display: block;
+    height: 18px;
+    line-height: 18px;
+    color: #ff4d6b
+}
+
+#ipt-pwd {
+    vertical-align: middle;
+    margin-right: 2px
+}
+
+.algdv, .head-float {
+    top: 1px;
+    right: 5px;
+    z-index: 99;
+    position: fixed
+}
+
+.xiuba-channel, .xiuba-icon {
+    z-index: 99
+}
+
+.sub-channel {
+    background-color: #202125;
+    padding: 5px;
+    width: 70px
+}
+
+.sub-channel li a {
+    color: #fff
+}
+
+.sub-channel ul li {
+    color: #aeaeae;
+    text-align: center;
+    padding-bottom: 0
+}
+
+.sub-channel ul {
+    padding: 0 0 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #393940
+}
+
+.sub-channel img {
+    width: 69px;
+    height: 69px;
+    display: block;
+    margin-bottom: 6px
+}
+
+.sub-channel ul li strong {
+    color: #ffd238;
+    font-weight: 400
+}
+
+.sub-channel ol li {
+    padding-left: 15px;
+    padding-bottom: 10px
+}
+
+.sub-channel ol li.cur a {
+    color: #fc93bc
+}
+
+.sub-channel ol li.cur {
+    background: url(/img/newindex/icon-5.png) no-repeat
+}
+
+.xiuba-icon .logo1 {
+    display: block;
+    background: url(/img/newindex/icon-xiu.gif) no-repeat #28292c;
+    height: 40px;
+    width: 80px;
+    line-height: 300;
+    overflow: hidden
+}
+
+.xiuba-icon .arr-b, .xiuba-icon .arr-t {
+    background: url(/img/newindex/arr-t.gif) center center no-repeat #000;
+    height: 16px;
+    width: 80px;
+    cursor: pointer;
+    display: block
+}
+
+.xiuba-icon .arr-b {
+    background: url(/img/newindex/arr-b.gif) center center no-repeat #000
+}
+
+.cl0, .cl10, .cl15, .cl20, .cl5, .dbline, .line, .spline {
+    clear: both;
+    overflow: hidden;
+    font-size: 0;
+    line-height: 0
+}
+
+.cl0 {
+    height: 0
+}
+
+.cl5 {
+    height: 5px
+}
+
+.cl10 {
+    height: 10px
+}
+
+.cl15 {
+    height: 15px
+}
+
+.cl20 {
+    height: 20px
+}
+
+.spline {
+    border-bottom: 1px dashed #d8d8d8;
+    height: 1px
+}
+
+.dbline {
+    border-bottom: 2px solid #e1e1d9;
+    height: 2px
+}
+
+.fs14 {
+    font-size: 14px
+}
+
+.tl {
+    text-align: left
+}
+
+.tc {
+    text-align: center
+}
+
+.tr {
+    text-align: right
+}
+
+.add, .date .triangle_down, .ding, .jinghua, .level_moon, .level_star, .level_sun, .logonbox .info .shelf .book, .logonbox .login span, .logonbox .mail_detail .title .closemail, .logonbox .quick_oprate .oprate_open em, .logonbox .record i, .maillink, .member_in, .menu .money, .search .select em, .searchbar .search, .send_mail, .tab .date em.current, .title span .triangle_down, .tj_ticket, .zh_money, em.list_icon {
+    background: url(/img/zongheng/icons.png) no-repeat;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    vertical-align: middle
+}
+
+.loading {
+    background: url(/img/zongheng/loading.gif) 8px 5px no-repeat #fff;
+    width: 140px;
+    height: 30px;
+    line-height: 30px;
+    color: #483817;
+    font-weight: 700;
+    padding: 0 8px 0 40px;
+    border: 1px solid #d3c5a9;
+    border-radius: 3px;
+    margin: 0 auto
+}
+
+.vip_1, .vip_2, .vip_3, .vip_4, .vip_5 {
+    width: 16px;
+    height: 16px;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    margin: 0 5px;
+    vertical-align: middle
+}
+
+.vip_1 {
+    background: url(/img/zongheng/lv1.gif) no-repeat
+}
+
+.vip_2 {
+    background: url(/img/zongheng/lv2.gif) no-repeat
+}
+
+.vip_3 {
+    background: url(/img/zongheng/lv3.gif) no-repeat
+}
+
+.vip_4 {
+    background: url(/img/zongheng/lv4.gif) no-repeat
+}
+
+.vip_5 {
+    background: url(/img/zongheng/lv5.gif) no-repeat
+}
+
+.member, .vip {
+    background: url(/img/zongheng/icons.png) no-repeat;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    vertical-align: text-bottom;
+    overflow: hidden;
+    margin-top: -3px
+}
+
+.vip {
+    background-position: -60px -96px;
+    width: 17px;
+    height: 16px
+}
+
+.member {
+    width: 18px;
+    height: 15px;
+    background-position: -242px -354px
+}
+
+.member_in {
+    background-position: -137px -137px;
+    width: 14px;
+    height: 14px
+}
+
+.level_moon, .level_sun {
+    width: 16px;
+    height: 16px
+}
+
+.level_sun {
+    background-position: 0 -120px
+}
+
+.level_moon {
+    background-position: -30px -120px
+}
+
+.level_star {
+    width: 16px;
+    height: 16px;
+    background-position: -60px -120px
+}
+
+.send_mail {
+    height: 13px;
+    width: 18px;
+    background-position: -280px -105px
+}
+
+.tj_ticket {
+    background-position: -236px -165px;
+    width: 11px;
+    height: 11px
+}
+
+.zh_money {
+    background-position: -150px -106px;
+    width: 10px;
+    height: 10px;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    vertical-align: middle;
+    _margin-top: 3px
+}
+
+.load, .unload {
+    width: 300px;
+    float: right
+}
+
+.logonbox {
+    background-color: #eef0f1;
+    position: fixed;
+    width: 100%;
+    left: 0;
+    top: 0;
+    z-index: 99999
+}
+
+.logonbox .wrap {
+    position: relative;
+    width: 980px;
+    margin: 0 auto
+}
+
+.logonbox .left_wrap {
+    float: left;
+    height: 34px;
+    position: relative
+}
+
+.logonbox .right_wrap {
+    float: right;
+    height: 34px;
+    position: relative
+}
+
+.logonbox .right_wrap_unlogin {
+    float: right;
+    height: 34px;
+    padding-right: 6px;
+    text-align: right
+}
+
+.logonbox .blackline {
+    height: 2px;
+    overflow: hidden;
+    background-color: #d2d4d5;
+    clear: both
+}
+
+.logonbox .right_wrap_unlogin div {
+    float: left;
+    padding: 0 5px;
+    margin-left: 6px
+}
+
+.logonbox .right_wrap_unlogin div a {
+    font-size: 14px;
+    font-weight: 700;
+    color: #666;
+    line-height: 35px
+}
+
+.logonbox .info li {
+    float: left;
+    padding-top: 10px;
+    margin-right: 5px;
+    *margin-right: 3px;
+    display: inline
+}
+
+.logonbox .info li.shelf {
+    width: 50px;
+    padding-top: 7px
+}
+
+.logonbox .info .ver {
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    width: 15px
+}
+
+.logonbox .info .name {
+    padding-top: 3px;
+    padding-left: 5px;
+    margin-top: 1px;
+    margin-right: 0;
+    padding-right: 1px;
+    position: relative;
+    z-index: 1000
+}
+
+.logonbox .info .name a {
+    color: #666;
+    font-weight: 700
+}
+
+.logonbox .info .name .ver {
+    width: 5px
+}
+
+.logonbox .info .name img {
+    border: 1px solid #d8d8d8;
+    width: 25px;
+    height: 25px;
+    vertical-align: middle;
+    margin: 0 3px
+}
+
+.logonbox .d_menu .whitesj, .logonbox .info .name .whitesj {
+    -moz-transition: transform .3s ease-in;
+    -webkit-transition: transform .3s ease-in;
+    -o-transition: transform .3s ease-in;
+    transition: transform .3s ease-in;
+    width: 9px;
+    height: 5px;
+    background: url(/img/zongheng/icons.png) -30px -45px no-repeat;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle
+}
+
+.logonbox .d_menu .whitesj {
+    margin: 0 2px
+}
+
+.logonbox .info .current {
+    background-color: #fff;
+    color: #3f3f3f;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    height: 34px;
+    float: left
+}
+
+.logonbox .info .current a, .logonbox .userinfo a {
+    color: #3f3f3f;
+    font-weight: 700
+}
+
+.logonbox .info .current .ver {
+    color: #fff
+}
+
+.logonbox .info .current .whitesj {
+    background-position: -32px -8px
+}
+
+.logonbox .info .mail {
+    position: relative;
+    padding-right: 5px;
+    padding-left: 10px;
+    height: 23px
+}
+
+.logonbox .info .mail.mail_hover {
+    padding: 8px 4px 0 9px;
+    margin-top: 1px;
+    border: 1px solid #c8c8c8;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom: 1px solid #fff;
+    z-index: 1000;
+    background: #fff
+}
+
+.logonbox .info .mail .maillink {
+    background-position: -44px -30px;
+    width: 17px;
+    height: 13px;
+    vertical-align: middle
+}
+
+.logonbox .info .mail .maillink.active {
+    background-position: -44px -45px
+}
+
+.logonbox .info .mail .maillink em {
+    padding: 0;
+    display: none
+}
+
+.logonbox .info .mail .maillink.active em {
+    background-color: #ae2433;
+    font-size: 10px;
+    font-family: Tahoma;
+    color: #fff;
+    padding: 0 2px;
+    height: 15px;
+    line-height: 15px;
+    overflow: hidden;
+    position: absolute;
+    left: 27px;
+    top: 18px;
+    display: block;
+    white-space: nowrap
+}
+
+.logonbox .info .mail.mail_hover .maillink em {
+    left: 26px;
+    top: 16px
+}
+
+.logonbox .info .mail .maillink em b {
+    background: url(/img/zongheng/icons.png) -278px -168px no-repeat;
+    width: 4px;
+    height: 4px;
+    left: -4px;
+    top: 2px;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    position: absolute
+}
+
+.logonbox .info .shelf a {
+    color: #666;
+    margin-left: 2px
+}
+
+.logonbox .info .shelf .book {
+    width: 18px;
+    height: 18px;
+    background-position: -66px -30px;
+    vertical-align: middle;
+    cursor: auto;
+    margin-top: -2px
+}
+
+.logonbox .info .shelf .ver {
+    margin-top: -2px
+}
+
+.logonbox .userinfo {
+    position: absolute;
+    background-color: #fff;
+    left: 0;
+    top: 33px;
+    width: 235px;
+    padding: 10px 5px;
+    border-top-left-radius: 0;
+    display: none;
+    z-index: 999
+}
+
+.logonbox .userinfo .tx_info {
+    float: left;
+    width: 64px;
+    margin-left: 10px;
+    border: 1px solid #d8d8d8
+}
+
+.logonbox .userinfo .tx_info a {
+    width: 64px;
+    height: 64px
+}
+
+.logonbox .userinfo .tx_info img {
+    width: 64px;
+    height: 64px;
+    border: none
+}
+
+.logonbox .userinfo .set {
+    float: left;
+    width: 140px;
+    padding: 0 0 0 10px
+}
+
+.logonbox .userinfo .set p {
+    line-height: 26px;
+    height: 26px
+}
+
+.logonbox .userinfo .set p a {
+    color: #787878;
+    font-weight: 400
+}
+
+.logonbox .userinfo .piao {
+    margin: 0 10px
+}
+
+.logonbox .userinfo .piao p {
+    color: #222;
+    padding: 6px 5px;
+    border-bottom: 1px solid #cecccc
+}
+
+.logonbox .userinfo .piao p.last {
+    border-bottom: 0 none
+}
+
+.logonbox .userinfo .piao p em {
+    color: #b01f2e;
+    padding-right: 2px;
+    font-weight: 700
+}
+
+.logonbox .userinfo .piao p a {
+    font-weight: 400;
+    color: #00ad14
+}
+
+.logonbox .userinfo .piao .level_moon, .logonbox .userinfo .piao .level_star, .logonbox .userinfo .set .level_sun, .piao .tj_ticket, .piao .zh_money {
+    margin: 0 2px
+}
+
+.logonbox .userinfo .tc {
+    text-align: right;
+    padding-bottom: 10px
+}
+
+.logonbox .userinfo .tc a, .logonbox .userinfo .tc a.setting {
+    color: #000;
+    cursor: pointer;
+    font-weight: 400;
+    margin: 0 5px
+}
+
+.logonbox .d_menu, .logonbox .default_wrap .search_box, .logonbox .newlink a:hover, .search .listpanel li a:hover, .secondary a.current, .secondary a:hover, .zh_dialog a, .zhcharge .chargebtn {
+    text-decoration: none
+}
+
+.d_menu_detail, .logonbox .mail_detail {
+    position: absolute;
+    right: 60px;
+    *right: 56px;
+    top: 33px;
+    width: 200px;
+    background-color: #fff;
+    padding: 10px 10px 6px;
+    border: 1px solid #c8c8c8;
+    z-index: 999
+}
+
+.logonbox .mail_detail .title {
+    background-color: #3f3f3f;
+    color: #fff;
+    height: 25px;
+    line-height: 25px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    display: none
+}
+
+.logonbox .mail_detail .title .closemail {
+    float: right;
+    background-position: -294px -228px;
+    width: 12px;
+    height: 12px;
+    margin: 7px 7px 0 0;
+    cursor: pointer
+}
+
+.logonbox .mail_detail .title h4 {
+    color: #fff;
+    padding-left: 14px
+}
+
+.logonbox .mail_detail .con p {
+    line-height: 26px;
+    padding: 0 5px 0 10px;
+    color: #222
+}
+
+.logonbox .mail_detail .con p a {
+    display: inline;
+    padding: 0 0 0 8px;
+    position: static;
+    font-weight: 700;
+    vertical-align: baseline;
+    color: #222;
+    float: right;
+    border-left: 1px solid #7a5d3b;
+    height: 14px;
+    line-height: 14px;
+    margin-top: 6px
+}
+
+.logonbox .mail_detail .con p em {
+    color: #b01f2e;
+    font-weight: 700
+}
+
+.logonbox .zh_close, .logonbox .zh_open {
+    background: url(/img/zongheng/icons.png) -30px 0 no-repeat;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    z-index: 100;
+    position: absolute;
+    margin: 8px 0 0 5px;
+    overflow: hidden;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    vertical-align: middle;
+    float: right;
+    right: 10px
+}
+
+.logonbox .zh_open {
+    background: url(/img/zongheng/icons.png) -60px 0 no-repeat;
+    overflow: hidden;
+    top: 28px
+}
+
+.logonbox .quick_oprate {
+    float: right;
+    color: #666;
+    padding-top: 10px
+}
+
+.logonbox .quick_oprate a {
+    color: #666;
+    margin: 0 5px
+}
+
+.logonbox .quick_oprate .fyellow {
+    color: #ead6b3
+}
+
+.logonbox .quick_oprate .oprate_open {
+    cursor: pointer;
+    padding-left: 4px;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    width: 42px;
+    color: #ebdbba
+}
+
+.logonbox .quick_oprate .oprate_open em {
+    background-position: -32px -15px;
+    height: 4px;
+    margin: 0 5px;
+    overflow: hidden;
+    width: 8px
+}
+
+.logonbox .quick_oprate .oprate_open ul {
+    display: none
+}
+
+.logonbox .quick_oprate .current {
+    position: relative;
+    width: 42px;
+    background-color: #fff;
+    height: 22px;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    color: #3f3f3f;
+    margin-top: -5px;
+    line-height: 22px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px
+}
+
+.logonbox .quick_oprate .current em {
+    background-position: -32px -8px;
+    position: absolute;
+    margin: 0;
+    right: 4px;
+    top: 10px
+}
+
+.logonbox .quick_oprate .current ul {
+    display: block;
+    position: absolute;
+    width: 110px;
+    padding: 5px 10px 15px;
+    background-color: #fff;
+    left: -68px;
+    top: 22px;
+    border-top-right-radius: 0
+}
+
+.logonbox .d_menu.mail_hover, .logonbox .default_wrap .search_box.hover, .logonbox .info .name.menu_hover {
+    border-bottom: 1px solid #fff;
+    border-top-right-radius: 3px
+}
+
+.logonbox .quick_oprate .current li {
+    border-bottom: 1px solid #c3c3c3
+}
+
+.logonbox .quick_oprate .current li a {
+    color: #3f3f3f
+}
+
+.logonbox .quick_oprate .current li .fyellow {
+    color: #7b4900
+}
+
+.logonbox .default_wrap {
+    float: left;
+    position: relative;
+    width: 225px;
+    line-height: 35px;
+    height: 35px;
+    color: #e5daad;
+    margin-right: 5px
+}
+
+.logonbox .default_wrap a {
+    color: #303030;
+    margin: 0 5px
+}
+
+.logonbox .default_wrap a.charge {
+    color: red
+}
+
+.logonbox .info .name.menu_hover {
+    background-color: #fff;
+    border: 1px solid #c8c8c8;
+    border-top-left-radius: 3px;
+    padding-right: 0;
+    padding-top: 2px;
+    padding-bottom: 2px
+}
+
+.logonbox .info .name.menu_hover a {
+    color: #002f4d
+}
+
+.logonbox .userinfo .tx_info .setting {
+    height: 16px;
+    line-height: 16px;
+    border: 1px solid #99bcc9;
+    background-color: #c8e6f2;
+    text-align: center;
+    opacity: .4;
+    filter: alpha(opacity=40);
+    -moz-opacity: .4;
+    -khtml-opacity: .4;
+    color: #000;
+    font-weight: 400;
+    position: relative;
+    margin: -13px 0 0;
+    width: 66px
+}
+
+.logonbox .default_wrap .search_box {
+    position: relative;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    margin: 1px 0 0;
+    *margin: 2px 0 0;
+    _margin: 0;
+    padding: 0 5px 7px;
+    height: 24px;
+    line-height: 27px;
+    overflow: hidden;
+    vertical-align: middle
+}
+
+.logonbox .default_wrap .search_box .whitesj {
+    background-image: none;
+    -moz-transition: transform .3s ease-in;
+    -webkit-transition: transform .3s ease-in;
+    -o-transition: transform .3s ease-in;
+    transition: transform .3s ease-in;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #e5daad
+}
+
+.logonbox .default_wrap .search_box.hover .whitesj {
+    border-top: 4px solid #002f4d
+}
+
+.logonbox .default_wrap .search_box.hover {
+    color: #002f4d;
+    background-color: #fff;
+    border: 1px solid #c8c8c8;
+    border-top-left-radius: 3px;
+    z-index: 2000
+}
+
+.logonbox .default_wrap .search_box_detail {
+    position: absolute;
+    left: 220px;
+    top: 34px;
+    width: 280px;
+    background-color: #fff;
+    padding: 10px 20px;
+    border: 1px solid #c8c8c8;
+    border-top-right-radius: 3px
+}
+
+.search_box_detail .searchbar .search {
+    width: 280px
+}
+
+.search_box_detail .searchbar .search .sousuo {
+    background: url(/img/zongheng/icons.png) -431px 0 no-repeat
+}
+
+.logonbox .d_menu {
+    color: #666;
+    font-size: 14px;
+    font-weight: 700;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    margin-top: 8px;
+    padding: 0 5px 5px;
+    line-height: 20px;
+    position: relative
+}
+
+.logonbox .d_menu.mail_hover {
+    color: #002f4d;
+    margin-top: 1px;
+    padding: 6px 4px 5px;
+    background-color: #fff;
+    border: 1px solid #c8c8c8;
+    border-top-left-radius: 3px;
+    z-index: 1000
+}
+
+.logonbox .dh_nav {
+    width: 48px
+}
+
+.logonbox .dh_nav, .logonbox .dh_nav a {
+    position: relative;
+    white-space: normal
+}
+
+.d_menu_detail {
+    right: 0;
+    width: 290px;
+    line-height: 20px;
+    position: absolute
+}
+
+.d_menu_detail .con h3 {
+    font-size: 12px;
+    padding: 0 0 2px 3px
+}
+
+.d_menu_detail .con a {
+    color: #837f7f;
+    margin: 0 3px;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 0;
+    display: inline
+}
+
+.d_menu_detail .con a.fred {
+    color: red
+}
+
+.logonbox .newlink {
+    position: absolute;
+    left: 50%;
+    margin-left: -560px;
+    top: 8px
+}
+
+.logonbox .newlink a {
+    background: url(/img/zongheng/btn.gif) 0 -28px no-repeat;
+    display: block;
+    width: 64px;
+    height: 19px;
+    line-height: 19px;
+    text-align: center;
+    color: #fff
+}
+
+.menu, .secondary {
+    line-height: 32px
+}
+
+.nav_left {
+    float: left;
+    width: 180px;
+    padding-top: 8px
+}
+
+.nav_left p {
+    text-align: center;
+    color: #a8202e;
+    padding: 0 0 5px
+}
+
+.top_gg {
+    width: 765px;
+    float: right;
+    padding-top: 11px
+}
+
+.menu {
+    background: #f5e6c8;
+    height: 32px
+}
+
+.menu a {
+    color: #303030;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 24px;
+    display: inline-block
+}
+
+.menu a.current, .menu a.gamecenter:hover, .menu a.girl:hover, .menu a:hover {
+    color: #b01f2e;
+    background-color: #fdf4e1;
+    text-decoration: none
+}
+
+.menu a.gamecenter {
+    background: url(/img/zongheng/icons.png) 85px -56px no-repeat;
+    margin-right: 0;
+    zoom: 1;
+    display: inline-block;
+    *display: inline;
+    padding-right: 30px
+}
+
+.menu a.girl {
+    background: url(/img/zongheng/icons.png) 81px -86px no-repeat;
+    padding-right: 27px
+}
+
+.menu .money em {
+    color: #eaff5a;
+    font-weight: 700;
+    font-size: 18px;
+    margin-right: 4px
+}
+
+.secondary {
+    background: #303030;
+    height: 32px;
+    font-size: 14px;
+    padding-left: 9px
+}
+
+.secondary a {
+    color: #fff;
+    padding: 0 16px;
+    display: inline-block
+}
+
+.searchbar {
+    padding-top: 4px
+}
+
+.searchbar .search {
+    background-position: -150px 0;
+    width: 346px;
+    height: 27px;
+    position: relative;
+    z-index: 9000
+}
+
+.searchbar .search .select {
+    width: 63px;
+    border-right: 1px solid #c8c8c8;
+    margin: 3px 0 0;
+    text-align: center;
+    cursor: pointer;
+    line-height: 21px;
+    height: 21px;
+    float: left
+}
+
+.searchbar .search .select em {
+    background-position: -30px -45px;
+    width: 9px;
+    height: 5px;
+    margin-left: 4px
+}
+
+.searchbar .search .input_text {
+    float: left;
+    margin-top: 1px;
+    padding-left: 10px;
+    height: 24px;
+    overflow: hidden;
+    width: 200px
+}
+
+.searchbar .search .input_text input {
+    line-height: 24px;
+    height: 24px;
+    border: 0;
+    color: #666;
+    width: 200px;
+    outline: 0;
+    background-color: transparent
+}
+
+.searchbar .search .input_text input:focus {
+    color: #535353
+}
+
+.searchbar .search .sousuo {
+    float: right;
+    cursor: pointer;
+    border: 0;
+    background: 0 0;
+    color: #e8ecf1;
+    width: 65px;
+    height: 27px
+}
+
+.search .listpanel {
+    position: absolute;
+    width: 62px;
+    left: 0;
+    top: 23px;
+    background-color: #fff;
+    border: 1px solid #C8C8C8;
+    border-top: none;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px
+}
+
+.search .listpanel li {
+    height: 18px;
+    line-height: 18px;
+    padding: 3px 0
+}
+
+.search .listpanel li a {
+    padding-left: 12px;
+    color: #535353;
+    display: block
+}
+
+.search .listpanel li a:hover {
+    background-color: #dfdfdf
+}
+
+.hot_search {
+    padding: 5px 8px 0 0;
+    *padding-top: 8px
+}
+
+.hot_search a {
+    color: #6b8697;
+    margin: 0 6px
+}
+
+.hot_search a:hover {
+    font-weight: 700;
+    margin: 0 4px
+}
+
+.zh_nav-bg {
+    background: #7d7d7d
+}
+
+.zh_nav-auto {
+    width: 1200px;
+    margin: auto;
+    position: relative;
+    z-index: 30
+}
+
+.zonghengHead .g-head .box {
+    margin-top: 36px
+}
+
+.shrink {
+    width: 45px;
+    height: 28px;
+    cursor: pointer;
+    float: left;
+    background: url(/img/zongheng/dian.png) 10px center no-repeat;
+    margin-left: 0;
+    margin-top: 20px;
+    margin-right: 5px
+}
+
+.options {
+    cursor: pointer;
+    position: relative;
+    z-index: 3
+}
+
+.option {
+    margin: 10px 0 15px 10px
+}
+
+.top-icon a {
+    color: #fff;
+    opacity: .7;
+    filter: Alpha(opacity=70)\9
+}
+
+.top-icon a:hover {
+    opacity: 1;
+    filter: Alpha(opacity=100) \9
+}
+
+.shrink dd {
+    padding: 10px;
+    position: absolute;
+    top: 48px;
+    z-index: 2;
+    background-color: #000;
+    margin-top: -1px;
+    display: none
+}
+
+.shrink dd a {
+    color: #fff
+}
+
+.shrink dd a:hover {
+    color: #cf3f71
+}
+
+.shrink dd p {
+    padding: 5px;
+    font-size: 14px
+}
+
+.zh_nav {
+    height: 40px;
+    float: left
+}
+
+.zh_nav ul li {
+    float: left;
+    height: 40px;
+    line-height: 40px;
+    padding: 0 12px;
+    font-size: 16px;
+    color: #fff
+}
+
+.zh_nav ul li a {
+    color: #fff
+}
+
+.xiu8_logo {
+    text-indent: -10000px;
+    display: inline-block;
+    background: url(/img/zongheng/xiu8-logo.png) no-repeat;
+    width: 159px;
+    height: 52px;
+    margin: 15px auto auto;
+    float: left
+}
+
+.zh_dialog a {
+    outline: 0
+}
+
+.zh_dialog input {
+    border: 0;
+    vertical-align: middle;
+    outline: 0
+}
+
+.zh_dialog .zh_regist .zhover, .zh_dialog .zhover {
+    padding: 0 5px;
+    height: 38px;
+    line-height: 38px;
+    border: 1px solid #cfcfcf
+}
+
+.zh_dialog {
+    position: relative
+}
+
+.zh_dialog .zhead {
+    height: 102px;
+    position: relative;
+    width: 100%
+}
+
+.zh_login .zhead {
+    /*background: url(../images/tit_login.png) no-repeat*/
+}
+
+.zh_regist .zhead {
+    /*background: url(../images/tit_regist.png) no-repeat*/
+}
+
+.zh_dialog .zh_regist .zhover, .zh_dialog .zhover {
+    /*background: url(../images/input_line.png) 40px 0 no-repeat*/
+}
+
+.zh_dialog .closezh {
+    position: relative;
+    overflow: hidden;
+    text-align: right;
+    height: 15px;
+    padding: 8px 12px
+}
+
+.zh_dialog .closezh span {
+    cursor: pointer;
+    float: right;
+    width: 15px;
+    height: 15px;
+    line-height: 0;
+    font-size: 0
+}
+
+.zh_dialog p {
+    font-size: 12px;
+    font-family: "微软雅黑"
+}
+
+.zh_login, .zh_regist {
+    position: relative;
+    width: 582px
+}
+
+.zh_dialog .zhcon {
+    padding: 0 65px
+}
+
+.zh_dialog .zh_wide {
+    float: left;
+    width: 262px
+}
+
+.zh_dialog .zh_side {
+    float: right;
+    width: 120px;
+    border-left: 1px solid #cfcfcf;
+    padding: 10px 0 10px 30px;
+    margin-top: 10px;
+    color: #777
+}
+
+.zh_regist .zh_side {
+    margin-top: 40px
+}
+
+.zh_dialog .zh_side p {
+    margin: 5px 0
+}
+
+.zh_dialog .form {
+    padding: 0
+}
+
+.zh_dialog .zhover {
+    font-size: 14px;
+    margin-top: 20px
+}
+
+.zh_dialog .zh_regist .zhover {
+    font-size: 14px;
+    margin-top: 10px
+}
+
+.zh_dialog .yzm .rand:hover, .zh_dialog .zhover:hover {
+    border-color: #fcafca;
+    box-shadow: 0 0 2px #fcafca
+}
+
+.zh_dialog .inputarea {
+    height: 34px;
+    line-height: 34px\9;
+    width: 200px;
+    border: none;
+    margin-left: 15px;
+    font-family: Arial "微软雅黑";
+    font-size: 14px
+}
+
+.zh_dialog .label a, .zh_dialog label {
+    color: #999
+}
+
+.zh_dialog .label {
+    margin: 15px 0 20px
+}
+
+.zh_dialog .label input {
+    vertical-align: middle;
+    margin-right: 5px
+}
+
+.zh_dialog a.unpassword {
+    float: right;
+    color: #0a8cd2;
+    *margin-top: -20px
+}
+
+.zh_dialog .submit {
+    background: #f42887;
+    color: #fff;
+    letter-spacing: 5px;
+    display: block;
+    width: 100%;
+    height: 40px;
+    line-height: 40px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700
+}
+
+.zh_dialog .likebtn {
+    display: block;
+    border: 1px solid #cfcfcf;
+    line-height: 40px;
+    height: 40px;
+    text-align: center;
+    color: #333;
+    cursor: pointer
+}
+
+.zh_dialog .hzbtns a {
+    height: 40px;
+    display: block;
+    line-height: 0
+}
+
+.zh_dialog .qqlogin {
+    /*background: url(../images/ico_qq.gif) no-repeat*/
+}
+
+.zh_dialog .bdlogin {
+    /*background: url(../images/ico_bd.gif) no-repeat;*/
+    margin-top: 8px
+}
+
+.zh_dialog .yzm {
+    margin: 20px 0 0
+}
+
+.zh_dialog .yzm .rand {
+    width: 80px;
+    padding: 0 10px;
+    height: 40px;
+    line-height: 40px\9;
+    border: 1px solid #cfcfcf;
+    vertical-align: middle;
+    color: #333;
+    font-size: 14px
+}
+
+.zh_dialog .yzm img {
+    height: 40px;
+    width: 100px;
+    vertical-align: middle;
+    margin: 0 8px
+}
+
+.up_sure {
+    border-radius: 3px;
+    background-color: #3f3f3f;
+    padding-top: 22px;
+    font-size: 12px
+}
+
+.up_sure .close {
+    background: url(http://static.zongheng.com/v2013/images/icon_all.gif) -423px -228px no-repeat;
+    cursor: pointer;
+    height: 12px;
+    width: 12px;
+    position: absolute;
+    right: 5px;
+    top: 5px
+}
+
+.up_sure .con {
+    padding: 20px;
+    border: 1px solid #dbdbdb;
+    border-top: 0 none;
+    background-color: #fff
+}
+
+.up_sure .con p {
+    line-height: 24px
+}
+
+.up_sure .con p a, .up_sure .con p em {
+    color: #7a4a04
+}
+
+.up_sure .con p b {
+    color: #7a4a04;
+    font-weight: 700
+}
+
+.up_sure .con p input {
+    vertical-align: middle;
+    margin: 0 5px
+}
+
+.up_sure .con .tc {
+    padding-top: 10px
+}
+
+.up_sure .con .tc .button, .up_sure .con .tc .cancel {
+    background: url(http://static.zongheng.com/v2013/images/button.gif) no-repeat;
+    border: 0;
+    cursor: pointer;
+    font-size: 14px;
+    height: 23px;
+    margin: 0 20px;
+    width: 76px;
+    line-height: 23px
+}
+
+.up_sure .con .tc .button {
+    background-position: -110px 0;
+    color: #e7e7e7;
+    font-weight: 700
+}
+
+.up_sure .con .tc .cancel {
+    background-position: -194px 0;
+    color: #6d6d6d;
+    font-weight: 700
+}
+
+.alert {
+    width: 200px
+}
+
+.confirm {
+    width: 300px
+}
+
+.up_sure .con .btn {
+    position: absolute;
+    top: 100px;
+    left: 80px;
+    height: 30px;
+    background: #fff;
+    width: 180px
+}
+
+.up_sure .con .btn span {
+    float: left;
+    display: inline;
+    height: 24px;
+    background: url(http://static.zongheng.com/v2013/images/button.gif) -110px 0 no-repeat;
+    font-size: 14px;
+    color: #fff;
+    font-weight: 700;
+    width: 76px;
+    text-align: center;
+    line-height: 24px;
+    cursor: pointer
+}
+
+.up_sure .con .btn .redticket {
+    margin: 0 20px 0 0
+}
+
+.up_sure .hhptips {
+    background: #494f56;
+    color: #fff;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 23px;
+    text-align: center;
+    line-height: 23px;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 700
+}
+
+.zhclearfix:after, .zhclearfix:before {
+    display: table;
+    content: ""
+}
+
+.zhclearfix:after {
+    clear: both
+}
+
+.zhclearfix {
+    zoom: 1
+}
+
+.zhcharge {
+    left: 50%;
+    padding: 5px 5px 10px;
+    margin-left: -460px;
+    width: 910px;
+    position: fixed;
+    top: 125px;
+    background: #fff;
+    z-index: 999;
+    bprder: 5px #c1c1c1;
+    border: 5px solid #ccc
+}
+
+.zhcharge .zhtit {
+    position: relative;
+    font-size: 16px;
+    font-family: "微软雅黑";
+    color: #333;
+    border-bottom: 1px solid #cfcfcf;
+    height: 40px;
+    line-height: 40px;
+    overflow: hidden
+}
+
+.zhcharge .zhtit span {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    cursor: pointer;
+    font-family: "宋体";
+    font-weight: 700
+}
+
+.zhcharge h3 {
+    font-size: 14px
+}
+
+.zhcharge .zhinfo {
+    font-size: 13px;
+    color: #666;
+    padding: 10px 20px 10px 30px
+}
+
+.zhcharge .zhinfo span {
+    margin-right: 10px
+}
+
+.zhcharge .zhinfo em {
+    color: #f66;
+    font-weight: 700
+}
+
+.zhcharge .zhtab {
+    padding: 0 30px
+}
+
+.zhcharge .zhtab li {
+    float: left;
+    background: url(/img/zongheng/charge.png) left bottom no-repeat;
+    height: 66px;
+    width: 108px;
+    padding-left: 44px;
+    color: #484954;
+    font-size: 14px;
+    margin: 10px 0 0 10px;
+    overflow: hidden;
+    display: inline;
+    cursor: pointer
+}
+
+.u-medal-b, .u-medals {
+    display: inline-block
+}
+
+.zhcharge .zhtab li.write {
+    padding: 0 5px;
+    width: 142px
+}
+
+.zhcharge .zhtab .write p {
+    margin: 8px 0 0
+}
+
+.zhcharge .zhtab .write input {
+    background: #fff;
+    border: 1px solid #cfcfcf;
+    height: 30px;
+    line-height: 30px;
+    width: 80px;
+    padding: 0 5px;
+    color: #959593;
+    margin-right: 5px
+}
+
+.zhcharge .zhtab li.active {
+    background: url(/img/zongheng/charge.png) no-repeat;
+    cursor: default
+}
+
+.zhcharge .zhtab li p {
+    margin-top: 12px
+}
+
+.zhcharge .chargetip {
+    text-align: center;
+    margin-top: 40px
+}
+
+.zhcharge .chargebtn {
+    background: #fe6d2c;
+    color: #fff;
+    font-size: 18px;
+    padding: 10px 20px;
+    font-family: "微软雅黑"
+}
+
+.zhcharge .chargetip p {
+    color: #ff1418;
+    font-size: 12px;
+    margin-top: 20px
+}
+
+.cor_gay {
+    color: #959593
+}
+
+.cor_red {
+    color: #f06;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 2px
+}
+
+.u-medal-b {
+    width: 31px;
+    height: 31px
+}
+
+.u-medal-b-100, .u-medal-b-101, .u-medal-b-102, .u-medal-b-103, .u-medal-b-104, .u-medal-b-105, .u-medal-b-106, .u-medal-b-107, .u-medal-b-108, .u-medal-b-109, .u-medal-b-110, .u-medal-b-111, .u-medal-b-112, .u-medal-b-113, .u-medal-b-122, .u-medal-b-123, .u-medal-b-124, .u-medal-b-125, .u-medal-b-126, .u-medal-b-127, .u-medal-b-128, .u-medal-b-129, .u-medal-b-130, .u-medal-b-131, .u-medal-b-132, .u-medal-b-133, .u-medal-b-134, .u-medal-b-135, .u-medal-b-136, .u-medal-b-137, .u-medal-b-138, .u-medal-b-139, .u-medal-b-140, .u-medal-b-141, .u-medal-b-142, .u-medal-b-143, .u-medal-b-144, .u-medal-b-145, .u-medal-b-149, .u-medal-b-150, .u-medal-b-151, .u-medal-b-152, .u-medal-b-153, .u-medal-b-154, .u-medal-b-155, .u-medal-b-156, .u-medal-b-157, .u-medal-b-158, .u-medal-b-159, .u-medal-b-160, .u-medal-b-161, .u-medal-b-162, .u-medal-b-163, .u-medal-b-164, .u-medal-b-165, .u-medal-b-166, .u-medal-b-167, .u-medal-b-168, .u-medal-b-169, .u-medal-b-170, .u-medal-b-171, .u-medal-b-172, .u-medal-b-173, .u-medal-b-174, .u-medal-b-175, .u-medal-b-176, .u-medal-b-177, .u-medal-b-178, .u-medal-b-179, .u-medal-b-180, .u-medal-b-293, .u-medal-b-294, .u-medal-b-295, .u-medal-b-296, .u-medal-b-297, .u-medal-b-298, .u-medal-b-300, .u-medal-b-301, .u-medal-b-302, .u-medal-b-303, .u-medal-b-304, .u-medal-b-329, .u-medal-b-330, .u-medal-b-331, .u-medal-b-332, .u-medal-b-333, .u-medal-b-336, .u-medal-b-339, .u-medal-b-340, .u-medal-b-341, .u-medal-b-342, .u-medal-b-343, .u-medal-b-344, .u-medal-b-345, .u-medal-b-346, .u-medal-b-347, .u-medal-b-348, .u-medal-b-349, .u-medal-b-350, .u-medal-b-351, .u-medal-b-352, .u-medal-b-353, .u-medal-b-354, .u-medal-b-355, .u-medal-b-356, .u-medal-b-357, .u-medal-b-358, .u-medal-b-359, .u-medal-b-360, .u-medal-b-361, .u-medal-b-362, .u-medal-b-363, .u-medal-b-364, .u-medal-b-388, .u-medal-b-389, .u-medal-b-390, .u-medal-b-391, .u-medal-b-392, .u-medal-b-393, .u-medal-b-394, .u-medal-b-395, .u-medal-b-396, .u-medal-b-397, .u-medal-b-398, .u-medal-b-399, .u-medal-b-400, .u-medal-b-401, .u-medal-b-402, .u-medal-b-403, .u-medal-b-404, .u-medal-b-405, .u-medal-b-406, .u-medal-b-407, .u-medal-b-408, .u-medal-b-409, .u-medal-b-410, .u-medal-b-411, .u-medal-b-412, .u-medal-b-413, .u-medal-b-414, .u-medal-b-416, .u-medal-b-417, .u-medal-b-418, .u-medal-b-425, .u-medal-b-426, .u-medal-b-427, .u-medal-b-428, .u-medal-b-429, .u-medal-b-430, .u-medal-b-436, .u-medal-b-437, .u-medal-b-438, .u-medal-b-439, .u-medal-b-440, .u-medal-b-441, .u-medal-b-442, .u-medal-b-443, .u-medal-b-444, .u-medal-b-445, .u-medal-b-446, .u-medal-b-451, .u-medal-b-452, .u-medal-b-458, .u-medal-b-461, .u-medal-b-474, .u-medal-b-475, .u-medal-b-476, .u-medal-b-478, .u-medal-b-479, .u-medal-b-480, .u-medal-b-481, .u-medal-b-482, .u-medal-b-483, .u-medal-b-484, .u-medal-b-485, .u-medal-b-63, .u-medal-b-64, .u-medal-b-65, .u-medal-b-66, .u-medal-b-67, .u-medal-b-68, .u-medal-b-69, .u-medal-b-70, .u-medal-b-71, .u-medal-b-72, .u-medal-b-73, .u-medal-b-74, .u-medal-b-75, .u-medal-b-82, .u-medal-b-83, .u-medal-b-85, .u-medal-b-86, .u-medal-b-87, .u-medal-b-89, .u-medal-b-91, .u-medal-b-92, .u-medal-b-93, .u-medal-b-94, .u-medal-b-95, .u-medal-b-96, .u-medal-b-97, .u-medal-b-98, .u-medal-b-99, .u-medal-b-g-388, .u-medal-b-g-389, .u-medal-b-g-390, .u-medal-b-g-391, .u-medal-b-g-392, .u-medal-b-g-480, .u-medal-b-g-481, .u-medal-b-g-482, .u-medal-b-g-483, .u-medal-b-g-484, .u-medal-b-g-485 {
+    background-image: url(/images/room/medal-b.png?v=20160317)
+}
+
+.u-medal-b-63 {
+    width: 31px;
+    height: 31px;
+    background-position: -161px -339px
+}
+
+.u-medal-b-71, .u-medal-b-72, .u-medal-b-73, .u-medal-b-74, .u-medal-b-75 {
+    width: 28px;
+    height: 28px
+}
+
+.u-medal-b-64 {
+    background-position: -40px -80px
+}
+
+.u-medal-b-65 {
+    background-position: -80px 0
+}
+
+.u-medal-b-66 {
+    background-position: -40px 0
+}
+
+.u-medal-b-67 {
+    background-position: 0 -40px
+}
+
+.u-medal-b-68 {
+    background-position: -40px -40px
+}
+
+.u-medal-b-69 {
+    background-position: 0 0
+}
+
+.u-medal-b-70 {
+    background-position: -80px -40px
+}
+
+.u-medal-b-71 {
+    background-position: -338px -233px
+}
+
+.u-medal-b-72 {
+    background-position: -338px -205px
+}
+
+.u-medal-b-73 {
+    background-position: -338px -177px
+}
+
+.u-medal-b-74 {
+    background-position: -338px -149px
+}
+
+.u-medal-b-75 {
+    background-position: -338px -121px
+}
+
+.u-medal-b-395, .u-medal-b-396, .u-medal-b-397, .u-medal-b-398, .u-medal-b-399, .u-medal-b-400, .u-medal-b-401, .u-medal-b-402, .u-medal-b-403, .u-medal-b-404, .u-medal-b-405, .u-medal-b-406, .u-medal-b-407, .u-medal-b-408, .u-medal-b-437, .u-medal-b-438, .u-medal-b-439, .u-medal-b-440, .u-medal-b-441, .u-medal-b-442, .u-medal-b-443, .u-medal-b-444, .u-medal-b-445, .u-medal-b-451, .u-medal-b-452, .u-medal-b-453, .u-medal-b-454, .u-medal-b-455, .u-medal-b-458, .u-medal-b-461, .u-medal-b-462, .u-medal-b-463, .u-medal-b-464, .u-medal-b-465, .u-medal-b-466, .u-medal-b-467, .u-medal-b-468, .u-medal-b-469, .u-medal-b-470, .u-medal-b-471, .u-medal-b-472, .u-medal-b-473, .u-medal-b-474, .u-medal-b-475, .u-medal-b-476, .u-medal-b-477 {
+    width: 32px;
+    height: 32px
+}
+
+.u-medal-b-76 {
+    background-image: url(http://image.cache.xiu8.com/medal/76_b.gif?v=20150630)
+}
+
+.u-medal-b-77 {
+    background-image: url(http://image.cache.xiu8.com/medal/77_b.gif?v=20150630)
+}
+
+.u-medal-b-78, .u-medal-b-79 {
+    background-image: url(http://image.cache.xiu8.com/medal/78_b.gif?v=20150630)
+}
+
+.u-medal-b-80 {
+    background-image: url(http://image.cache.xiu8.com/medal/80_b.gif?v=20150630)
+}
+
+.u-medal-b-81 {
+    background-image: url(http://image.cache.xiu8.com/medal/81_b.gif?v=20150630)
+}
+
+.u-medal-b-82 {
+    background-position: -31px -120px
+}
+
+.u-medal-b-83 {
+    background-position: -62px -120px
+}
+
+.u-medal-b-84 {
+    background-image: url(http://image.cache.xiu8.com/medal/84_b.gif?v=20150630)
+}
+
+.u-medal-b-85 {
+    background-position: -93px -120px
+}
+
+.u-medal-b-86 {
+    background-position: -152px 0
+}
+
+.u-medal-b-87 {
+    background-position: -152px -31px
+}
+
+.u-medal-b-88 {
+    background-image: url(http://image.cache.xiu8.com/medal/88_b.gif?v=20150630)
+}
+
+.u-medal-b-89 {
+    background-position: -152px -62px
+}
+
+.u-medal-b-90 {
+    background-image: url(http://image.cache.xiu8.com/medal/90_b.gif?v=20150630)
+}
+
+.u-medal-b-91 {
+    background-position: -152px -93px
+}
+
+.u-medal-b-92 {
+    background-position: -126px -119px
+}
+
+.u-medal-b-93 {
+    background-position: 0 -151px
+}
+
+.u-medal-b-94 {
+    background-position: -31px -151px
+}
+
+.u-medal-b-95 {
+    background-position: -62px -151px
+}
+
+.u-medal-b-96 {
+    background-position: -93px -151px
+}
+
+.u-medal-b-97 {
+    background-position: -124px -151px
+}
+
+.u-medal-b-98 {
+    background-position: -183px 0
+}
+
+.u-medal-b-99 {
+    background-position: -183px -31px
+}
+
+.u-medal-b-100 {
+    background-position: -183px -62px
+}
+
+.u-medal-b-101 {
+    background-position: -183px -93px
+}
+
+.u-medal-b-102 {
+    background-position: -183px -124px
+}
+
+.u-medal-b-103 {
+    background-position: 0 -182px
+}
+
+.u-medal-b-104 {
+    background-position: -31px -182px
+}
+
+.u-medal-b-105 {
+    background-position: -62px -182px
+}
+
+.u-medal-b-106 {
+    background-position: -93px -182px
+}
+
+.u-medal-b-107 {
+    background-position: -124px -182px
+}
+
+.u-medal-b-108 {
+    background-position: -155px -182px
+}
+
+.u-medal-b-109 {
+    background-position: -214px 0
+}
+
+.u-medal-b-110 {
+    background-position: -214px -31px
+}
+
+.u-medal-b-111 {
+    background-position: -214px -62px
+}
+
+.u-medal-b-112 {
+    background-position: -214px -93px
+}
+
+.u-medal-b-113 {
+    background-position: -214px -124px
+}
+
+.u-medal-b-114 {
+    background-image: url(http://image.cache.xiu8.com/medal/114_b.gif?v=20150630)
+}
+
+.u-medal-b-115 {
+    background-image: url(http://image.cache.xiu8.com/medal/115_b.gif?v=20150630)
+}
+
+.u-medal-b-116 {
+    background-image: url(http://image.cache.xiu8.com/medal/116_b.gif?v=20150630)
+}
+
+.u-medal-b-117 {
+    background-image: url(http://image.cache.xiu8.com/medal/117_b.gif?v=20150630)
+}
+
+.u-medal-b-118 {
+    background-image: url(http://image.cache.xiu8.com/medal/118_b.gif?v=20150630)
+}
+
+.u-medal-b-119 {
+    background-image: url(http://image.cache.xiu8.com/medal/119_b.gif?v=20150630)
+}
+
+.u-medal-b-120 {
+    background-image: url(http://image.cache.xiu8.com/medal/120_b.gif?v=20150630)
+}
+
+.u-medal-b-121 {
+    background-image: url(http://image.cache.xiu8.com/medal/121_b.gif?v=20150630)
+}
+
+.u-medal-b-122 {
+    background-position: -214px -155px
+}
+
+.u-medal-b-123 {
+    background-position: 0 -213px
+}
+
+.u-medal-b-124 {
+    background-position: -31px -213px
+}
+
+.u-medal-b-125 {
+    background-position: -62px -213px
+}
+
+.u-medal-b-126 {
+    background-position: -93px -213px
+}
+
+.u-medal-b-127 {
+    background-position: -124px -213px
+}
+
+.u-medal-b-128 {
+    background-position: -155px -213px
+}
+
+.u-medal-b-129 {
+    background-position: -186px -213px
+}
+
+.u-medal-b-130 {
+    background-position: -245px 0
+}
+
+.u-medal-b-131 {
+    background-position: -245px -31px
+}
+
+.u-medal-b-132 {
+    background-position: -245px -62px
+}
+
+.u-medal-b-133 {
+    background-position: -245px -93px
+}
+
+.u-medal-b-134 {
+    background-position: -245px -124px
+}
+
+.u-medal-b-135 {
+    background-position: -120px -32px
+}
+
+.u-medal-b-136 {
+    background-position: -245px -186px
+}
+
+.u-medal-b-137 {
+    background-position: 0 -244px
+}
+
+.u-medal-b-138 {
+    background-position: -31px -244px
+}
+
+.u-medal-b-139 {
+    background-position: -62px -244px
+}
+
+.u-medal-b-140 {
+    background-position: -93px -244px
+}
+
+.u-medal-b-141 {
+    background-position: -124px -244px
+}
+
+.u-medal-b-142 {
+    background-position: -155px -244px
+}
+
+.u-medal-b-143 {
+    background-position: -186px -244px
+}
+
+.u-medal-b-144 {
+    background-position: -217px -244px
+}
+
+.u-medal-b-145 {
+    background-position: -276px 0
+}
+
+.u-medal-b-146 {
+    background-image: url(http://image.cache.xiu8.com/medal/146_b.gif?v=20150630)
+}
+
+.u-medal-b-147 {
+    background-image: url(http://image.cache.xiu8.com/medal/147_b.gif?v=20150630)
+}
+
+.u-medal-b-148 {
+    background-image: url(http://image.cache.xiu8.com/medal/148_b.gif?v=20150630)
+}
+
+.u-medal-b-149 {
+    background-position: -276px -31px
+}
+
+.u-medal-b-150 {
+    background-position: -97px -380px
+}
+
+.u-medal-b-151 {
+    background-position: -276px -62px
+}
+
+.u-medal-b-152 {
+    background-position: -276px -93px
+}
+
+.u-medal-b-153 {
+    background-position: -276px -124px
+}
+
+.u-medal-b-154 {
+    background-position: -276px -155px
+}
+
+.u-medal-b-155 {
+    background-position: -276px -186px
+}
+
+.u-medal-b-156 {
+    background-position: -276px -217px
+}
+
+.u-medal-b-157 {
+    background-position: 0 -275px
+}
+
+.u-medal-b-158 {
+    background-position: -31px -275px
+}
+
+.u-medal-b-159 {
+    background-position: -62px -275px
+}
+
+.u-medal-b-160 {
+    background-position: -93px -275px
+}
+
+.u-medal-b-161 {
+    background-position: -124px -275px
+}
+
+.u-medal-b-162 {
+    background-position: -155px -275px
+}
+
+.u-medal-b-163 {
+    background-position: -186px -275px
+}
+
+.u-medal-b-164 {
+    background-position: -217px -275px
+}
+
+.u-medal-b-165 {
+    background-position: -248px -275px
+}
+
+.u-medal-b-166 {
+    background-position: -307px 0
+}
+
+.u-medal-b-167 {
+    background-position: -307px -31px
+}
+
+.u-medal-b-168 {
+    background-position: -307px -62px
+}
+
+.u-medal-b-169 {
+    background-position: -307px -93px
+}
+
+.u-medal-b-170 {
+    background-position: -307px -124px
+}
+
+.u-medal-b-171 {
+    background-position: -307px -155px
+}
+
+.u-medal-b-172 {
+    background-position: -307px -186px
+}
+
+.u-medal-b-173 {
+    background-position: -307px -217px
+}
+
+.u-medal-b-174 {
+    background-position: -307px -248px
+}
+
+.u-medal-b-175 {
+    background-position: 0 -306px
+}
+
+.u-medal-b-176 {
+    background-position: -31px -306px
+}
+
+.u-medal-b-177 {
+    background-position: -62px -306px
+}
+
+.u-medal-b-178 {
+    background-position: -93px -306px
+}
+
+.u-medal-b-179 {
+    background-position: -124px -306px
+}
+
+.u-medal-b-180 {
+    background-position: -155px -306px
+}
+
+.u-medal-b-293 {
+    background-position: -120px 0
+}
+
+.u-medal-b-294 {
+    background-position: -80px -80px
+}
+
+.u-medal-b-295 {
+    background-position: -248px -306px
+}
+
+.u-medal-b-296 {
+    background-position: -279px -306px
+}
+
+.u-medal-b-297 {
+    background-position: -338px 0
+}
+
+.u-medal-b-298 {
+    background-position: -338px -31px
+}
+
+.u-medal-b-300 {
+    background-position: -338px -61px
+}
+
+.u-medal-b-301 {
+    background-position: 0 -121px
+}
+
+.u-medal-b-302 {
+    background-position: -120px -63px
+}
+
+.u-medal-b-303 {
+    background-position: -217px -306px
+}
+
+.u-medal-b-304 {
+    background-position: 0 -80px
+}
+
+.u-medal-b-329 {
+    background-position: -245px -155px
+}
+
+.u-medal-b-330 {
+    background-position: -186px -306px
+}
+
+.u-medal-b-332 {
+    background-position: -310px -305px
+}
+
+.u-medal-b-331 {
+    background-position: -339px -305px
+}
+
+.u-medal-b-333 {
+    background-position: 0 -338px
+}
+
+.u-medal-b-336 {
+    background-position: -32px -338px
+}
+
+.u-medal-b-339 {
+    background-position: -64px -338px
+}
+
+.u-medal-b-340 {
+    background-position: -96px -338px
+}
+
+.u-medal-b-341 {
+    background-position: -128px -338px
+}
+
+.u-medal-b-342, .u-medal-b-343, .u-medal-b-344, .u-medal-b-345, .u-medal-b-346, .u-medal-b-347, .u-medal-b-348, .u-medal-b-349, .u-medal-b-350, .u-medal-b-351, .u-medal-b-352, .u-medal-b-353, .u-medal-b-354, .u-medal-b-355, .u-medal-b-356, .u-medal-b-357, .u-medal-b-358, .u-medal-b-359, .u-medal-b-360, .u-medal-b-361, .u-medal-b-362, .u-medal-b-363, .u-medal-b-364, .u-medal-b-365, .u-medal-b-366, .u-medal-b-368, .u-medal-b-369, .u-medal-b-370, .u-medal-b-371, .u-medal-b-372, .u-medal-b-373, .u-medal-b-374, .u-medal-b-375, .u-medal-b-376, .u-medal-b-377, .u-medal-b-378, .u-medal-b-379, .u-medal-b-380, .u-medal-b-381, .u-medal-b-382, .u-medal-b-383, .u-medal-b-384, .u-medal-b-385, .u-medal-b-386, .u-medal-b-387 {
+    background-image: url(/images/room/stamp-b.png?v=20150630);
+    width: 32px;
+    height: 32px;
+    vertical-align: middle
+}
+
+.u-medal-b-342 {
+    background-position: -32px 0
+}
+
+.u-medal-b-343 {
+    background-position: -64px -128px
+}
+
+.u-medal-b-344 {
+    background-position: 0 -32px
+}
+
+.u-medal-b-345 {
+    background-position: -32px -32px
+}
+
+.u-medal-b-346 {
+    background-position: -64px 0
+}
+
+.u-medal-b-347 {
+    background-position: -64px -32px
+}
+
+.u-medal-b-348 {
+    background-position: 0 -64px
+}
+
+.u-medal-b-349 {
+    background-position: -32px -64px
+}
+
+.u-medal-b-350 {
+    background-position: -64px -64px
+}
+
+.u-medal-b-351 {
+    background-position: -96px 0
+}
+
+.u-medal-b-352 {
+    background-position: -96px -32px
+}
+
+.u-medal-b-353 {
+    background-position: -96px -64px
+}
+
+.u-medal-b-354 {
+    background-position: 0 -96px
+}
+
+.u-medal-b-355 {
+    background-position: -32px -96px
+}
+
+.u-medal-b-356 {
+    background-position: -64px -96px
+}
+
+.u-medal-b-357 {
+    background-position: -96px -96px
+}
+
+.u-medal-b-358 {
+    background-position: -128px 0
+}
+
+.u-medal-b-359 {
+    background-position: -128px -32px
+}
+
+.u-medal-b-360 {
+    background-position: -128px -64px
+}
+
+.u-medal-b-361 {
+    background-position: -128px -96px
+}
+
+.u-medal-b-362 {
+    background-position: 0 -128px
+}
+
+.u-medal-b-363 {
+    background-position: -32px -128px
+}
+
+.u-medal-b-364 {
+    background-position: 0 0
+}
+
+.u-medal-b-365 {
+    background-position: -96px -128px
+}
+
+.u-medal-b-366 {
+    background-position: -128px -128px
+}
+
+.u-medal-b-368 {
+    background-position: -160px 0
+}
+
+.u-medal-b-369 {
+    background-position: -160px -32px
+}
+
+.u-medal-b-370 {
+    background-position: -160px -64px
+}
+
+.u-medal-b-371 {
+    background-position: -160px -96px
+}
+
+.u-medal-b-372 {
+    background-position: -160px -128px
+}
+
+.u-medal-b-373 {
+    background-position: 0 -160px
+}
+
+.u-medal-b-374 {
+    background-position: -32px -160px
+}
+
+.u-medal-b-375 {
+    background-position: -64px -160px
+}
+
+.u-medal-b-376 {
+    background-position: -96px -160px
+}
+
+.u-medal-b-377 {
+    background-position: -128px -160px
+}
+
+.u-medal-b-378 {
+    background-position: -160px -160px
+}
+
+.u-medal-b-379 {
+    background-position: -192px 0
+}
+
+.u-medal-b-380 {
+    background-position: -192px -32px
+}
+
+.u-medal-b-381 {
+    background-position: -192px -64px
+}
+
+.u-medal-b-382 {
+    background-position: -192px -96px
+}
+
+.u-medal-b-383 {
+    background-position: -192px -128px
+}
+
+.u-medal-b-384 {
+    background-position: -192px -160px
+}
+
+.u-medal-b-385 {
+    background-position: 0 -192px
+}
+
+.u-medal-b-386 {
+    background-position: -32px -192px
+}
+
+.u-medal-b-387 {
+    background-position: -64px -192px
+}
+
+.u-medal-b-g-388 {
+    background-position: 0 -452px
+}
+
+.u-medal-b-g-389 {
+    background-position: -32px -452px
+}
+
+.u-medal-b-g-390 {
+    background-position: -64px -452px
+}
+
+.u-medal-b-g-391 {
+    background-position: -96px -452px
+}
+
+.u-medal-b-g-392 {
+    background-position: -130px -452px
+}
+
+.u-medal-b-388 {
+    background-position: 0 -420px
+}
+
+.u-medal-b-389 {
+    background-position: -32px -420px
+}
+
+.u-medal-b-390 {
+    background-position: -64px -420px
+}
+
+.u-medal-b-391 {
+    background-position: -96px -420px
+}
+
+.u-medal-b-392 {
+    background-position: -130px -420px
+}
+
+.u-medal-b-393 {
+    background-position: -132px -380px
+}
+
+.u-medal-b-394 {
+    background-position: -164px -381px
+}
+
+.u-medal-b-395 {
+    background-position: 0 -500px
+}
+
+.u-medal-b-396 {
+    background-position: -32px -500px
+}
+
+.u-medal-b-397 {
+    background-position: -64px -500px
+}
+
+.u-medal-b-398 {
+    background-position: -96px -500px
+}
+
+.u-medal-b-399 {
+    background-position: -128px -500px
+}
+
+.u-medal-b-400 {
+    background-position: -160px -500px
+}
+
+.u-medal-b-401 {
+    background-position: -192px -500px
+}
+
+.u-medal-b-402 {
+    background-position: -224px -500px
+}
+
+.u-medal-b-403 {
+    background-position: -256px -500px
+}
+
+.u-medal-b-404 {
+    background-position: -288px -500px
+}
+
+.u-medal-b-405 {
+    background-position: -320px -500px
+}
+
+.u-medal-b-406 {
+    background-position: 0 -532px
+}
+
+.u-medal-b-407 {
+    background-position: -32px -532px
+}
+
+.u-medal-b-408 {
+    background-position: -64px -532px
+}
+
+.u-medal-b-409 {
+    background-position: -96px -532px
+}
+
+.u-medal-b-413 {
+    background-position: -128px -532px
+}
+
+.u-medal-b-410 {
+    background-position: -160px -532px
+}
+
+.u-medal-b-412 {
+    background-position: -192px -532px
+}
+
+.u-medal-b-411 {
+    background-position: -224px -532px
+}
+
+.u-medal-b-414 {
+    background-position: -256px -532px
+}
+
+.u-medal-b-418 {
+    background-position: -288px -532px
+}
+
+.u-medal-b-417 {
+    background-position: -320px -532px
+}
+
+.u-medal-b-416 {
+    background-position: 0 -564px
+}
+
+.u-medal-b-426 {
+    background-position: -32px -564px
+}
+
+.u-medal-b-425 {
+    background-position: -64px -564px
+}
+
+.u-medal-b-427 {
+    background-position: -96px -564px
+}
+
+.u-medal-b-428 {
+    background-position: -128px -564px
+}
+
+.u-medal-b-429 {
+    background-position: -160px -564px
+}
+
+.u-medal-b-430 {
+    background-position: -192px -564px
+}
+
+.u-medal-b-431 {
+    background-image: url(http://image.cache.xiu8.com/medal/431_b.gif)
+}
+
+.u-medal-b-432 {
+    background-image: url(http://image.cache.xiu8.com/medal/432_b.gif)
+}
+
+.u-medal-b-433 {
+    background-image: url(http://image.cache.xiu8.com/medal/433_b.gif)
+}
+
+.u-medal-b-434 {
+    background-image: url(http://image.cache.xiu8.com/medal/434_b.gif)
+}
+
+.u-medal-b-435 {
+    background-image: url(http://image.cache.xiu8.com/medal/435_b.gif)
+}
+
+.u-medal-b-436 {
+    background-position: -224px -564px
+}
+
+.u-medal-b-437 {
+    background-position: -256px -564px
+}
+
+.u-medal-b-438 {
+    background-position: 0 -596px
+}
+
+.u-medal-b-439 {
+    background-position: -32px -596px
+}
+
+.u-medal-b-440 {
+    background-position: -64px -596px
+}
+
+.u-medal-b-441 {
+    background-position: -96px -596px
+}
+
+.u-medal-b-442 {
+    background-position: -128px -596px
+}
+
+.u-medal-b-443 {
+    background-position: -160px -596px
+}
+
+.u-medal-b-444 {
+    background-position: -192px -596px
+}
+
+.u-medal-b-445 {
+    background-position: -224px -596px
+}
+
+.u-medal-b-446 {
+    background-position: -256px -596px;
+    width: 32px;
+    height: 32px
+}
+
+.u-medal-b-451 {
+    background-position: -288px -564px
+}
+
+.u-medal-b-452 {
+    background-position: -288px -596px
+}
+
+.u-medal-b-453 {
+    background-image: url(http://image.cache.xiu8.com/medal/453_b.gif)
+}
+
+.u-medal-b-454 {
+    background-image: url(http://image.cache.xiu8.com/medal/454_b.gif)
+}
+
+.u-medal-b-455 {
+    background-image: url(http://image.cache.xiu8.com/medal/455_b.gif)
+}
+
+.u-medal-b-458 {
+    background-position: -320px -596px
+}
+
+.u-medal-b-461 {
+    background-position: 0 -628px
+}
+
+.u-medal-b-462 {
+    background-image: url(http://image.cache.xiu8.com/medal/462_b.gif)
+}
+
+.u-medal-b-463 {
+    background-image: url(http://image.cache.xiu8.com/medal/463_b.gif)
+}
+
+.u-medal-b-464 {
+    background: url(http://image.cache.xiu8.com/medal/464_b.png) center center no-repeat
+}
+
+.u-medal-b-465 {
+    background: url(http://image.cache.xiu8.com/medal/465_b.png) center center no-repeat
+}
+
+.u-medal-b-466 {
+    background: url(http://image.cache.xiu8.com/medal/466_b.png) center center no-repeat
+}
+
+.u-medal-b-467 {
+    background: url(http://image.cache.xiu8.com/medal/467_b.png) center center no-repeat
+}
+
+.u-medal-b-468 {
+    background: url(http://image.cache.xiu8.com/medal/468_b.png) center center no-repeat
+}
+
+.u-medal-b-469 {
+    background: url(http://image.cache.xiu8.com/medal/469_b.png) center center no-repeat
+}
+
+.u-medal-b-470 {
+    background: url(http://image.cache.xiu8.com/medal/470_b.png) center center no-repeat
+}
+
+.u-medal-b-471 {
+    background: url(http://image.cache.xiu8.com/medal/471_b.png) center center no-repeat
+}
+
+.u-medal-b-472 {
+    background: url(http://image.cache.xiu8.com/medal/472_b.png) center center no-repeat
+}
+
+.u-medal-b-473 {
+    background: url(http://image.cache.xiu8.com/medal/473_b.png) center center no-repeat
+}
+
+.u-medal-b-474 {
+    background-position: -96px -628px
+}
+
+.u-medal-b-475 {
+    background-position: -128px -628px
+}
+
+.u-medal-b-476 {
+    background-position: -160px -628px
+}
+
+.u-medal-b-477 {
+    background: url(http://image.cache.xiu8.com/medal/477_b.gif) center center no-repeat
+}
+
+.u-medal-b-478, .u-medal-b-479, .u-medal-b-480, .u-medal-b-481, .u-medal-b-482, .u-medal-b-483, .u-medal-b-485, .u-medal-b-g-480, .u-medal-b-g-481, .u-medal-b-g-482, .u-medal-b-g-483, .u-medal-b-g-484, .u-medal-b-g-485 {
+    width: 30px;
+    height: 30px
+}
+
+.u-medal-b-478 {
+    background-position: -1px -660px
+}
+
+.u-medal-b-479 {
+    background-position: -33px -660px
+}
+
+.u-medal-b-480 {
+    background-position: -64px -659px
+}
+
+.u-medal-b-481 {
+    background-position: -94px -660px
+}
+
+.u-medal-b-482 {
+    background-position: -124px -660px
+}
+
+.u-medal-b-483 {
+    background-position: -130px -422px
+}
+
+.u-medal-b-484 {
+    background-position: -184px -658px;
+    width: 30px;
+    height: 30px
+}
+
+.u-medal-b-485 {
+    background-position: -214px -658px
+}
+
+.u-medal-b-g-480 {
+    background-position: -64px -690px
+}
+
+.u-medal-b-g-481 {
+    background-position: -94px -690px
+}
+
+.u-medal-b-g-482 {
+    background-position: -124px -690px
+}
+
+.u-medal-b-g-483 {
+    background-position: -130px -452px
+}
+
+.u-medal-b-g-484 {
+    background-position: -184px -690px
+}
+
+.u-medal-b-g-485 {
+    background-position: -214px -690px
+}
+
+.u-medals {
+    width: 22px;
+    height: 22px;
+    vertical-align: middle
+}
+
+.u-medal-100, .u-medal-101, .u-medal-102, .u-medal-103, .u-medal-104, .u-medal-105, .u-medal-106, .u-medal-107, .u-medal-108, .u-medal-109, .u-medal-110, .u-medal-111, .u-medal-112, .u-medal-113, .u-medal-122, .u-medal-123, .u-medal-124, .u-medal-125, .u-medal-126, .u-medal-127, .u-medal-128, .u-medal-129, .u-medal-130, .u-medal-131, .u-medal-132, .u-medal-133, .u-medal-134, .u-medal-135, .u-medal-136, .u-medal-137, .u-medal-138, .u-medal-139, .u-medal-140, .u-medal-141, .u-medal-142, .u-medal-143, .u-medal-144, .u-medal-145, .u-medal-149, .u-medal-150, .u-medal-151, .u-medal-152, .u-medal-153, .u-medal-154, .u-medal-155, .u-medal-156, .u-medal-157, .u-medal-158, .u-medal-159, .u-medal-160, .u-medal-161, .u-medal-162, .u-medal-163, .u-medal-164, .u-medal-165, .u-medal-166, .u-medal-167, .u-medal-168, .u-medal-169, .u-medal-170, .u-medal-171, .u-medal-172, .u-medal-173, .u-medal-174, .u-medal-175, .u-medal-176, .u-medal-177, .u-medal-178, .u-medal-179, .u-medal-180, .u-medal-293, .u-medal-294, .u-medal-295, .u-medal-296, .u-medal-297, .u-medal-298, .u-medal-300, .u-medal-301, .u-medal-302, .u-medal-303, .u-medal-304, .u-medal-329, .u-medal-330, .u-medal-331, .u-medal-332, .u-medal-333, .u-medal-336, .u-medal-339, .u-medal-340, .u-medal-341, .u-medal-342, .u-medal-343, .u-medal-344, .u-medal-345, .u-medal-346, .u-medal-347, .u-medal-348, .u-medal-349, .u-medal-350, .u-medal-351, .u-medal-352, .u-medal-353, .u-medal-354, .u-medal-355, .u-medal-356, .u-medal-357, .u-medal-358, .u-medal-359, .u-medal-360, .u-medal-361, .u-medal-362, .u-medal-363, .u-medal-364, .u-medal-388, .u-medal-389, .u-medal-390, .u-medal-391, .u-medal-392, .u-medal-393, .u-medal-394, .u-medal-395, .u-medal-396, .u-medal-397, .u-medal-398, .u-medal-399, .u-medal-400, .u-medal-401, .u-medal-402, .u-medal-403, .u-medal-404, .u-medal-405, .u-medal-406, .u-medal-407, .u-medal-408, .u-medal-409, .u-medal-410, .u-medal-411, .u-medal-412, .u-medal-413, .u-medal-414, .u-medal-416, .u-medal-417, .u-medal-418, .u-medal-425, .u-medal-426, .u-medal-427, .u-medal-428, .u-medal-429, .u-medal-430, .u-medal-436, .u-medal-437, .u-medal-438, .u-medal-439, .u-medal-440, .u-medal-441, .u-medal-442, .u-medal-443, .u-medal-444, .u-medal-445, .u-medal-446, .u-medal-451, .u-medal-452, .u-medal-458, .u-medal-461, .u-medal-474, .u-medal-475, .u-medal-476, .u-medal-478, .u-medal-479, .u-medal-480, .u-medal-481, .u-medal-482, .u-medal-483, .u-medal-484, .u-medal-485, .u-medal-63, .u-medal-64, .u-medal-65, .u-medal-66, .u-medal-67, .u-medal-68, .u-medal-69, .u-medal-70, .u-medal-71, .u-medal-72, .u-medal-73, .u-medal-74, .u-medal-75, .u-medal-82, .u-medal-83, .u-medal-85, .u-medal-86, .u-medal-87, .u-medal-89, .u-medal-91, .u-medal-92, .u-medal-93, .u-medal-94, .u-medal-95, .u-medal-96, .u-medal-97, .u-medal-98, .u-medal-99, .u-medal-g-118, .u-medal-g-119, .u-medal-g-120, .u-medal-g-388, .u-medal-g-389, .u-medal-g-390, .u-medal-g-391, .u-medal-g-392, .u-medal-g-475, .u-medal-g-478, .u-medal-g-479, .u-medal-g-480, .u-medal-g-481, .u-medal-g-482, .u-medal-g-483, .u-medal-g-484, .u-medal-g-485, .u-medal-g-91, .u-medal-g-92, .u-medal-g-93, .u-medal-g-94 {
+    background-image: url(/images/room/medal.png?v=20160317)
+}
+
+.u-medal-64, .u-medal-65, .u-medal-66, .u-medal-67, .u-medal-68, .u-medal-69, .u-medal-70 {
+    width: 24px;
+    height: 26px
+}
+
+.u-medal-63 {
+    background-position: -118px -47px
+}
+
+.u-medal-64 {
+    background-position: 0 -62px
+}
+
+.u-medal-65 {
+    background-position: -31px -62px
+}
+
+.u-medal-66 {
+    background-position: 0 0
+}
+
+.u-medal-67 {
+    background-position: -31px 0
+}
+
+.u-medal-68 {
+    background-position: 0 -31px
+}
+
+.u-medal-69 {
+    background-position: -31px -31px
+}
+
+.u-medal-70 {
+    background-position: -62px 0
+}
+
+.u-medal-71 {
+    background-position: -154px -161px
+}
+
+.u-medal-72 {
+    background-position: -229px -110px
+}
+
+.u-medal-73 {
+    background-position: -229px -132px
+}
+
+.u-medal-74 {
+    background-position: -229px -154px
+}
+
+.u-medal-75 {
+    background-position: -229px -176px
+}
+
+.u-medal-76 {
+    background: url(http://image.cache.xiu8.com/medal/76_s.gif?v=20150630)
+}
+
+.u-medal-77 {
+    background: url(http://image.cache.xiu8.com/medal/77_s.gif?v=20150630)
+}
+
+.u-medal-78 {
+    background: url(http://image.cache.xiu8.com/medal/78_s.gif?v=20150630)
+}
+
+.u-medal-79 {
+    background: url(http://image.cache.xiu8.com/medal/79_s.gif?v=20150630)
+}
+
+.u-medal-80 {
+    background: url(http://image.cache.xiu8.com/medal/80_s.gif?v=20150630)
+}
+
+.u-medal-81 {
+    background: url(http://image.cache.xiu8.com/medal/81_s.gif?v=20150630)
+}
+
+.u-medal-82 {
+    background-position: -229px -198px
+}
+
+.u-medal-83 {
+    background-position: 0 -227px
+}
+
+.u-medal-84 {
+    background: url(http://image.cache.xiu8.com/medal/84_s.gif?v=20150630)
+}
+
+.u-medal-85 {
+    background-position: -96px -93px
+}
+
+.u-medal-86 {
+    background-position: -93px -72px
+}
+
+.u-medal-87 {
+    background-position: -66px -227px
+}
+
+.u-medal-88 {
+    background: url(http://image.cache.xiu8.com/medal/88_s.gif?v=20150630)
+}
+
+.u-medal-89 {
+    background-position: -88px -227px
+}
+
+.u-medal-90 {
+    background: url(http://image.cache.xiu8.com/medal/90_s.gif?v=20150630)
+}
+
+.u-medal-91 {
+    background-position: -117px -70px
+}
+
+.u-medal-92 {
+    background-position: -226px -268px
+}
+
+.u-medal-93 {
+    background-position: -117px -92px
+}
+
+.u-medal-94 {
+    background-position: 0 -117px
+}
+
+.u-medal-95 {
+    background-position: -22px -117px
+}
+
+.u-medal-96 {
+    background-position: -44px -117px
+}
+
+.u-medal-97 {
+    background-position: -66px -117px
+}
+
+.u-medal-98 {
+    background-position: -88px -117px
+}
+
+.u-medal-99 {
+    background-position: -110px -117px
+}
+
+.u-medal-100 {
+    background-position: -141px 0
+}
+
+.u-medal-101 {
+    background-position: -141px -22px
+}
+
+.u-medal-102 {
+    background-position: -141px -44px
+}
+
+.u-medal-103 {
+    background-position: -141px -66px
+}
+
+.u-medal-104 {
+    background-position: -141px -88px
+}
+
+.u-medal-105 {
+    background-position: -141px -110px
+}
+
+.u-medal-106 {
+    background-position: 0 -139px
+}
+
+.u-medal-107 {
+    background-position: -22px -139px
+}
+
+.u-medal-108 {
+    background-position: -44px -139px
+}
+
+.u-medal-109 {
+    background-position: -66px -139px
+}
+
+.u-medal-110 {
+    background-position: -88px -139px
+}
+
+.u-medal-111 {
+    background-position: -110px -139px
+}
+
+.u-medal-112 {
+    background-position: -132px -139px
+}
+
+.u-medal-113 {
+    background-position: -163px 0
+}
+
+.u-medal-114 {
+    background: url(http://image.cache.xiu8.com/medal/114_s.gif?v=20150630)
+}
+
+.u-medal-115 {
+    background: url(http://image.cache.xiu8.com/medal/115_s.gif?v=20150630)
+}
+
+.u-medal-116 {
+    background: url(http://image.cache.xiu8.com/medal/116_s.gif?v=20150630)
+}
+
+.u-medal-117 {
+    background: url(http://image.cache.xiu8.com/medal/117_s.gif?v=20150630)
+}
+
+.u-medal-118 {
+    background: url(http://image.cache.xiu8.com/medal/118_s.gif?v=20150630)
+}
+
+.u-medal-119 {
+    background: url(http://image.cache.xiu8.com/medal/119_s.gif?v=20150630)
+}
+
+.u-medal-120 {
+    background: url(http://image.cache.xiu8.com/medal/120_s.gif?v=20150630)
+}
+
+.u-medal-121 {
+    background: url(http://image.cache.xiu8.com/medal/121_s.gif?v=20150630)
+}
+
+.u-medal-122 {
+    background-position: -163px -22px
+}
+
+.u-medal-123 {
+    background-position: -163px -44px
+}
+
+.u-medal-124 {
+    background-position: -163px -66px
+}
+
+.u-medal-125 {
+    background-position: -163px -88px
+}
+
+.u-medal-126 {
+    background-position: -163px -110px
+}
+
+.u-medal-127 {
+    background-position: -163px -132px
+}
+
+.u-medal-128 {
+    background-position: 0 -161px
+}
+
+.u-medal-129 {
+    background-position: -22px -161px
+}
+
+.u-medal-130 {
+    background-position: -44px -161px
+}
+
+.u-medal-131 {
+    background-position: -66px -161px
+}
+
+.u-medal-132 {
+    background-position: -88px -161px
+}
+
+.u-medal-133 {
+    background-position: -110px -161px
+}
+
+.u-medal-134 {
+    background-position: -132px -161px
+}
+
+.u-medal-135 {
+    background-position: -110px -227px
+}
+
+.u-medal-136 {
+    background-position: -185px 0
+}
+
+.u-medal-137 {
+    background-position: -185px -22px
+}
+
+.u-medal-138 {
+    background-position: -185px -44px
+}
+
+.u-medal-139 {
+    background-position: -185px -66px
+}
+
+.u-medal-140 {
+    background-position: -185px -88px
+}
+
+.u-medal-141 {
+    background-position: -185px -110px
+}
+
+.u-medal-142 {
+    background-position: -185px -132px
+}
+
+.u-medal-143 {
+    background-position: -185px -154px
+}
+
+.u-medal-144 {
+    background-position: 0 -183px
+}
+
+.u-medal-145 {
+    background-position: -22px -183px
+}
+
+.u-medal-146 {
+    background: url(http://image.cache.xiu8.com/medal/146_s.gif?v=20150630)
+}
+
+.u-medal-147 {
+    background: url(http://image.cache.xiu8.com/medal/147_s.gif?v=20150630)
+}
+
+.u-medal-148 {
+    background: url(http://image.cache.xiu8.com/medal/148_s.gif?v=20150630)
+}
+
+.u-medal-149 {
+    background-position: -44px -183px
+}
+
+.u-medal-150 {
+    background-position: -70px -279px
+}
+
+.u-medal-151 {
+    background-position: -66px -183px
+}
+
+.u-medal-152 {
+    background-position: -88px -183px
+}
+
+.u-medal-153 {
+    background-position: -110px -183px
+}
+
+.u-medal-154 {
+    background-position: -132px -183px
+}
+
+.u-medal-155 {
+    background-position: -154px -183px
+}
+
+.u-medal-156 {
+    background-position: -176px -183px
+}
+
+.u-medal-157 {
+    background-position: -207px 0
+}
+
+.u-medal-158 {
+    background-position: -207px -22px
+}
+
+.u-medal-159 {
+    background-position: -207px -44px
+}
+
+.u-medal-160 {
+    background-position: -207px -66px
+}
+
+.u-medal-161 {
+    background-position: -207px -88px
+}
+
+.u-medal-162 {
+    background-position: -207px -110px
+}
+
+.u-medal-163 {
+    background-position: -207px -132px
+}
+
+.u-medal-164 {
+    background-position: -207px -154px
+}
+
+.u-medal-165 {
+    background-position: -207px -176px
+}
+
+.u-medal-166 {
+    background-position: 0 -205px
+}
+
+.u-medal-167 {
+    background-position: -22px -205px
+}
+
+.u-medal-168 {
+    background-position: -44px -205px
+}
+
+.u-medal-169 {
+    background-position: -66px -205px
+}
+
+.u-medal-170 {
+    background-position: -88px -205px
+}
+
+.u-medal-171 {
+    background-position: -110px -205px
+}
+
+.u-medal-172 {
+    background-position: -132px -205px
+}
+
+.u-medal-173 {
+    background-position: -154px -205px
+}
+
+.u-medal-174 {
+    background-position: -176px -205px
+}
+
+.u-medal-175 {
+    background-position: -198px -205px;
+    width: 23px
+}
+
+.u-medal-176 {
+    background-position: -229px 0
+}
+
+.u-medal-177 {
+    background-position: -229px -22px
+}
+
+.u-medal-178 {
+    background-position: -229px -44px
+}
+
+.u-medal-179 {
+    background-position: -229px -66px
+}
+
+.u-medal-180 {
+    background-position: -229px -88px
+}
+
+.u-medal-293 {
+    background-position: -62px -62px;
+    width: 23px;
+    height: 23px
+}
+
+.u-medal-294 {
+    background-position: -94px -25px
+}
+
+.u-medal-295 {
+    background-position: -93px -48px
+}
+
+.u-medal-296 {
+    background-position: 0 -93px
+}
+
+.u-medal-297 {
+    background-position: -24px -93px
+}
+
+.u-medal-298 {
+    background-position: -48px -93px
+}
+
+.u-medal-300 {
+    background-position: -72px -93px
+}
+
+.u-medal-301 {
+    background-position: -117px 0
+}
+
+.u-medal-302 {
+    background-position: -117px -24px
+}
+
+.u-medal-303 {
+    background-position: -93px 0
+}
+
+.u-medal-304 {
+    background-position: -62px -31px
+}
+
+.u-medal-329 {
+    background-position: -22px -227px
+}
+
+.u-medal-330 {
+    background-position: -44px -227px
+}
+
+.u-medal-332 {
+    background-position: -132px -227px;
+    width: 21px
+}
+
+.u-medal-331 {
+    background-position: -152px -227px
+}
+
+.u-medal-333 {
+    background-position: -74px -251px;
+    width: 24px
+}
+
+.u-medal-336 {
+    background-position: -49px -251px;
+    width: 24px
+}
+
+.u-medal-339 {
+    background-position: -99px -251px
+}
+
+.u-medal-340 {
+    background-position: 0 -251px;
+    width: 24px
+}
+
+.u-medal-341 {
+    background-position: -25px -251px;
+    width: 24px
+}
+
+.u-medal-342, .u-medal-343, .u-medal-344, .u-medal-345, .u-medal-346, .u-medal-347, .u-medal-348, .u-medal-349, .u-medal-350, .u-medal-351, .u-medal-352, .u-medal-353, .u-medal-354, .u-medal-355, .u-medal-356, .u-medal-357, .u-medal-358, .u-medal-359, .u-medal-360, .u-medal-361, .u-medal-362, .u-medal-363, .u-medal-364, .u-medal-365, .u-medal-366, .u-medal-368, .u-medal-369, .u-medal-370, .u-medal-371, .u-medal-372, .u-medal-373, .u-medal-374, .u-medal-375, .u-medal-376, .u-medal-377, .u-medal-378, .u-medal-379, .u-medal-380, .u-medal-381, .u-medal-382, .u-medal-383, .u-medal-384, .u-medal-385, .u-medal-386, .u-medal-387 {
+    background-image: url(/images/room/stamp.png?v=20150630);
+    width: 22px;
+    height: 22px;
+    vertical-align: middle
+}
+
+.u-medal-342 {
+    background-position: -22px 0
+}
+
+.u-medal-343 {
+    background-position: -44px -88px
+}
+
+.u-medal-344 {
+    background-position: 0 -22px
+}
+
+.u-medal-345 {
+    background-position: -22px -22px
+}
+
+.u-medal-346 {
+    background-position: -44px 0
+}
+
+.u-medal-347 {
+    background-position: -44px -22px
+}
+
+.u-medal-348 {
+    background-position: 0 -44px
+}
+
+.u-medal-349 {
+    background-position: -22px -44px
+}
+
+.u-medal-350 {
+    background-position: -44px -44px
+}
+
+.u-medal-351 {
+    background-position: -66px 0
+}
+
+.u-medal-352 {
+    background-position: -66px -22px
+}
+
+.u-medal-353 {
+    background-position: -66px -44px
+}
+
+.u-medal-354 {
+    background-position: 0 -66px
+}
+
+.u-medal-355 {
+    background-position: -22px -66px
+}
+
+.u-medal-356 {
+    background-position: -44px -66px
+}
+
+.u-medal-357 {
+    background-position: -66px -66px
+}
+
+.u-medal-358 {
+    background-position: -88px 0
+}
+
+.u-medal-359 {
+    background-position: -88px -22px
+}
+
+.u-medal-360 {
+    background-position: -88px -44px
+}
+
+.u-medal-361 {
+    background-position: -88px -66px
+}
+
+.u-medal-362 {
+    background-position: 0 -88px
+}
+
+.u-medal-363 {
+    background-position: -22px -88px
+}
+
+.u-medal-364 {
+    background-position: 0 0
+}
+
+.u-medal-365 {
+    background-position: -66px -88px
+}
+
+.u-medal-366 {
+    background-position: -88px -88px
+}
+
+.u-medal-368 {
+    background-position: -110px 0
+}
+
+.u-medal-369 {
+    background-position: -110px -22px
+}
+
+.u-medal-370 {
+    background-position: -110px -44px
+}
+
+.u-medal-371 {
+    background-position: -110px -66px
+}
+
+.u-medal-372 {
+    background-position: -110px -88px
+}
+
+.u-medal-373 {
+    background-position: 0 -110px
+}
+
+.u-medal-374 {
+    background-position: -22px -110px
+}
+
+.u-medal-375 {
+    background-position: -44px -110px
+}
+
+.u-medal-376 {
+    background-position: -66px -110px
+}
+
+.u-medal-377 {
+    background-position: -88px -110px
+}
+
+.u-medal-378 {
+    background-position: -110px -110px
+}
+
+.u-medal-379 {
+    background-position: -132px 0
+}
+
+.u-medal-380 {
+    background-position: -132px -22px
+}
+
+.u-medal-381 {
+    background-position: -132px -44px
+}
+
+.u-medal-382 {
+    background-position: -132px -66px
+}
+
+.u-medal-383 {
+    background-position: -132px -88px
+}
+
+.u-medal-384 {
+    background-position: -132px -110px
+}
+
+.u-medal-385 {
+    background-position: 0 -132px
+}
+
+.u-medal-386 {
+    background-position: -22px -132px
+}
+
+.u-medal-387 {
+    background-position: -44px -132px
+}
+
+.u-medal-g-388 {
+    background-position: 0 -348px
+}
+
+.u-medal-g-389 {
+    background-position: -22px -348px
+}
+
+.u-medal-g-390 {
+    background-position: -46px -348px
+}
+
+.u-medal-g-391 {
+    background-position: -70px -348px
+}
+
+.u-medal-g-392 {
+    background-position: -92px -348px
+}
+
+.u-medal-388 {
+    background-position: 0 -326px
+}
+
+.u-medal-389 {
+    background-position: -22px -326px
+}
+
+.u-medal-390 {
+    background-position: -46px -326px
+}
+
+.u-medal-391 {
+    background-position: -70px -326px
+}
+
+.u-medal-392 {
+    background-position: -92px -326px
+}
+
+.u-medal-393 {
+    background-position: -92px -280px
+}
+
+.u-medal-394 {
+    background-position: -114px -280px
+}
+
+.u-medal-395 {
+    background-position: 0 -402px
+}
+
+.u-medal-396 {
+    background-position: -24px -402px
+}
+
+.u-medal-397 {
+    background-position: -47px -402px
+}
+
+.u-medal-398 {
+    background-position: -70px -402px
+}
+
+.u-medal-399 {
+    background-position: -93px -402px
+}
+
+.u-medal-400 {
+    background-position: -116px -401px
+}
+
+.u-medal-401 {
+    background-position: -139px -401px
+}
+
+.u-medal-402 {
+    background-position: -162px -401px
+}
+
+.u-medal-403 {
+    background-position: -185px -401px
+}
+
+.u-medal-404 {
+    background-position: -208px -401px
+}
+
+.u-medal-405 {
+    background-position: -231px -401px
+}
+
+.u-medal-406 {
+    background-position: 0 -425px
+}
+
+.u-medal-407 {
+    background-position: -24px -425px
+}
+
+.u-medal-408 {
+    background-position: -47px -425px
+}
+
+.u-medal-409 {
+    background-position: -70px -425px
+}
+
+.u-medal-413 {
+    background-position: -93px -425px
+}
+
+.u-medal-410 {
+    background-position: -116px -425px
+}
+
+.u-medal-412 {
+    background-position: -139px -425px
+}
+
+.u-medal-411 {
+    background-position: -162px -425px
+}
+
+.u-medal-414 {
+    background-position: -185px -425px
+}
+
+.u-medal-418 {
+    background-position: -208px -425px
+}
+
+.u-medal-417 {
+    background-position: -231px -425px
+}
+
+.u-medal-416 {
+    background-position: 0 -448px
+}
+
+.u-medal-426 {
+    background-position: -24px -448px
+}
+
+.u-medal-425 {
+    background-position: -47px -448px
+}
+
+.u-medal-427 {
+    background-position: -70px -448px
+}
+
+.u-medal-428 {
+    background-position: -93px -448px
+}
+
+.u-medal-429 {
+    background-position: -116px -448px
+}
+
+.u-medal-430 {
+    background-position: -139px -448px
+}
+
+.u-medal-431 {
+    background-image: url(http://image.cache.xiu8.com/medal/431_s.gif)
+}
+
+.u-medal-432 {
+    background-image: url(http://image.cache.xiu8.com/medal/432_s.gif)
+}
+
+.u-medal-433 {
+    background-image: url(http://image.cache.xiu8.com/medal/433_s.gif)
+}
+
+.u-medal-434 {
+    background-image: url(http://image.cache.xiu8.com/medal/434_s.gif)
+}
+
+.u-medal-435 {
+    background-image: url(http://image.cache.xiu8.com/medal/435_s.gif)
+}
+
+.u-medal-436 {
+    background-position: -162px -447px
+}
+
+.u-medal-437 {
+    background-position: -185px -447px
+}
+
+.u-medal-438 {
+    background-position: 0 -470px
+}
+
+.u-medal-439 {
+    background-position: -24px -470px
+}
+
+.u-medal-440 {
+    background-position: -47px -470px
+}
+
+.u-medal-441 {
+    background-position: -70px -470px
+}
+
+.u-medal-442 {
+    background-position: -93px -470px
+}
+
+.u-medal-443 {
+    background-position: -116px -470px
+}
+
+.u-medal-444 {
+    background-position: -139px -470px
+}
+
+.u-medal-445 {
+    background-position: -162px -470px
+}
+
+.u-medal-446 {
+    background-position: -185px -470px
+}
+
+.u-medal-451 {
+    background-position: -208px -447px
+}
+
+.u-medal-452 {
+    background-position: -208px -470px
+}
+
+.u-medal-453 {
+    background-image: url(http://image.cache.xiu8.com/medal/453_s.gif);
+    width: 22px
+}
+
+.u-medal-454 {
+    background-image: url(http://image.cache.xiu8.com/medal/454_s.gif);
+    width: 22px
+}
+
+.u-medal-455 {
+    background-image: url(http://image.cache.xiu8.com/medal/455_s.gif);
+    width: 22px
+}
+
+.u-medal-456 {
+    background: url(http://image.cache.xiu8.com/medal/456_s.gif) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-458 {
+    background-position: -230px -470px
+}
+
+.u-medal-461 {
+    background-position: 0 -494px
+}
+
+.u-medal-462 {
+    background: url(http://image.cache.xiu8.com/medal/462_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-463 {
+    background: url(http://image.cache.xiu8.com/medal/463_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-464 {
+    background: url(http://image.cache.xiu8.com/medal/464_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-465 {
+    background: url(http://image.cache.xiu8.com/medal/465_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-466 {
+    background: url(http://image.cache.xiu8.com/medal/466_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-467 {
+    background: url(http://image.cache.xiu8.com/medal/467_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-468 {
+    background: url(http://image.cache.xiu8.com/medal/468_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-469 {
+    background: url(http://image.cache.xiu8.com/medal/469_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-470 {
+    background: url(http://image.cache.xiu8.com/medal/470_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-471 {
+    background: url(http://image.cache.xiu8.com/medal/471_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-472 {
+    background: url(http://image.cache.xiu8.com/medal/472_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-473 {
+    background: url(http://image.cache.xiu8.com/medal/473_s.png) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-474 {
+    background-position: -70px -494px;
+    height: 22px
+}
+
+.u-medal-475 {
+    background-position: -93px -494px;
+    height: 22px
+}
+
+.u-medal-476 {
+    background-position: -116px -494px;
+    height: 22px
+}
+
+.u-medal-477 {
+    background: url(http://image.cache.xiu8.com/medal/477_s.gif) center center no-repeat;
+    height: 22px
+}
+
+.u-medal-478 {
+    height: 22px;
+    background-position: 0 -517px
+}
+
+.u-medal-479 {
+    height: 22px;
+    background-position: -23px -517px
+}
+
+.u-medal-480 {
+    height: 22px;
+    background-position: -46px -517px
+}
+
+.u-medal-481 {
+    height: 22px;
+    background-position: -69px -517px
+}
+
+.u-medal-482 {
+    height: 22px;
+    background-position: -92px -517px
+}
+
+.u-medal-483 {
+    height: 22px;
+    background-position: -368px -517px
+}
+
+.u-medal-484 {
+    height: 22px;
+    background-position: -138px -517px
+}
+
+.u-medal-485 {
+    height: 22px;
+    background-position: -161px -517px
+}
+
+.u-medal-g-480 {
+    height: 22px;
+    background-position: -46px -539px
+}
+
+.u-medal-g-481 {
+    height: 22px;
+    background-position: -69px -539px
+}
+
+.u-medal-g-482 {
+    height: 22px;
+    background-position: -92px -539px
+}
+
+.u-medal-g-483 {
+    height: 22px;
+    background-position: -368px -539px
+}
+
+.u-medal-g-484 {
+    height: 22px;
+    background-position: -138px -539px
+}
+
+.u-medal-g-485 {
+    height: 22px;
+    background-position: -161px -539px
+}
+
+.u-medal-g-478 {
+    background-position: 0 -540px
+}
+
+.u-medal-g-479 {
+    background-position: -23px -540px
+}
+
+.u-medal-g-94 {
+    background-position: -116px -348px
+}
+
+.u-medal-g-91, .u-medal-g-92, .u-medal-g-93 {
+    background-position: -138px -348px
+}
+
+.u-medal-g-118 {
+    background-position: -161px -348px
+}
+
+.u-medal-g-119 {
+    background-position: -208px -348px
+}
+
+.u-medal-g-120 {
+    background-position: -186px -348px
+}
+
+.u-medal-g-475 {
+    background-position: -230px -348px
+}

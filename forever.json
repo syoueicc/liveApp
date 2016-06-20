@@ -1,0 +1,7 @@
+{
+    "uid": "app",
+    "append": true,
+    "watch": true,
+    "script": "index.js",
+    "command": "node --harmony_destructuring"
+}
