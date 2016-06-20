@@ -19,7 +19,7 @@ app.use( router.routes() );
 server.listen('9191', () => console.log('server is runing on port: 9191'));
 
 const rooms = {};
-const top1 = {};
+let top1 = null;
 const top23 = [];
 io.on('connection', function(socket) {
 	"use strict";
@@ -36,22 +36,34 @@ io.on('connection', function(socket) {
 		if( _.some(rooms[roomid], user) === false ) rooms[roomid].push(user);
 
 		socket.join(roomid);
-		io.to(roomid).emit("user joined", user, rooms[roomid]);
+		io.to(roomid).emit("user joined", user, rooms[roomid], top1, top23);
 		//socket.broadcast.emit('user joined', user);
 	});
 
 	socket.on('send gift', function(gift, total, user, _room) {
 		const coin = parseInt(gift.coin) * parseInt(total);
 		switch(true) {
-			case coin >= (100*1000) && (!!top1.titme && moment().isAfter( moment(top1.titme).add(3, "minutes") || coin > top1.coin ) ):
-				io.sockets.emit("update Top", {
+			case coin >= (100*1000) && _.isEmpty(top1):
+				top1 = {
 					coin: coin,
 					gift: gift,
 					total: total,
 					user: user,
 					room: _room,
 					time: moment()
-				});
+				};
+				io.sockets.emit("update Top", top1);
+				break;
+			case coin >= (100*1000) && (!!top1.titme && moment().isAfter( moment(top1.titme).add(3, "minutes") || coin > top1.coin ) ):
+				top1 = {
+					coin: coin,
+					gift: gift,
+					total: total,
+					user: user,
+					room: _room,
+					time: moment()
+				};
+				io.sockets.emit("update Top", top1);
 				break;
 			case coin >= (20*1000):
 				if(_.size(top23) >= 2) top23.shift();
@@ -66,6 +78,11 @@ io.on('connection', function(socket) {
 				io.sockets.emit("update Top23", top23);
 				break;
 			default:
+				io.to(roomid).emit("send message", {
+					gift: gift,
+					total: total,
+					type: "gift"
+				});
 				break;
 
 		}

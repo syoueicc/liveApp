@@ -870,7 +870,8 @@
                         </div>
                         <p class="js-top-animation">
                             <span class="date f-r" style="margin-top: 12px">
-                                <span class="js-runtime">
+                                <span class="js-runtime" v-if="!!top">
+                                    {{moment(top.time).add(3, "minutes").diff(moment())}}
                                 </span>
                                 <i class="icon icon-q">
                                 </i>
@@ -2233,9 +2234,11 @@ export default {
            this.socket.emit("add user", this.user); 
         }
         
-        this.socket.on('user joined', function(user, room) {
+        this.socket.on('user joined', function(user, room, top1, top23) {
             self.addChartwarp(_.extend({type: "join"}, user));
             self.userList = room;
+            self.top = top1;
+            self.top23 = top23;
         });
         this.socket.on('send message', function(user) {
             self.addChartwarp(_.extend({type:"msg", time: moment().format("hh:mm")}, user));
@@ -2252,7 +2255,17 @@ export default {
             self.top = top;
         })
     },
+    computed: {
+        getToptimes() {
+            if( _.isEmpty(top) ) return "";
+            let minutes = moment( top.time ).add(3, "minutes").diff(moment());
+            if(minutes <= 0) return "00:00";
+            minutes = parseInt(minutes / 1000);
+            //const 
+        }
+    },
     methods: {
+        moment: moment,
         targeQuick() {
             this.showQuick = !this.showQuick;
         },
@@ -2321,7 +2334,7 @@ export default {
                         if(response.data.code == 0) {
                             self.socket.emit("send gift", self.targetGift, r.total, self.user, self.room);
                             
-                            self.socket.emit('send message', _.extend(r, self.user) );
+                            //self.socket.emit('send message', _.extend(r, self.user) );
                             self.refreshBalance(_.result(response, "data.data[1]"));
                             self.refreshRoom(self.room_id)
                         }else {

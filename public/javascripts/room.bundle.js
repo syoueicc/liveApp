@@ -8,7 +8,7 @@ webpackJsonp([2,4],[
 
 	var _vue2 = _interopRequireDefault(_vue);
 
-	var _room = __webpack_require__(169);
+	var _room = __webpack_require__(146);
 
 	var _room2 = _interopRequireDefault(_room);
 
@@ -31,7 +31,7 @@ webpackJsonp([2,4],[
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {/*!
-	 * Vue.js v1.0.17
+	 * Vue.js v1.0.25
 	 * (c) 2016 Evan You
 	 * Released under the MIT License.
 	 */
@@ -78,6 +78,10 @@ webpackJsonp([2,4],[
 	  delete obj[key];
 	  var ob = obj.__ob__;
 	  if (!ob) {
+	    if (obj._isVue) {
+	      delete obj._data[key];
+	      obj._digest();
+	    }
 	    return;
 	  }
 	  ob.dep.notify();
@@ -317,7 +321,7 @@ webpackJsonp([2,4],[
 	var isArray = Array.isArray;
 
 	/**
-	 * Define a non-enumerable property
+	 * Define a property.
 	 *
 	 * @param {Object} obj
 	 * @param {String} key
@@ -426,8 +430,15 @@ webpackJsonp([2,4],[
 
 	// UA sniffing for working around browser-specific quirks
 	var UA = inBrowser && window.navigator.userAgent.toLowerCase();
+	var isIE = UA && UA.indexOf('trident') > 0;
 	var isIE9 = UA && UA.indexOf('msie 9.0') > 0;
 	var isAndroid = UA && UA.indexOf('android') > 0;
+	var isIos = UA && /(iphone|ipad|ipod|ios)/i.test(UA);
+	var iosVersionMatch = isIos && UA.match(/os ([\d_]+)/);
+	var iosVersion = iosVersionMatch && iosVersionMatch[1].split('_');
+
+	// detecting iOS UIWebView by indexedDB
+	var hasMutationObserverBug = iosVersion && Number(iosVersion[0]) >= 9 && Number(iosVersion[1]) >= 3 && !window.indexedDB;
 
 	var transitionProp = undefined;
 	var transitionEndEvent = undefined;
@@ -468,7 +479,7 @@ webpackJsonp([2,4],[
 	  }
 
 	  /* istanbul ignore if */
-	  if (typeof MutationObserver !== 'undefined') {
+	  if (typeof MutationObserver !== 'undefined' && !hasMutationObserverBug) {
 	    var counter = 1;
 	    var observer = new MutationObserver(nextTickHandler);
 	    var textNode = document.createTextNode(counter);
@@ -497,6 +508,27 @@ webpackJsonp([2,4],[
 	  };
 	})();
 
+	var _Set = undefined;
+	/* istanbul ignore if */
+	if (typeof Set !== 'undefined' && Set.toString().match(/native code/)) {
+	  // use native Set when available.
+	  _Set = Set;
+	} else {
+	  // a non-standard Set polyfill that only works with primitive keys.
+	  _Set = function () {
+	    this.set = Object.create(null);
+	  };
+	  _Set.prototype.has = function (key) {
+	    return this.set[key] !== undefined;
+	  };
+	  _Set.prototype.add = function (key) {
+	    this.set[key] = 1;
+	  };
+	  _Set.prototype.clear = function () {
+	    this.set = Object.create(null);
+	  };
+	}
+
 	function Cache(limit) {
 	  this.size = 0;
 	  this.limit = limit;
@@ -519,12 +551,12 @@ webpackJsonp([2,4],[
 
 	p.put = function (key, value) {
 	  var removed;
-	  if (this.size === this.limit) {
-	    removed = this.shift();
-	  }
 
 	  var entry = this.get(key, true);
 	  if (!entry) {
+	    if (this.size === this.limit) {
+	      removed = this.shift();
+	    }
 	    entry = {
 	      key: key
 	    };
@@ -676,7 +708,7 @@ webpackJsonp([2,4],[
 	 *   ]
 	 * }
 	 *
-	 * @param {String} str
+	 * @param {String} s
 	 * @return {Object}
 	 */
 
@@ -768,8 +800,8 @@ webpackJsonp([2,4],[
 	  var close = escapeRegex(config.delimiters[1]);
 	  var unsafeOpen = escapeRegex(config.unsafeDelimiters[0]);
 	  var unsafeClose = escapeRegex(config.unsafeDelimiters[1]);
-	  tagRE = new RegExp(unsafeOpen + '(.+?)' + unsafeClose + '|' + open + '(.+?)' + close, 'g');
-	  htmlRE = new RegExp('^' + unsafeOpen + '.*' + unsafeClose + '$');
+	  tagRE = new RegExp(unsafeOpen + '((?:.|\\n)+?)' + unsafeClose + '|' + open + '((?:.|\\n)+?)' + close, 'g');
+	  htmlRE = new RegExp('^' + unsafeOpen + '((?:.|\\n)+?)' + unsafeClose + '$');
 	  // reset cache
 	  cache = new Cache(1000);
 	}
@@ -793,7 +825,6 @@ webpackJsonp([2,4],[
 	  if (hit) {
 	    return hit;
 	  }
-	  text = text.replace(/\n/g, '');
 	  if (!tagRE.test(text)) {
 	    return null;
 	  }
@@ -938,6 +969,13 @@ webpackJsonp([2,4],[
 	  warnExpressionErrors: true,
 
 	  /**
+	   * Whether to allow devtools inspection.
+	   * Disabled by default in production builds.
+	   */
+
+	  devtools: process.env.NODE_ENV !== 'production',
+
+	  /**
 	   * Internal flag to indicate the delimiters have been
 	   * changed.
 	   *
@@ -1002,22 +1040,21 @@ webpackJsonp([2,4],[
 	});
 
 	var warn = undefined;
+	var formatComponentName = undefined;
 
 	if (process.env.NODE_ENV !== 'production') {
 	  (function () {
 	    var hasConsole = typeof console !== 'undefined';
-	    warn = function (msg, e) {
-	      if (hasConsole && (!config.silent || config.debug)) {
-	        console.warn('[Vue warn]: ' + msg);
-	        /* istanbul ignore if */
-	        if (config.debug) {
-	          if (e) {
-	            throw e;
-	          } else {
-	            console.warn(new Error('Warning Stack Trace').stack);
-	          }
-	        }
+
+	    warn = function (msg, vm) {
+	      if (hasConsole && !config.silent) {
+	        console.error('[Vue warn]: ' + msg + (vm ? formatComponentName(vm) : ''));
 	      }
+	    };
+
+	    formatComponentName = function (vm) {
+	      var name = vm._isVue ? vm.$options.name : vm.name;
+	      return name ? ' (found in component: <' + hyphenate(name) + '>)' : '';
 	    };
 	  })();
 	}
@@ -1136,8 +1173,9 @@ webpackJsonp([2,4],[
 	 */
 
 	function inDoc(node) {
-	  var doc = document.documentElement;
-	  var parent = node && node.parentNode;
+	  if (!node) return false;
+	  var doc = node.ownerDocument.documentElement;
+	  var parent = node.parentNode;
 	  return doc === node || doc === parent || !!(parent && parent.nodeType === 1 && doc.contains(parent));
 	}
 
@@ -1275,6 +1313,22 @@ webpackJsonp([2,4],[
 	}
 
 	/**
+	 * For IE9 compat: when both class and :class are present
+	 * getAttribute('class') returns wrong value...
+	 *
+	 * @param {Element} el
+	 * @return {String}
+	 */
+
+	function getClass(el) {
+	  var classname = el.className;
+	  if (typeof classname === 'object') {
+	    classname = classname.baseVal || '';
+	  }
+	  return classname;
+	}
+
+	/**
 	 * In IE9, setAttribute('class') will result in empty class
 	 * if the element also has the :class attribute; However in
 	 * PhantomJS, setting `className` does not work on SVG elements...
@@ -1304,7 +1358,7 @@ webpackJsonp([2,4],[
 	  if (el.classList) {
 	    el.classList.add(cls);
 	  } else {
-	    var cur = ' ' + (el.getAttribute('class') || '') + ' ';
+	    var cur = ' ' + getClass(el) + ' ';
 	    if (cur.indexOf(' ' + cls + ' ') < 0) {
 	      setClass(el, (cur + cls).trim());
 	    }
@@ -1322,7 +1376,7 @@ webpackJsonp([2,4],[
 	  if (el.classList) {
 	    el.classList.remove(cls);
 	  } else {
-	    var cur = ' ' + (el.getAttribute('class') || '') + ' ';
+	    var cur = ' ' + getClass(el) + ' ';
 	    var tar = ' ' + cls + ' ';
 	    while (cur.indexOf(tar) >= 0) {
 	      cur = cur.replace(tar, ' ');
@@ -1521,8 +1575,8 @@ webpackJsonp([2,4],[
 	  }
 	}
 
-	var commonTagRE = /^(div|p|span|img|a|b|i|br|ul|ol|li|h1|h2|h3|h4|h5|h6|code|pre|table|th|td|tr|form|label|input|select|option|nav|article|section|header|footer)$/;
-	var reservedTagRE = /^(slot|partial|component)$/;
+	var commonTagRE = /^(div|p|span|img|a|b|i|br|ul|ol|li|h1|h2|h3|h4|h5|h6|code|pre|table|th|td|tr|form|label|input|select|option|nav|article|section|header|footer)$/i;
+	var reservedTagRE = /^(slot|partial|component)$/i;
 
 	var isUnknownElement = undefined;
 	if (process.env.NODE_ENV !== 'production') {
@@ -1534,7 +1588,8 @@ webpackJsonp([2,4],[
 	      return (/HTMLUnknownElement/.test(el.toString()) &&
 	        // Chrome returns unknown for several HTML5 elements.
 	        // https://code.google.com/p/chromium/issues/detail?id=540526
-	        !/^(data|time|rtc|rb)$/.test(tag)
+	        // Firefox returns unknown for some "Interactive elements."
+	        !/^(data|time|rtc|rb|details|dialog|summary)$/.test(tag)
 	      );
 	    }
 	  };
@@ -1556,7 +1611,7 @@ webpackJsonp([2,4],[
 	    if (resolveAsset(options, 'components', tag)) {
 	      return { id: tag };
 	    } else {
-	      var is = hasAttrs && getIsBinding(el);
+	      var is = hasAttrs && getIsBinding(el, options);
 	      if (is) {
 	        return is;
 	      } else if (process.env.NODE_ENV !== 'production') {
@@ -1569,7 +1624,7 @@ webpackJsonp([2,4],[
 	      }
 	    }
 	  } else if (hasAttrs) {
-	    return getIsBinding(el);
+	    return getIsBinding(el, options);
 	  }
 	}
 
@@ -1577,114 +1632,24 @@ webpackJsonp([2,4],[
 	 * Get "is" binding from an element.
 	 *
 	 * @param {Element} el
+	 * @param {Object} options
 	 * @return {Object|undefined}
 	 */
 
-	function getIsBinding(el) {
+	function getIsBinding(el, options) {
 	  // dynamic syntax
-	  var exp = getAttr(el, 'is');
+	  var exp = el.getAttribute('is');
 	  if (exp != null) {
-	    return { id: exp };
+	    if (resolveAsset(options, 'components', exp)) {
+	      el.removeAttribute('is');
+	      return { id: exp };
+	    }
 	  } else {
 	    exp = getBindAttr(el, 'is');
 	    if (exp != null) {
 	      return { id: exp, dynamic: true };
 	    }
 	  }
-	}
-
-	/**
-	 * Set a prop's initial value on a vm and its data object.
-	 *
-	 * @param {Vue} vm
-	 * @param {Object} prop
-	 * @param {*} value
-	 */
-
-	function initProp(vm, prop, value) {
-	  var key = prop.path;
-	  value = coerceProp(prop, value);
-	  vm[key] = vm._data[key] = assertProp(prop, value) ? value : undefined;
-	}
-
-	/**
-	 * Assert whether a prop is valid.
-	 *
-	 * @param {Object} prop
-	 * @param {*} value
-	 */
-
-	function assertProp(prop, value) {
-	  if (!prop.options.required && ( // non-required
-	  prop.raw === null || // abscent
-	  value == null) // null or undefined
-	  ) {
-	      return true;
-	    }
-	  var options = prop.options;
-	  var type = options.type;
-	  var valid = true;
-	  var expectedType;
-	  if (type) {
-	    if (type === String) {
-	      expectedType = 'string';
-	      valid = typeof value === expectedType;
-	    } else if (type === Number) {
-	      expectedType = 'number';
-	      valid = typeof value === 'number';
-	    } else if (type === Boolean) {
-	      expectedType = 'boolean';
-	      valid = typeof value === 'boolean';
-	    } else if (type === Function) {
-	      expectedType = 'function';
-	      valid = typeof value === 'function';
-	    } else if (type === Object) {
-	      expectedType = 'object';
-	      valid = isPlainObject(value);
-	    } else if (type === Array) {
-	      expectedType = 'array';
-	      valid = isArray(value);
-	    } else {
-	      valid = value instanceof type;
-	    }
-	  }
-	  if (!valid) {
-	    process.env.NODE_ENV !== 'production' && warn('Invalid prop: type check failed for ' + prop.path + '="' + prop.raw + '".' + ' Expected ' + formatType(expectedType) + ', got ' + formatValue(value) + '.');
-	    return false;
-	  }
-	  var validator = options.validator;
-	  if (validator) {
-	    if (!validator(value)) {
-	      process.env.NODE_ENV !== 'production' && warn('Invalid prop: custom validator check failed for ' + prop.path + '="' + prop.raw + '"');
-	      return false;
-	    }
-	  }
-	  return true;
-	}
-
-	/**
-	 * Force parsing value with coerce option.
-	 *
-	 * @param {*} value
-	 * @param {Object} options
-	 * @return {*}
-	 */
-
-	function coerceProp(prop, value) {
-	  var coerce = prop.options.coerce;
-	  if (!coerce) {
-	    return value;
-	  }
-	  // coerce is a function
-	  return coerce(value);
-	}
-
-	function formatType(val) {
-	  return val ? val.charAt(0).toUpperCase() + val.slice(1) : 'custom type';
-	}
-
-	function formatValue(val) {
-	  return Object.prototype.toString.call(val).slice(8, -1);
 	}
 
 	/**
@@ -1730,7 +1695,7 @@ webpackJsonp([2,4],[
 	      return parentVal;
 	    }
 	    if (typeof childVal !== 'function') {
-	      process.env.NODE_ENV !== 'production' && warn('The "data" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.');
+	      process.env.NODE_ENV !== 'production' && warn('The "data" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.', vm);
 	      return parentVal;
 	    }
 	    if (!parentVal) {
@@ -1764,7 +1729,7 @@ webpackJsonp([2,4],[
 
 	strats.el = function (parentVal, childVal, vm) {
 	  if (!vm && childVal && typeof childVal !== 'function') {
-	    process.env.NODE_ENV !== 'production' && warn('The "el" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.');
+	    process.env.NODE_ENV !== 'production' && warn('The "el" option should be a function ' + 'that returns a per-instance value in component ' + 'definitions.', vm);
 	    return;
 	  }
 	  var ret = childVal || parentVal;
@@ -1781,15 +1746,6 @@ webpackJsonp([2,4],[
 	};
 
 	/**
-	 * 0.11 deprecation warning
-	 */
-
-	strats.paramAttributes = function () {
-	  /* istanbul ignore next */
-	  process.env.NODE_ENV !== 'production' && warn('"paramAttributes" option has been deprecated in 0.12. ' + 'Use "props" instead.');
-	};
-
-	/**
 	 * Assets
 	 *
 	 * When a vm is present (instance creation), we need to do
@@ -1798,7 +1754,7 @@ webpackJsonp([2,4],[
 	 */
 
 	function mergeAssets(parentVal, childVal) {
-	  var res = Object.create(parentVal);
+	  var res = Object.create(parentVal || null);
 	  return childVal ? extend(res, guardArrayAssets(childVal)) : res;
 	}
 
@@ -1957,11 +1913,21 @@ webpackJsonp([2,4],[
 	function mergeOptions(parent, child, vm) {
 	  guardComponents(child);
 	  guardProps(child);
+	  if (process.env.NODE_ENV !== 'production') {
+	    if (child.propsData && !vm) {
+	      warn('propsData can only be used as an instantiation option.');
+	    }
+	  }
 	  var options = {};
 	  var key;
+	  if (child['extends']) {
+	    parent = typeof child['extends'] === 'function' ? mergeOptions(parent, child['extends'].options, vm) : mergeOptions(parent, child['extends'], vm);
+	  }
 	  if (child.mixins) {
 	    for (var i = 0, l = child.mixins.length; i < l; i++) {
-	      parent = mergeOptions(parent, child.mixins[i], vm);
+	      var mixin = child.mixins[i];
+	      var mixinOptions = mixin.prototype instanceof Vue ? mixin.options : mixin;
+	      parent = mergeOptions(parent, mixinOptions, vm);
 	    }
 	  }
 	  for (key in parent) {
@@ -1987,31 +1953,26 @@ webpackJsonp([2,4],[
 	 * @param {Object} options
 	 * @param {String} type
 	 * @param {String} id
+	 * @param {Boolean} warnMissing
 	 * @return {Object|Function}
 	 */
 
-	function resolveAsset(options, type, id) {
+	function resolveAsset(options, type, id, warnMissing) {
 	  /* istanbul ignore if */
 	  if (typeof id !== 'string') {
 	    return;
 	  }
 	  var assets = options[type];
 	  var camelizedId;
-	  return assets[id] ||
+	  var res = assets[id] ||
 	  // camelCase ID
 	  assets[camelizedId = camelize(id)] ||
 	  // Pascal Case ID
 	  assets[camelizedId.charAt(0).toUpperCase() + camelizedId.slice(1)];
-	}
-
-	/**
-	 * Assert asset exists
-	 */
-
-	function assertAsset(val, type, id) {
-	  if (!val) {
-	    process.env.NODE_ENV !== 'production' && warn('Failed to resolve ' + type + ': ' + id);
+	  if (process.env.NODE_ENV !== 'production' && warnMissing && !res) {
+	    warn('Failed to resolve ' + type.slice(0, -1) + ': ' + id, options);
 	  }
+	  return res;
 	}
 
 	var uid$1 = 0;
@@ -2128,10 +2089,9 @@ webpackJsonp([2,4],[
 	});
 
 	/**
-	 * Convenience method to remove the element at given index.
+	 * Convenience method to remove the element at given index or target element reference.
 	 *
-	 * @param {Number} index
-	 * @param {*} val
+	 * @param {*} item
 	 */
 
 	def(arrayProto, '$remove', function $remove(item) {
@@ -2144,6 +2104,24 @@ webpackJsonp([2,4],[
 	});
 
 	var arrayKeys = Object.getOwnPropertyNames(arrayMethods);
+
+	/**
+	 * By default, when a reactive property is set, the new value is
+	 * also converted to become reactive. However in certain cases, e.g.
+	 * v-for scope alias and props, we don't want to force conversion
+	 * because the value may be a nested value under a frozen data structure.
+	 *
+	 * So whenever we want to set a reactive property without forcing
+	 * conversion on the new value, we wrap that call inside this function.
+	 */
+
+	var shouldConvert = true;
+
+	function withoutConversion(fn) {
+	  shouldConvert = false;
+	  fn();
+	  shouldConvert = true;
+	}
 
 	/**
 	 * Observer class that are attached to each observed
@@ -2240,7 +2218,7 @@ webpackJsonp([2,4],[
 	 * the prototype chain using __proto__
 	 *
 	 * @param {Object|Array} target
-	 * @param {Object} proto
+	 * @param {Object} src
 	 */
 
 	function protoAugment(target, src) {
@@ -2282,7 +2260,7 @@ webpackJsonp([2,4],[
 	  var ob;
 	  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
 	    ob = value.__ob__;
-	  } else if ((isArray(value) || isPlainObject(value)) && Object.isExtensible(value) && !value._isVue) {
+	  } else if (shouldConvert && (isArray(value) || isPlainObject(value)) && Object.isExtensible(value) && !value._isVue) {
 	    ob = new Observer(value);
 	  }
 	  if (ob && vm) {
@@ -2377,13 +2355,19 @@ webpackJsonp([2,4],[
 		hasProto: hasProto,
 		inBrowser: inBrowser,
 		devtools: devtools,
+		isIE: isIE,
 		isIE9: isIE9,
 		isAndroid: isAndroid,
+		isIos: isIos,
+		iosVersionMatch: iosVersionMatch,
+		iosVersion: iosVersion,
+		hasMutationObserverBug: hasMutationObserverBug,
 		get transitionProp () { return transitionProp; },
 		get transitionEndEvent () { return transitionEndEvent; },
 		get animationProp () { return animationProp; },
 		get animationEndEvent () { return animationEndEvent; },
 		nextTick: nextTick,
+		get _Set () { return _Set; },
 		query: query,
 		inDoc: inDoc,
 		getAttr: getAttr,
@@ -2410,11 +2394,7 @@ webpackJsonp([2,4],[
 		getOuterHTML: getOuterHTML,
 		mergeOptions: mergeOptions,
 		resolveAsset: resolveAsset,
-		assertAsset: assertAsset,
 		checkComponentAttr: checkComponentAttr,
-		initProp: initProp,
-		assertProp: assertProp,
-		coerceProp: coerceProp,
 		commonTagRE: commonTagRE,
 		reservedTagRE: reservedTagRE,
 		get warn () { return warn; }
@@ -2493,13 +2473,6 @@ webpackJsonp([2,4],[
 	      this.$parent.$children.push(this);
 	    }
 
-	    // save raw constructor data before merge
-	    // so that we know which properties are provided at
-	    // instantiation.
-	    if (process.env.NODE_ENV !== 'production') {
-	      this._runtimeData = options.data;
-	    }
-
 	    // merge options.
 	    options = this.$options = mergeOptions(this.constructor.options, options, this);
 
@@ -2507,7 +2480,7 @@ webpackJsonp([2,4],[
 	    this._updateRef();
 
 	    // initialize data as empty object.
-	    // it will be filled up in _initScope().
+	    // it will be filled up in _initData().
 	    this._data = {};
 
 	    // call init hook
@@ -2802,8 +2775,8 @@ webpackJsonp([2,4],[
 
 	var warnNonExistent;
 	if (process.env.NODE_ENV !== 'production') {
-	  warnNonExistent = function (path) {
-	    warn('You are setting a non-existent path "' + path.raw + '" ' + 'on a vm instance. Consider pre-initializing the property ' + 'with the "data" option for more reliable reactivity ' + 'and better performance.');
+	  warnNonExistent = function (path, vm) {
+	    warn('You are setting a non-existent path "' + path.raw + '" ' + 'on a vm instance. Consider pre-initializing the property ' + 'with the "data" option for more reliable reactivity ' + 'and better performance.', vm);
 	  };
 	}
 
@@ -2835,7 +2808,7 @@ webpackJsonp([2,4],[
 	      if (!isObject(obj)) {
 	        obj = {};
 	        if (process.env.NODE_ENV !== 'production' && last._isVue) {
-	          warnNonExistent(path);
+	          warnNonExistent(path, last);
 	        }
 	        set(last, key, obj);
 	      }
@@ -2846,7 +2819,7 @@ webpackJsonp([2,4],[
 	        obj[key] = val;
 	      } else {
 	        if (process.env.NODE_ENV !== 'production' && obj._isVue) {
-	          warnNonExistent(path);
+	          warnNonExistent(path, obj);
 	        }
 	        set(obj, key, val);
 	      }
@@ -2867,7 +2840,7 @@ webpackJsonp([2,4],[
 	var allowedKeywordsRE = new RegExp('^(' + allowedKeywords.replace(/,/g, '\\b|') + '\\b)');
 
 	// keywords that don't make sense inside expressions
-	var improperKeywords = 'break,case,class,catch,const,continue,debugger,default,' + 'delete,do,else,export,extends,finally,for,function,if,' + 'import,in,instanceof,let,return,super,switch,throw,try,' + 'var,while,with,yield,enum,await,implements,package,' + 'proctected,static,interface,private,public';
+	var improperKeywords = 'break,case,class,catch,const,continue,debugger,default,' + 'delete,do,else,export,extends,finally,for,function,if,' + 'import,in,instanceof,let,return,super,switch,throw,try,' + 'var,while,with,yield,enum,await,implements,package,' + 'protected,static,interface,private,public';
 	var improperKeywordsRE = new RegExp('^(' + improperKeywords.replace(/,/g, '\\b|') + '\\b)');
 
 	var wsRE = /\s/g;
@@ -2876,7 +2849,9 @@ webpackJsonp([2,4],[
 	var restoreRE = /"(\d+)"/g;
 	var pathTestRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['.*?'\]|\[".*?"\]|\[\d+\]|\[[A-Za-z_$][\w$]*\])*$/;
 	var identRE = /[^\w$\.](?:[A-Za-z_$][\w$]*)/g;
-	var booleanLiteralRE = /^(?:true|false)$/;
+	var literalValueRE$1 = /^(?:true|false|null|undefined|Infinity|NaN)$/;
+
+	function noop() {}
 
 	/**
 	 * Save / Rewrite / Restore
@@ -2958,7 +2933,7 @@ webpackJsonp([2,4],[
 	  // save strings and object literal keys
 	  var body = exp.replace(saveRE, save).replace(wsRE, '');
 	  // rewrite all paths
-	  // pad 1 space here becaue the regex matches 1 extra char
+	  // pad 1 space here because the regex matches 1 extra char
 	  body = (' ' + body).replace(identRE, rewrite).replace(restoreRE, restore);
 	  return makeGetterFn(body);
 	}
@@ -2979,7 +2954,15 @@ webpackJsonp([2,4],[
 	    return new Function('scope', 'return ' + body + ';');
 	    /* eslint-enable no-new-func */
 	  } catch (e) {
-	    process.env.NODE_ENV !== 'production' && warn('Invalid expression. ' + 'Generated function body: ' + body);
+	    if (process.env.NODE_ENV !== 'production') {
+	      /* istanbul ignore if */
+	      if (e.toString().match(/unsafe-eval|CSP/)) {
+	        warn('It seems you are using the default build of Vue.js in an environment ' + 'with Content Security Policy that prohibits unsafe-eval. ' + 'Use the CSP-compliant build instead: ' + 'http://vuejs.org/guide/installation.html#CSP-compliant-build');
+	      } else {
+	        warn('Invalid expression. ' + 'Generated function body: ' + body);
+	      }
+	    }
+	    return noop;
 	  }
 	}
 
@@ -3041,8 +3024,8 @@ webpackJsonp([2,4],[
 
 	function isSimplePath(exp) {
 	  return pathTestRE.test(exp) &&
-	  // don't treat true/false as paths
-	  !booleanLiteralRE.test(exp) &&
+	  // don't treat literal values as paths
+	  !literalValueRE$1.test(exp) &&
 	  // Math constants e.g. Math.PI, Math.E etc.
 	  exp.slice(0, 5) !== 'Math.';
 	}
@@ -3058,23 +3041,23 @@ webpackJsonp([2,4],[
 	// before user watchers so that when user watchers are
 	// triggered, the DOM would have already been in updated
 	// state.
+
 	var queue = [];
 	var userQueue = [];
 	var has = {};
 	var circular = {};
 	var waiting = false;
-	var internalQueueDepleted = false;
 
 	/**
 	 * Reset the batcher's state.
 	 */
 
 	function resetBatcherState() {
-	  queue = [];
-	  userQueue = [];
+	  queue.length = 0;
+	  userQueue.length = 0;
 	  has = {};
 	  circular = {};
-	  waiting = internalQueueDepleted = false;
+	  waiting = false;
 	}
 
 	/**
@@ -3082,15 +3065,26 @@ webpackJsonp([2,4],[
 	 */
 
 	function flushBatcherQueue() {
-	  runBatcherQueue(queue);
-	  internalQueueDepleted = true;
-	  runBatcherQueue(userQueue);
-	  // dev tool hook
-	  /* istanbul ignore if */
-	  if (devtools) {
-	    devtools.emit('flush');
+	  var _again = true;
+
+	  _function: while (_again) {
+	    _again = false;
+
+	    runBatcherQueue(queue);
+	    runBatcherQueue(userQueue);
+	    // user watchers triggered more watchers,
+	    // keep flushing until it depletes
+	    if (queue.length) {
+	      _again = true;
+	      continue _function;
+	    }
+	    // dev tool hook
+	    /* istanbul ignore if */
+	    if (devtools && config.devtools) {
+	      devtools.emit('flush');
+	    }
+	    resetBatcherState();
 	  }
-	  resetBatcherState();
 	}
 
 	/**
@@ -3111,11 +3105,12 @@ webpackJsonp([2,4],[
 	    if (process.env.NODE_ENV !== 'production' && has[id] != null) {
 	      circular[id] = (circular[id] || 0) + 1;
 	      if (circular[id] > config._maxUpdateCount) {
-	        queue.splice(has[id], 1);
-	        warn('You may have an infinite update loop for watcher ' + 'with expression: ' + watcher.expression);
+	        warn('You may have an infinite update loop for watcher ' + 'with expression "' + watcher.expression + '"', watcher.vm);
+	        break;
 	      }
 	    }
 	  }
+	  queue.length = 0;
 	}
 
 	/**
@@ -3132,12 +3127,6 @@ webpackJsonp([2,4],[
 	function pushWatcher(watcher) {
 	  var id = watcher.id;
 	  if (has[id] == null) {
-	    // if an internal watcher is pushed, but the internal
-	    // queue is already depleted, we run it immediately.
-	    if (internalQueueDepleted && !watcher.user) {
-	      watcher.run();
-	      return;
-	    }
 	    // push watcher into appropriate queue
 	    var q = watcher.user ? userQueue : queue;
 	    has[id] = q.length;
@@ -3158,7 +3147,7 @@ webpackJsonp([2,4],[
 	 * This is used for both the $watch() api and directives.
 	 *
 	 * @param {Vue} vm
-	 * @param {String} expression
+	 * @param {String|Function} expOrFn
 	 * @param {Function} cb
 	 * @param {Object} options
 	 *                 - {Array} filters
@@ -3179,13 +3168,15 @@ webpackJsonp([2,4],[
 	  var isFn = typeof expOrFn === 'function';
 	  this.vm = vm;
 	  vm._watchers.push(this);
-	  this.expression = isFn ? expOrFn.toString() : expOrFn;
+	  this.expression = expOrFn;
 	  this.cb = cb;
 	  this.id = ++uid$2; // uid for batching
 	  this.active = true;
 	  this.dirty = this.lazy; // for lazy watchers
-	  this.deps = Object.create(null);
-	  this.newDeps = null;
+	  this.deps = [];
+	  this.newDeps = [];
+	  this.depIds = new _Set();
+	  this.newDepIds = new _Set();
 	  this.prevError = null; // for async error stacks
 	  // parse expression for getter/setter
 	  if (isFn) {
@@ -3203,23 +3194,6 @@ webpackJsonp([2,4],[
 	}
 
 	/**
-	 * Add a dependency to this directive.
-	 *
-	 * @param {Dep} dep
-	 */
-
-	Watcher.prototype.addDep = function (dep) {
-	  var id = dep.id;
-	  if (!this.newDeps[id]) {
-	    this.newDeps[id] = dep;
-	    if (!this.deps[id]) {
-	      this.deps[id] = dep;
-	      dep.addSub(this);
-	    }
-	  }
-	};
-
-	/**
 	 * Evaluate the getter, and re-collect dependencies.
 	 */
 
@@ -3231,7 +3205,7 @@ webpackJsonp([2,4],[
 	    value = this.getter.call(scope, scope);
 	  } catch (e) {
 	    if (process.env.NODE_ENV !== 'production' && config.warnExpressionErrors) {
-	      warn('Error when evaluating expression "' + this.expression + '". ' + (config.debug ? '' : 'Turn on debug mode to see stack trace.'), e);
+	      warn('Error when evaluating expression ' + '"' + this.expression + '": ' + e.toString(), this.vm);
 	    }
 	  }
 	  // "touch" every property so they are all tracked as
@@ -3267,14 +3241,14 @@ webpackJsonp([2,4],[
 	    this.setter.call(scope, scope, value);
 	  } catch (e) {
 	    if (process.env.NODE_ENV !== 'production' && config.warnExpressionErrors) {
-	      warn('Error when evaluating setter "' + this.expression + '"', e);
+	      warn('Error when evaluating setter ' + '"' + this.expression + '": ' + e.toString(), this.vm);
 	    }
 	  }
 	  // two-way sync for v-for alias
 	  var forContext = scope.$forContext;
 	  if (forContext && forContext.alias === this.expression) {
 	    if (forContext.filters) {
-	      process.env.NODE_ENV !== 'production' && warn('It seems you are using two-way binding on ' + 'a v-for alias (' + this.expression + '), and the ' + 'v-for has filters. This will not work properly. ' + 'Either remove the filters or use an array of ' + 'objects and bind to object properties instead.');
+	      process.env.NODE_ENV !== 'production' && warn('It seems you are using two-way binding on ' + 'a v-for alias (' + this.expression + '), and the ' + 'v-for has filters. This will not work properly. ' + 'Either remove the filters or use an array of ' + 'objects and bind to object properties instead.', this.vm);
 	      return;
 	    }
 	    forContext._withLock(function () {
@@ -3294,7 +3268,23 @@ webpackJsonp([2,4],[
 
 	Watcher.prototype.beforeGet = function () {
 	  Dep.target = this;
-	  this.newDeps = Object.create(null);
+	};
+
+	/**
+	 * Add a dependency to this directive.
+	 *
+	 * @param {Dep} dep
+	 */
+
+	Watcher.prototype.addDep = function (dep) {
+	  var id = dep.id;
+	  if (!this.newDepIds.has(id)) {
+	    this.newDepIds.add(id);
+	    this.newDeps.push(dep);
+	    if (!this.depIds.has(id)) {
+	      dep.addSub(this);
+	    }
+	  }
 	};
 
 	/**
@@ -3303,15 +3293,21 @@ webpackJsonp([2,4],[
 
 	Watcher.prototype.afterGet = function () {
 	  Dep.target = null;
-	  var ids = Object.keys(this.deps);
-	  var i = ids.length;
+	  var i = this.deps.length;
 	  while (i--) {
-	    var id = ids[i];
-	    if (!this.newDeps[id]) {
-	      this.deps[id].removeSub(this);
+	    var dep = this.deps[i];
+	    if (!this.newDepIds.has(dep.id)) {
+	      dep.removeSub(this);
 	    }
 	  }
+	  var tmp = this.depIds;
+	  this.depIds = this.newDepIds;
+	  this.newDepIds = tmp;
+	  this.newDepIds.clear();
+	  tmp = this.deps;
 	  this.deps = this.newDeps;
+	  this.newDeps = tmp;
+	  this.newDeps.length = 0;
 	};
 
 	/**
@@ -3399,10 +3395,9 @@ webpackJsonp([2,4],[
 	 */
 
 	Watcher.prototype.depend = function () {
-	  var depIds = Object.keys(this.deps);
-	  var i = depIds.length;
+	  var i = this.deps.length;
 	  while (i--) {
-	    this.deps[depIds[i]].depend();
+	    this.deps[i].depend();
 	  }
 	};
 
@@ -3419,10 +3414,9 @@ webpackJsonp([2,4],[
 	    if (!this.vm._isBeingDestroyed && !this.vm._vForRemoving) {
 	      this.vm._watchers.$remove(this);
 	    }
-	    var depIds = Object.keys(this.deps);
-	    var i = depIds.length;
+	    var i = this.deps.length;
 	    while (i--) {
-	      this.deps[depIds[i]].removeSub(this);
+	      this.deps[i].removeSub(this);
 	    }
 	    this.active = false;
 	    this.vm = this.cb = this.value = null;
@@ -3437,15 +3431,33 @@ webpackJsonp([2,4],[
 	 * @param {*} val
 	 */
 
-	function traverse(val) {
-	  var i, keys;
-	  if (isArray(val)) {
-	    i = val.length;
-	    while (i--) traverse(val[i]);
-	  } else if (isObject(val)) {
-	    keys = Object.keys(val);
-	    i = keys.length;
-	    while (i--) traverse(val[keys[i]]);
+	var seenObjects = new _Set();
+	function traverse(val, seen) {
+	  var i = undefined,
+	      keys = undefined;
+	  if (!seen) {
+	    seen = seenObjects;
+	    seen.clear();
+	  }
+	  var isA = isArray(val);
+	  var isO = isObject(val);
+	  if (isA || isO) {
+	    if (val.__ob__) {
+	      var depId = val.__ob__.dep.id;
+	      if (seen.has(depId)) {
+	        return;
+	      } else {
+	        seen.add(depId);
+	      }
+	    }
+	    if (isA) {
+	      i = val.length;
+	      while (i--) traverse(val[i], seen);
+	    } else if (isO) {
+	      keys = Object.keys(val);
+	      i = keys.length;
+	      while (i--) traverse(val[keys[i]], seen);
+	    }
 	  }
 	}
 
@@ -3490,8 +3502,9 @@ webpackJsonp([2,4],[
 	  return isTemplate(node) && isFragment(node.content);
 	}
 
-	var tagRE$1 = /<([\w:]+)/;
+	var tagRE$1 = /<([\w:-]+)/;
 	var entityRE = /&#?\w+?;/;
+	var commentRE = /<!--/;
 
 	/**
 	 * Convert a string template to a DocumentFragment.
@@ -3514,8 +3527,9 @@ webpackJsonp([2,4],[
 	  var frag = document.createDocumentFragment();
 	  var tagMatch = templateString.match(tagRE$1);
 	  var entityMatch = entityRE.test(templateString);
+	  var commentMatch = commentRE.test(templateString);
 
-	  if (!tagMatch && !entityMatch) {
+	  if (!tagMatch && !entityMatch && !commentMatch) {
 	    // text only, return a single text node.
 	    frag.appendChild(document.createTextNode(templateString));
 	  } else {
@@ -3554,10 +3568,13 @@ webpackJsonp([2,4],[
 
 	function nodeToFragment(node) {
 	  // if its a template tag and the browser supports it,
-	  // its content is already a document fragment.
+	  // its content is already a document fragment. However, iOS Safari has
+	  // bug when using directly cloned template content with touch
+	  // events and can cause crashes when the nodes are removed from DOM, so we
+	  // have to treat template elements as string templates. (#2805)
+	  /* istanbul ignore if */
 	  if (isRealTemplate(node)) {
-	    trimNode(node.content);
-	    return node.content;
+	    return stringToFragment(node.innerHTML);
 	  }
 	  // script template
 	  if (node.tagName === 'SCRIPT') {
@@ -3612,6 +3629,7 @@ webpackJsonp([2,4],[
 	 */
 
 	function cloneNode(node) {
+	  /* istanbul ignore if */
 	  if (!node.querySelectorAll) {
 	    return node.cloneNode();
 	  }
@@ -3756,6 +3774,7 @@ webpackJsonp([2,4],[
 	 * @param {DocumentFragment} frag
 	 * @param {Vue} [host]
 	 * @param {Object} [scope]
+	 * @param {Fragment} [parentFrag]
 	 */
 	function Fragment(linker, vm, frag, host, scope, parentFrag) {
 	  this.children = [];
@@ -3921,7 +3940,7 @@ webpackJsonp([2,4],[
 	 */
 
 	function attach(child) {
-	  if (!child._isAttached) {
+	  if (!child._isAttached && inDoc(child.$el)) {
 	    child._callHook('attached');
 	  }
 	}
@@ -3933,7 +3952,7 @@ webpackJsonp([2,4],[
 	 */
 
 	function detach(child) {
-	  if (child._isAttached) {
+	  if (child._isAttached && !inDoc(child.$el)) {
 	    child._callHook('detached');
 	  }
 	}
@@ -3951,7 +3970,7 @@ webpackJsonp([2,4],[
 	  this.vm = vm;
 	  var template;
 	  var isString = typeof el === 'string';
-	  if (isString || isTemplate(el)) {
+	  if (isString || isTemplate(el) && !el.hasAttribute('v-if')) {
 	    template = parseTemplate(el, true);
 	  } else {
 	    template = document.createDocumentFragment();
@@ -3994,15 +4013,16 @@ webpackJsonp([2,4],[
 	var EL = 1500;
 	var COMPONENT = 1500;
 	var PARTIAL = 1750;
-	var FOR = 2000;
-	var IF = 2000;
-	var SLOT = 2100;
+	var IF = 2100;
+	var FOR = 2200;
+	var SLOT = 2300;
 
 	var uid$3 = 0;
 
 	var vFor = {
 
 	  priority: FOR,
+	  terminal: true,
 
 	  params: ['track-by', 'stagger', 'enter-stagger', 'leave-stagger'],
 
@@ -4021,7 +4041,7 @@ webpackJsonp([2,4],[
 	    }
 
 	    if (!this.alias) {
-	      process.env.NODE_ENV !== 'production' && warn('Alias is required in v-for.');
+	      process.env.NODE_ENV !== 'production' && warn('Invalid v-for expression "' + this.descriptor.raw + '": ' + 'alias is required.', this.vm);
 	      return;
 	    }
 
@@ -4112,7 +4132,9 @@ webpackJsonp([2,4],[
 	        // update data for track-by, object repeat &
 	        // primitive values.
 	        if (trackByKey || convertedFromObject || primitive) {
-	          frag.scope[alias] = value;
+	          withoutConversion(function () {
+	            frag.scope[alias] = value;
+	          });
 	        }
 	      } else {
 	        // new isntance
@@ -4202,7 +4224,11 @@ webpackJsonp([2,4],[
 	    // for two-way binding on alias
 	    scope.$forContext = this;
 	    // define scope properties
-	    defineReactive(scope, alias, value);
+	    // important: define the scope alias without forced conversion
+	    // so that frozen data structures remain non-reactive.
+	    withoutConversion(function () {
+	      defineReactive(scope, alias, value);
+	    });
 	    defineReactive(scope, '$index', index);
 	    if (key) {
 	      defineReactive(scope, '$key', key);
@@ -4286,7 +4312,15 @@ webpackJsonp([2,4],[
 	      });
 	      setTimeout(op, staggerAmount);
 	    } else {
-	      frag.before(prevEl.nextSibling);
+	      var target = prevEl.nextSibling;
+	      /* istanbul ignore if */
+	      if (!target) {
+	        // reset end anchor position in case the position was messed up
+	        // by an external drag-n-drop library.
+	        after(this.end, prevEl);
+	        target = this.end;
+	      }
+	      frag.before(target);
 	    }
 	  },
 
@@ -4357,7 +4391,7 @@ webpackJsonp([2,4],[
 	    var primitive = !isObject(value);
 	    var id;
 	    if (key || trackByKey || primitive) {
-	      id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+	      id = getTrackByKey(index, key, value, trackByKey);
 	      if (!cache[id]) {
 	        cache[id] = frag;
 	      } else if (trackByKey !== '$index') {
@@ -4371,8 +4405,10 @@ webpackJsonp([2,4],[
 	        } else {
 	          process.env.NODE_ENV !== 'production' && this.warnDuplicate(value);
 	        }
-	      } else {
+	      } else if (Object.isExtensible(value)) {
 	        def(value, id, frag);
+	      } else if (process.env.NODE_ENV !== 'production') {
+	        warn('Frozen v-for objects cannot be automatically tracked, make sure to ' + 'provide a track-by key.');
 	      }
 	    }
 	    frag.raw = value;
@@ -4392,7 +4428,7 @@ webpackJsonp([2,4],[
 	    var primitive = !isObject(value);
 	    var frag;
 	    if (key || trackByKey || primitive) {
-	      var id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+	      var id = getTrackByKey(index, key, value, trackByKey);
 	      frag = this.cache[id];
 	    } else {
 	      frag = value[this.id];
@@ -4419,7 +4455,7 @@ webpackJsonp([2,4],[
 	    var key = hasOwn(scope, '$key') && scope.$key;
 	    var primitive = !isObject(value);
 	    if (trackByKey || key || primitive) {
-	      var id = trackByKey ? trackByKey === '$index' ? index : value[trackByKey] : key || value;
+	      var id = getTrackByKey(index, key, value, trackByKey);
 	      this.cache[id] = null;
 	    } else {
 	      value[this.id] = null;
@@ -4460,7 +4496,7 @@ webpackJsonp([2,4],[
 	   * the filters. This is passed to and called by the watcher.
 	   *
 	   * It is necessary for this to be called during the
-	   * wathcer's dependency collection phase because we want
+	   * watcher's dependency collection phase because we want
 	   * the v-for to update when the source Object is mutated.
 	   */
 
@@ -4569,15 +4605,29 @@ webpackJsonp([2,4],[
 	  return ret;
 	}
 
+	/**
+	 * Get the track by key for an item.
+	 *
+	 * @param {Number} index
+	 * @param {String} key
+	 * @param {*} value
+	 * @param {String} [trackByKey]
+	 */
+
+	function getTrackByKey(index, key, value, trackByKey) {
+	  return trackByKey ? trackByKey === '$index' ? index : trackByKey.charAt(0).match(/\w/) ? getPath(value, trackByKey) : value[trackByKey] : key || value;
+	}
+
 	if (process.env.NODE_ENV !== 'production') {
 	  vFor.warnDuplicate = function (value) {
-	    warn('Duplicate value found in v-for="' + this.descriptor.raw + '": ' + JSON.stringify(value) + '. Use track-by="$index" if ' + 'you are expecting duplicate values.');
+	    warn('Duplicate value found in v-for="' + this.descriptor.raw + '": ' + JSON.stringify(value) + '. Use track-by="$index" if ' + 'you are expecting duplicate values.', this.vm);
 	  };
 	}
 
 	var vIf = {
 
 	  priority: IF,
+	  terminal: true,
 
 	  bind: function bind() {
 	    var el = this.el;
@@ -4586,14 +4636,13 @@ webpackJsonp([2,4],[
 	      var next = el.nextElementSibling;
 	      if (next && getAttr(next, 'v-else') !== null) {
 	        remove(next);
-	        this.elseFactory = new FragmentFactory(next._context || this.vm, next);
+	        this.elseEl = next;
 	      }
 	      // check main block
 	      this.anchor = createAnchor('v-if');
 	      replace(el, this.anchor);
-	      this.factory = new FragmentFactory(this.vm, el);
 	    } else {
-	      process.env.NODE_ENV !== 'production' && warn('v-if="' + this.expression + '" cannot be ' + 'used on an instance root element.');
+	      process.env.NODE_ENV !== 'production' && warn('v-if="' + this.expression + '" cannot be ' + 'used on an instance root element.', this.vm);
 	      this.invalid = true;
 	    }
 	  },
@@ -4614,6 +4663,10 @@ webpackJsonp([2,4],[
 	      this.elseFrag.remove();
 	      this.elseFrag = null;
 	    }
+	    // lazy init factory
+	    if (!this.factory) {
+	      this.factory = new FragmentFactory(this.vm, this.el);
+	    }
 	    this.frag = this.factory.create(this._host, this._scope, this._frag);
 	    this.frag.before(this.anchor);
 	  },
@@ -4623,7 +4676,10 @@ webpackJsonp([2,4],[
 	      this.frag.remove();
 	      this.frag = null;
 	    }
-	    if (this.elseFactory && !this.elseFrag) {
+	    if (this.elseEl && !this.elseFrag) {
+	      if (!this.elseFactory) {
+	        this.elseFactory = new FragmentFactory(this.elseEl._context || this.vm, this.elseEl);
+	      }
 	      this.elseFrag = this.elseFactory.create(this._host, this._scope, this._frag);
 	      this.elseFrag.before(this.anchor);
 	    }
@@ -4712,6 +4768,10 @@ webpackJsonp([2,4],[
 	      });
 	      this.on('blur', function () {
 	        self.focused = false;
+	        // do not sync value after fragment removal (#2017)
+	        if (!self._frag || self._frag.inserted) {
+	          self.rawListener();
+	        }
 	      });
 	    }
 
@@ -4779,7 +4839,10 @@ webpackJsonp([2,4],[
 	  },
 
 	  update: function update(value) {
-	    this.el.value = _toString(value);
+	    // #3029 only update when the value changes. This prevent
+	    // browsers from overwriting values like selectionStart
+	    value = _toString(value);
+	    if (value !== this.el.value) this.el.value = value;
 	  },
 
 	  unbind: function unbind() {
@@ -4828,6 +4891,8 @@ webpackJsonp([2,4],[
 	var select = {
 
 	  bind: function bind() {
+	    var _this = this;
+
 	    var self = this;
 	    var el = this.el;
 
@@ -4859,11 +4924,16 @@ webpackJsonp([2,4],[
 	    // selectedIndex with value -1 to 0 when the element
 	    // is appended to a new parent, therefore we have to
 	    // force a DOM update whenever that happens...
-	    this.vm.$on('hook:attached', this.forceUpdate);
+	    this.vm.$on('hook:attached', function () {
+	      nextTick(_this.forceUpdate);
+	    });
 	  },
 
 	  update: function update(value) {
 	    var el = this.el;
+	    if (!inDoc(el)) {
+	      return nextTick(this.forceUpdate);
+	    }
 	    el.selectedIndex = -1;
 	    var multi = this.multiple && isArray(value);
 	    var options = el.options;
@@ -5015,7 +5085,7 @@ webpackJsonp([2,4],[
 	    // friendly warning...
 	    this.checkFilters();
 	    if (this.hasRead && !this.hasWrite) {
-	      process.env.NODE_ENV !== 'production' && warn('It seems you are using a read-only filter with ' + 'v-model. You might want to use a two-way filter ' + 'to ensure correct behavior.');
+	      process.env.NODE_ENV !== 'production' && warn('It seems you are using a read-only filter with ' + 'v-model="' + this.descriptor.raw + '". ' + 'You might want to use a two-way filter to ensure correct behavior.', this.vm);
 	    }
 	    var el = this.el;
 	    var tag = el.tagName;
@@ -5027,7 +5097,7 @@ webpackJsonp([2,4],[
 	    } else if (tag === 'TEXTAREA') {
 	      handler = handlers.text;
 	    } else {
-	      process.env.NODE_ENV !== 'production' && warn('v-model does not support element type: ' + tag);
+	      process.env.NODE_ENV !== 'production' && warn('v-model does not support element type: ' + tag, this.vm);
 	      return;
 	    }
 	    el.__v_model = this;
@@ -5143,7 +5213,7 @@ webpackJsonp([2,4],[
 	    }
 
 	    if (typeof handler !== 'function') {
-	      process.env.NODE_ENV !== 'production' && warn('v-on:' + this.arg + '="' + this.expression + '" expects a function value, ' + 'got ' + handler);
+	      process.env.NODE_ENV !== 'production' && warn('v-on:' + this.arg + '="' + this.expression + '" expects a function value, ' + 'got ' + handler, this.vm);
 	      return;
 	    }
 
@@ -5159,7 +5229,7 @@ webpackJsonp([2,4],[
 	    }
 	    // key filter
 	    var keys = Object.keys(this.modifiers).filter(function (key) {
-	      return key !== 'stop' && key !== 'prevent';
+	      return key !== 'stop' && key !== 'prevent' && key !== 'self' && key !== 'capture';
 	    });
 	    if (keys.length) {
 	      handler = keyFilter(handler, keys);
@@ -5236,11 +5306,17 @@ webpackJsonp([2,4],[
 	    if (value) {
 	      var isImportant = importantRE.test(value) ? 'important' : '';
 	      if (isImportant) {
+	        /* istanbul ignore if */
+	        if (process.env.NODE_ENV !== 'production') {
+	          warn('It\'s probably a bad idea to use !important with inline rules. ' + 'This feature will be deprecated in a future version of Vue.');
+	        }
 	        value = value.replace(importantRE, '').trim();
+	        this.el.style.setProperty(prop.kebab, value, isImportant);
+	      } else {
+	        this.el.style[prop.camel] = value;
 	      }
-	      this.el.style.setProperty(prop, value, isImportant);
 	    } else {
-	      this.el.style.removeProperty(prop);
+	      this.el.style[prop.camel] = '';
 	    }
 	  }
 
@@ -5282,14 +5358,20 @@ webpackJsonp([2,4],[
 	  }
 	  var i = prefixes.length;
 	  var prefixed;
+	  if (camel !== 'filter' && camel in testEl.style) {
+	    return {
+	      kebab: prop,
+	      camel: camel
+	    };
+	  }
 	  while (i--) {
 	    prefixed = camelPrefixes[i] + upper;
 	    if (prefixed in testEl.style) {
-	      return prefixes[i] + prop;
+	      return {
+	        kebab: prefixes[i] + prop,
+	        camel: prefixed
+	      };
 	    }
-	  }
-	  if (camel in testEl.style) {
-	    return prop;
 	  }
 	}
 
@@ -5336,7 +5418,7 @@ webpackJsonp([2,4],[
 
 	      // only allow binding on native attributes
 	      if (disallowedInterpAttrRE.test(attr) || attr === 'name' && (tag === 'PARTIAL' || tag === 'SLOT')) {
-	        process.env.NODE_ENV !== 'production' && warn(attr + '="' + descriptor.raw + '": ' + 'attribute interpolation is not allowed in Vue.js ' + 'directives and special attributes.');
+	        process.env.NODE_ENV !== 'production' && warn(attr + '="' + descriptor.raw + '": ' + 'attribute interpolation is not allowed in Vue.js ' + 'directives and special attributes.', this.vm);
 	        this.el.removeAttribute(attr);
 	        this.invalid = true;
 	      }
@@ -5346,12 +5428,12 @@ webpackJsonp([2,4],[
 	        var raw = attr + '="' + descriptor.raw + '": ';
 	        // warn src
 	        if (attr === 'src') {
-	          warn(raw + 'interpolation in "src" attribute will cause ' + 'a 404 request. Use v-bind:src instead.');
+	          warn(raw + 'interpolation in "src" attribute will cause ' + 'a 404 request. Use v-bind:src instead.', this.vm);
 	        }
 
 	        // warn style
 	        if (attr === 'style') {
-	          warn(raw + 'interpolation in "style" attribute will cause ' + 'the attribute to be discarded in Internet Explorer. ' + 'Use v-bind:style instead.');
+	          warn(raw + 'interpolation in "style" attribute will cause ' + 'the attribute to be discarded in Internet Explorer. ' + 'Use v-bind:style instead.', this.vm);
 	        }
 	      }
 	    }
@@ -5379,8 +5461,12 @@ webpackJsonp([2,4],[
 	      attr = camelize(attr);
 	    }
 	    if (!interp && attrWithPropsRE.test(attr) && attr in el) {
-	      el[attr] = attr === 'value' ? value == null // IE9 will set input.value to "null" for null...
+	      var attrValue = attr === 'value' ? value == null // IE9 will set input.value to "null" for null...
 	      ? '' : value : value;
+
+	      if (el[attr] !== attrValue) {
+	        el[attr] = attrValue;
+	      }
 	    }
 	    // set model props
 	    var modelProp = modelProps[attr];
@@ -5447,7 +5533,7 @@ webpackJsonp([2,4],[
 
 	var ref = {
 	  bind: function bind() {
-	    process.env.NODE_ENV !== 'production' && warn('v-ref:' + this.arg + ' must be used on a child ' + 'component. Found on <' + this.el.tagName.toLowerCase() + '>.');
+	    process.env.NODE_ENV !== 'production' && warn('v-ref:' + this.arg + ' must be used on a child ' + 'component. Found on <' + this.el.tagName.toLowerCase() + '>.', this.vm);
 	  }
 	};
 
@@ -5480,65 +5566,94 @@ webpackJsonp([2,4],[
 	  deep: true,
 
 	  update: function update(value) {
-	    if (value && typeof value === 'string') {
-	      this.handleObject(stringToObject(value));
-	    } else if (isPlainObject(value)) {
-	      this.handleObject(value);
-	    } else if (isArray(value)) {
-	      this.handleArray(value);
-	    } else {
+	    if (!value) {
 	      this.cleanup();
+	    } else if (typeof value === 'string') {
+	      this.setClass(value.trim().split(/\s+/));
+	    } else {
+	      this.setClass(normalize$1(value));
 	    }
 	  },
 
-	  handleObject: function handleObject(value) {
-	    this.cleanup(value);
-	    var keys = this.prevKeys = Object.keys(value);
-	    for (var i = 0, l = keys.length; i < l; i++) {
-	      var key = keys[i];
-	      if (value[key]) {
-	        addClass(this.el, key);
-	      } else {
-	        removeClass(this.el, key);
-	      }
-	    }
-	  },
-
-	  handleArray: function handleArray(value) {
+	  setClass: function setClass(value) {
 	    this.cleanup(value);
 	    for (var i = 0, l = value.length; i < l; i++) {
-	      if (value[i]) {
-	        addClass(this.el, value[i]);
+	      var val = value[i];
+	      if (val) {
+	        apply(this.el, val, addClass);
 	      }
 	    }
-	    this.prevKeys = value.slice();
+	    this.prevKeys = value;
 	  },
 
 	  cleanup: function cleanup(value) {
-	    if (this.prevKeys) {
-	      var i = this.prevKeys.length;
-	      while (i--) {
-	        var key = this.prevKeys[i];
-	        if (key && (!value || !contains(value, key))) {
-	          removeClass(this.el, key);
-	        }
+	    var prevKeys = this.prevKeys;
+	    if (!prevKeys) return;
+	    var i = prevKeys.length;
+	    while (i--) {
+	      var key = prevKeys[i];
+	      if (!value || value.indexOf(key) < 0) {
+	        apply(this.el, key, removeClass);
 	      }
 	    }
 	  }
 	};
 
-	function stringToObject(value) {
-	  var res = {};
-	  var keys = value.trim().split(/\s+/);
-	  var i = keys.length;
-	  while (i--) {
-	    res[keys[i]] = true;
+	/**
+	 * Normalize objects and arrays (potentially containing objects)
+	 * into array of strings.
+	 *
+	 * @param {Object|Array<String|Object>} value
+	 * @return {Array<String>}
+	 */
+
+	function normalize$1(value) {
+	  var res = [];
+	  if (isArray(value)) {
+	    for (var i = 0, l = value.length; i < l; i++) {
+	      var _key = value[i];
+	      if (_key) {
+	        if (typeof _key === 'string') {
+	          res.push(_key);
+	        } else {
+	          for (var k in _key) {
+	            if (_key[k]) res.push(k);
+	          }
+	        }
+	      }
+	    }
+	  } else if (isObject(value)) {
+	    for (var key in value) {
+	      if (value[key]) res.push(key);
+	    }
 	  }
 	  return res;
 	}
 
-	function contains(value, key) {
-	  return isArray(value) ? value.indexOf(key) > -1 : hasOwn(value, key);
+	/**
+	 * Add or remove a class/classes on an element
+	 *
+	 * @param {Element} el
+	 * @param {String} key The class name. This may or may not
+	 *                     contain a space character, in such a
+	 *                     case we'll deal with multiple class
+	 *                     names at once.
+	 * @param {Function} fn
+	 */
+
+	function apply(el, key, fn) {
+	  key = key.trim();
+	  if (key.indexOf(' ') === -1) {
+	    fn(el, key);
+	    return;
+	  }
+	  // The key contains one or more space characters.
+	  // Since a class name doesn't accept such characters, we
+	  // treat it as multiple classes.
+	  var keys = key.split(/\s+/);
+	  for (var i = 0, l = keys.length; i < l; i++) {
+	    fn(el, keys[i]);
+	  }
 	}
 
 	var component = {
@@ -5582,6 +5697,7 @@ webpackJsonp([2,4],[
 	      // cached, when the component is used elsewhere this attribute
 	      // will remain at link time.
 	      this.el.removeAttribute('is');
+	      this.el.removeAttribute(':is');
 	      // remove ref, same as above
 	      if (this.descriptor.ref) {
 	        this.el.removeAttribute('v-ref:' + hyphenate(this.descriptor.ref));
@@ -5637,16 +5753,19 @@ webpackJsonp([2,4],[
 	  /**
 	   * Resolve the component constructor to use when creating
 	   * the child vm.
+	   *
+	   * @param {String|Function} value
+	   * @param {Function} cb
 	   */
 
-	  resolveComponent: function resolveComponent(id, cb) {
+	  resolveComponent: function resolveComponent(value, cb) {
 	    var self = this;
 	    this.pendingComponentCb = cancellable(function (Component) {
-	      self.ComponentName = Component.options.name || id;
+	      self.ComponentName = Component.options.name || (typeof value === 'string' ? value : null);
 	      self.Component = Component;
 	      cb();
 	    });
-	    this.vm._resolveComponent(id, this.pendingComponentCb);
+	    this.vm._resolveComponent(value, this.pendingComponentCb);
 	  },
 
 	  /**
@@ -5753,7 +5872,7 @@ webpackJsonp([2,4],[
 	      }
 	      /* istanbul ignore if */
 	      if (process.env.NODE_ENV !== 'production' && this.el.hasAttribute('transition') && child._isFragment) {
-	        warn('Transitions will not work on a fragment instance. ' + 'Template: ' + child.$options.template);
+	        warn('Transitions will not work on a fragment instance. ' + 'Template: ' + child.$options.template, child);
 	      }
 	      return child;
 	    }
@@ -5778,13 +5897,16 @@ webpackJsonp([2,4],[
 
 	  unbuild: function unbuild(defer) {
 	    if (this.waitingFor) {
-	      this.waitingFor.$destroy();
+	      if (!this.keepAlive) {
+	        this.waitingFor.$destroy();
+	      }
 	      this.waitingFor = null;
 	    }
 	    var child = this.childVM;
 	    if (!child || this.keepAlive) {
 	      if (child) {
 	        // remove ref
+	        child._inactive = true;
 	        child._updateRef(true);
 	      }
 	      return;
@@ -5837,10 +5959,8 @@ webpackJsonp([2,4],[
 	    var self = this;
 	    var current = this.childVM;
 	    // for devtool inspection
-	    if (process.env.NODE_ENV !== 'production') {
-	      if (current) current._inactive = true;
-	      target._inactive = false;
-	    }
+	    if (current) current._inactive = true;
+	    target._inactive = false;
 	    this.childVM = target;
 	    switch (self.params.transitionMode) {
 	      case 'in-out':
@@ -5898,6 +6018,379 @@ webpackJsonp([2,4],[
 	  }
 	}
 
+	var propBindingModes = config._propBindingModes;
+	var empty = {};
+
+	// regexes
+	var identRE$1 = /^[$_a-zA-Z]+[\w$]*$/;
+	var settablePathRE = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*|\[[^\[\]]+\])*$/;
+
+	/**
+	 * Compile props on a root element and return
+	 * a props link function.
+	 *
+	 * @param {Element|DocumentFragment} el
+	 * @param {Array} propOptions
+	 * @param {Vue} vm
+	 * @return {Function} propsLinkFn
+	 */
+
+	function compileProps(el, propOptions, vm) {
+	  var props = [];
+	  var names = Object.keys(propOptions);
+	  var i = names.length;
+	  var options, name, attr, value, path, parsed, prop;
+	  while (i--) {
+	    name = names[i];
+	    options = propOptions[name] || empty;
+
+	    if (process.env.NODE_ENV !== 'production' && name === '$data') {
+	      warn('Do not use $data as prop.', vm);
+	      continue;
+	    }
+
+	    // props could contain dashes, which will be
+	    // interpreted as minus calculations by the parser
+	    // so we need to camelize the path here
+	    path = camelize(name);
+	    if (!identRE$1.test(path)) {
+	      process.env.NODE_ENV !== 'production' && warn('Invalid prop key: "' + name + '". Prop keys ' + 'must be valid identifiers.', vm);
+	      continue;
+	    }
+
+	    prop = {
+	      name: name,
+	      path: path,
+	      options: options,
+	      mode: propBindingModes.ONE_WAY,
+	      raw: null
+	    };
+
+	    attr = hyphenate(name);
+	    // first check dynamic version
+	    if ((value = getBindAttr(el, attr)) === null) {
+	      if ((value = getBindAttr(el, attr + '.sync')) !== null) {
+	        prop.mode = propBindingModes.TWO_WAY;
+	      } else if ((value = getBindAttr(el, attr + '.once')) !== null) {
+	        prop.mode = propBindingModes.ONE_TIME;
+	      }
+	    }
+	    if (value !== null) {
+	      // has dynamic binding!
+	      prop.raw = value;
+	      parsed = parseDirective(value);
+	      value = parsed.expression;
+	      prop.filters = parsed.filters;
+	      // check binding type
+	      if (isLiteral(value) && !parsed.filters) {
+	        // for expressions containing literal numbers and
+	        // booleans, there's no need to setup a prop binding,
+	        // so we can optimize them as a one-time set.
+	        prop.optimizedLiteral = true;
+	      } else {
+	        prop.dynamic = true;
+	        // check non-settable path for two-way bindings
+	        if (process.env.NODE_ENV !== 'production' && prop.mode === propBindingModes.TWO_WAY && !settablePathRE.test(value)) {
+	          prop.mode = propBindingModes.ONE_WAY;
+	          warn('Cannot bind two-way prop with non-settable ' + 'parent path: ' + value, vm);
+	        }
+	      }
+	      prop.parentPath = value;
+
+	      // warn required two-way
+	      if (process.env.NODE_ENV !== 'production' && options.twoWay && prop.mode !== propBindingModes.TWO_WAY) {
+	        warn('Prop "' + name + '" expects a two-way binding type.', vm);
+	      }
+	    } else if ((value = getAttr(el, attr)) !== null) {
+	      // has literal binding!
+	      prop.raw = value;
+	    } else if (process.env.NODE_ENV !== 'production') {
+	      // check possible camelCase prop usage
+	      var lowerCaseName = path.toLowerCase();
+	      value = /[A-Z\-]/.test(name) && (el.getAttribute(lowerCaseName) || el.getAttribute(':' + lowerCaseName) || el.getAttribute('v-bind:' + lowerCaseName) || el.getAttribute(':' + lowerCaseName + '.once') || el.getAttribute('v-bind:' + lowerCaseName + '.once') || el.getAttribute(':' + lowerCaseName + '.sync') || el.getAttribute('v-bind:' + lowerCaseName + '.sync'));
+	      if (value) {
+	        warn('Possible usage error for prop `' + lowerCaseName + '` - ' + 'did you mean `' + attr + '`? HTML is case-insensitive, remember to use ' + 'kebab-case for props in templates.', vm);
+	      } else if (options.required) {
+	        // warn missing required
+	        warn('Missing required prop: ' + name, vm);
+	      }
+	    }
+	    // push prop
+	    props.push(prop);
+	  }
+	  return makePropsLinkFn(props);
+	}
+
+	/**
+	 * Build a function that applies props to a vm.
+	 *
+	 * @param {Array} props
+	 * @return {Function} propsLinkFn
+	 */
+
+	function makePropsLinkFn(props) {
+	  return function propsLinkFn(vm, scope) {
+	    // store resolved props info
+	    vm._props = {};
+	    var inlineProps = vm.$options.propsData;
+	    var i = props.length;
+	    var prop, path, options, value, raw;
+	    while (i--) {
+	      prop = props[i];
+	      raw = prop.raw;
+	      path = prop.path;
+	      options = prop.options;
+	      vm._props[path] = prop;
+	      if (inlineProps && hasOwn(inlineProps, path)) {
+	        initProp(vm, prop, inlineProps[path]);
+	      }if (raw === null) {
+	        // initialize absent prop
+	        initProp(vm, prop, undefined);
+	      } else if (prop.dynamic) {
+	        // dynamic prop
+	        if (prop.mode === propBindingModes.ONE_TIME) {
+	          // one time binding
+	          value = (scope || vm._context || vm).$get(prop.parentPath);
+	          initProp(vm, prop, value);
+	        } else {
+	          if (vm._context) {
+	            // dynamic binding
+	            vm._bindDir({
+	              name: 'prop',
+	              def: propDef,
+	              prop: prop
+	            }, null, null, scope); // el, host, scope
+	          } else {
+	              // root instance
+	              initProp(vm, prop, vm.$get(prop.parentPath));
+	            }
+	        }
+	      } else if (prop.optimizedLiteral) {
+	        // optimized literal, cast it and just set once
+	        var stripped = stripQuotes(raw);
+	        value = stripped === raw ? toBoolean(toNumber(raw)) : stripped;
+	        initProp(vm, prop, value);
+	      } else {
+	        // string literal, but we need to cater for
+	        // Boolean props with no value, or with same
+	        // literal value (e.g. disabled="disabled")
+	        // see https://github.com/vuejs/vue-loader/issues/182
+	        value = options.type === Boolean && (raw === '' || raw === hyphenate(prop.name)) ? true : raw;
+	        initProp(vm, prop, value);
+	      }
+	    }
+	  };
+	}
+
+	/**
+	 * Process a prop with a rawValue, applying necessary coersions,
+	 * default values & assertions and call the given callback with
+	 * processed value.
+	 *
+	 * @param {Vue} vm
+	 * @param {Object} prop
+	 * @param {*} rawValue
+	 * @param {Function} fn
+	 */
+
+	function processPropValue(vm, prop, rawValue, fn) {
+	  var isSimple = prop.dynamic && isSimplePath(prop.parentPath);
+	  var value = rawValue;
+	  if (value === undefined) {
+	    value = getPropDefaultValue(vm, prop);
+	  }
+	  value = coerceProp(prop, value, vm);
+	  var coerced = value !== rawValue;
+	  if (!assertProp(prop, value, vm)) {
+	    value = undefined;
+	  }
+	  if (isSimple && !coerced) {
+	    withoutConversion(function () {
+	      fn(value);
+	    });
+	  } else {
+	    fn(value);
+	  }
+	}
+
+	/**
+	 * Set a prop's initial value on a vm and its data object.
+	 *
+	 * @param {Vue} vm
+	 * @param {Object} prop
+	 * @param {*} value
+	 */
+
+	function initProp(vm, prop, value) {
+	  processPropValue(vm, prop, value, function (value) {
+	    defineReactive(vm, prop.path, value);
+	  });
+	}
+
+	/**
+	 * Update a prop's value on a vm.
+	 *
+	 * @param {Vue} vm
+	 * @param {Object} prop
+	 * @param {*} value
+	 */
+
+	function updateProp(vm, prop, value) {
+	  processPropValue(vm, prop, value, function (value) {
+	    vm[prop.path] = value;
+	  });
+	}
+
+	/**
+	 * Get the default value of a prop.
+	 *
+	 * @param {Vue} vm
+	 * @param {Object} prop
+	 * @return {*}
+	 */
+
+	function getPropDefaultValue(vm, prop) {
+	  // no default, return undefined
+	  var options = prop.options;
+	  if (!hasOwn(options, 'default')) {
+	    // absent boolean value defaults to false
+	    return options.type === Boolean ? false : undefined;
+	  }
+	  var def = options['default'];
+	  // warn against non-factory defaults for Object & Array
+	  if (isObject(def)) {
+	    process.env.NODE_ENV !== 'production' && warn('Invalid default value for prop "' + prop.name + '": ' + 'Props with type Object/Array must use a factory function ' + 'to return the default value.', vm);
+	  }
+	  // call factory function for non-Function types
+	  return typeof def === 'function' && options.type !== Function ? def.call(vm) : def;
+	}
+
+	/**
+	 * Assert whether a prop is valid.
+	 *
+	 * @param {Object} prop
+	 * @param {*} value
+	 * @param {Vue} vm
+	 */
+
+	function assertProp(prop, value, vm) {
+	  if (!prop.options.required && ( // non-required
+	  prop.raw === null || // abscent
+	  value == null) // null or undefined
+	  ) {
+	      return true;
+	    }
+	  var options = prop.options;
+	  var type = options.type;
+	  var valid = !type;
+	  var expectedTypes = [];
+	  if (type) {
+	    if (!isArray(type)) {
+	      type = [type];
+	    }
+	    for (var i = 0; i < type.length && !valid; i++) {
+	      var assertedType = assertType(value, type[i]);
+	      expectedTypes.push(assertedType.expectedType);
+	      valid = assertedType.valid;
+	    }
+	  }
+	  if (!valid) {
+	    if (process.env.NODE_ENV !== 'production') {
+	      warn('Invalid prop: type check failed for prop "' + prop.name + '".' + ' Expected ' + expectedTypes.map(formatType).join(', ') + ', got ' + formatValue(value) + '.', vm);
+	    }
+	    return false;
+	  }
+	  var validator = options.validator;
+	  if (validator) {
+	    if (!validator(value)) {
+	      process.env.NODE_ENV !== 'production' && warn('Invalid prop: custom validator check failed for prop "' + prop.name + '".', vm);
+	      return false;
+	    }
+	  }
+	  return true;
+	}
+
+	/**
+	 * Force parsing value with coerce option.
+	 *
+	 * @param {*} value
+	 * @param {Object} options
+	 * @return {*}
+	 */
+
+	function coerceProp(prop, value, vm) {
+	  var coerce = prop.options.coerce;
+	  if (!coerce) {
+	    return value;
+	  }
+	  if (typeof coerce === 'function') {
+	    return coerce(value);
+	  } else {
+	    process.env.NODE_ENV !== 'production' && warn('Invalid coerce for prop "' + prop.name + '": expected function, got ' + typeof coerce + '.', vm);
+	    return value;
+	  }
+	}
+
+	/**
+	 * Assert the type of a value
+	 *
+	 * @param {*} value
+	 * @param {Function} type
+	 * @return {Object}
+	 */
+
+	function assertType(value, type) {
+	  var valid;
+	  var expectedType;
+	  if (type === String) {
+	    expectedType = 'string';
+	    valid = typeof value === expectedType;
+	  } else if (type === Number) {
+	    expectedType = 'number';
+	    valid = typeof value === expectedType;
+	  } else if (type === Boolean) {
+	    expectedType = 'boolean';
+	    valid = typeof value === expectedType;
+	  } else if (type === Function) {
+	    expectedType = 'function';
+	    valid = typeof value === expectedType;
+	  } else if (type === Object) {
+	    expectedType = 'object';
+	    valid = isPlainObject(value);
+	  } else if (type === Array) {
+	    expectedType = 'array';
+	    valid = isArray(value);
+	  } else {
+	    valid = value instanceof type;
+	  }
+	  return {
+	    valid: valid,
+	    expectedType: expectedType
+	  };
+	}
+
+	/**
+	 * Format type for output
+	 *
+	 * @param {String} type
+	 * @return {String}
+	 */
+
+	function formatType(type) {
+	  return type ? type.charAt(0).toUpperCase() + type.slice(1) : 'custom type';
+	}
+
+	/**
+	 * Format value
+	 *
+	 * @param {*} value
+	 * @return {String}
+	 */
+
+	function formatValue(val) {
+	  return Object.prototype.toString.call(val).slice(8, -1);
+	}
+
 	var bindingModes = config._propBindingModes;
 
 	var propDef = {
@@ -5912,10 +6405,7 @@ webpackJsonp([2,4],[
 	    var twoWay = prop.mode === bindingModes.TWO_WAY;
 
 	    var parentWatcher = this.parentWatcher = new Watcher(parent, parentKey, function (val) {
-	      val = coerceProp(prop, val);
-	      if (assertProp(prop, val)) {
-	        child[childKey] = val;
-	      }
+	      updateProp(child, prop, val);
 	    }, {
 	      twoWay: twoWay,
 	      filters: prop.filters,
@@ -5994,6 +6484,32 @@ webpackJsonp([2,4],[
 	var animDurationProp = animationProp + 'Duration';
 
 	/**
+	 * If a just-entered element is applied the
+	 * leave class while its enter transition hasn't started yet,
+	 * and the transitioned property has the same value for both
+	 * enter/leave, then the leave transition will be skipped and
+	 * the transitionend event never fires. This function ensures
+	 * its callback to be called after a transition has started
+	 * by waiting for double raf.
+	 *
+	 * It falls back to setTimeout on devices that support CSS
+	 * transitions but not raf (e.g. Android 4.2 browser) - since
+	 * these environments are usually slow, we are giving it a
+	 * relatively large timeout.
+	 */
+
+	var raf = inBrowser && window.requestAnimationFrame;
+	var waitForTransitionStart = raf
+	/* istanbul ignore next */
+	? function (fn) {
+	  raf(function () {
+	    raf(fn);
+	  });
+	} : function (fn) {
+	  setTimeout(fn, 50);
+	};
+
+	/**
 	 * A Transition object that encapsulates the state and logic
 	 * of the transition.
 	 *
@@ -6019,7 +6535,7 @@ webpackJsonp([2,4],[
 	  /* istanbul ignore if */
 	  if (process.env.NODE_ENV !== 'production') {
 	    if (this.type && this.type !== TYPE_TRANSITION && this.type !== TYPE_ANIMATION) {
-	      warn('invalid CSS transition type for transition="' + this.id + '": ' + this.type);
+	      warn('invalid CSS transition type for transition="' + this.id + '": ' + this.type, vm);
 	    }
 	  }
 	  // bind
@@ -6077,19 +6593,13 @@ webpackJsonp([2,4],[
 	 */
 
 	p$1.enterNextTick = function () {
-	  // Important hack:
-	  // in Chrome, if a just-entered element is applied the
-	  // leave class while its interpolated property still has
-	  // a very small value (within one frame), Chrome will
-	  // skip the leave transition entirely and not firing the
-	  // transtionend event. Therefore we need to protected
-	  // against such cases using a one-frame timeout.
-	  this.justEntered = true;
-	  var self = this;
-	  setTimeout(function () {
-	    self.justEntered = false;
-	  }, 17);
+	  var _this = this;
 
+	  // prevent transition skipping
+	  this.justEntered = true;
+	  waitForTransitionStart(function () {
+	    _this.justEntered = false;
+	  });
 	  var enterDone = this.enterDone;
 	  var type = this.getCssTransitionType(this.enterClass);
 	  if (!this.pendingJsCb) {
@@ -6350,10 +6860,9 @@ webpackJsonp([2,4],[
 	    // resolve on owner vm
 	    var hooks = resolveAsset(this.vm.$options, 'transitions', id);
 	    id = id || 'v';
+	    oldId = oldId || 'v';
 	    el.__v_trans = new Transition(el, id, hooks, this.vm);
-	    if (oldId) {
-	      removeClass(el, oldId + '-transition');
-	    }
+	    removeClass(el, oldId + '-transition');
 	    addClass(el, id + '-transition');
 	  }
 	};
@@ -6366,187 +6875,6 @@ webpackJsonp([2,4],[
 	  transition: transition$1
 	};
 
-	var propBindingModes = config._propBindingModes;
-	var empty = {};
-
-	// regexes
-	var identRE$1 = /^[$_a-zA-Z]+[\w$]*$/;
-	var settablePathRE = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*|\[[^\[\]]+\])*$/;
-
-	/**
-	 * Compile props on a root element and return
-	 * a props link function.
-	 *
-	 * @param {Element|DocumentFragment} el
-	 * @param {Array} propOptions
-	 * @return {Function} propsLinkFn
-	 */
-
-	function compileProps(el, propOptions) {
-	  var props = [];
-	  var names = Object.keys(propOptions);
-	  var i = names.length;
-	  var options, name, attr, value, path, parsed, prop;
-	  while (i--) {
-	    name = names[i];
-	    options = propOptions[name] || empty;
-
-	    if (process.env.NODE_ENV !== 'production' && name === '$data') {
-	      warn('Do not use $data as prop.');
-	      continue;
-	    }
-
-	    // props could contain dashes, which will be
-	    // interpreted as minus calculations by the parser
-	    // so we need to camelize the path here
-	    path = camelize(name);
-	    if (!identRE$1.test(path)) {
-	      process.env.NODE_ENV !== 'production' && warn('Invalid prop key: "' + name + '". Prop keys ' + 'must be valid identifiers.');
-	      continue;
-	    }
-
-	    prop = {
-	      name: name,
-	      path: path,
-	      options: options,
-	      mode: propBindingModes.ONE_WAY,
-	      raw: null
-	    };
-
-	    attr = hyphenate(name);
-	    // first check dynamic version
-	    if ((value = getBindAttr(el, attr)) === null) {
-	      if ((value = getBindAttr(el, attr + '.sync')) !== null) {
-	        prop.mode = propBindingModes.TWO_WAY;
-	      } else if ((value = getBindAttr(el, attr + '.once')) !== null) {
-	        prop.mode = propBindingModes.ONE_TIME;
-	      }
-	    }
-	    if (value !== null) {
-	      // has dynamic binding!
-	      prop.raw = value;
-	      parsed = parseDirective(value);
-	      value = parsed.expression;
-	      prop.filters = parsed.filters;
-	      // check binding type
-	      if (isLiteral(value) && !parsed.filters) {
-	        // for expressions containing literal numbers and
-	        // booleans, there's no need to setup a prop binding,
-	        // so we can optimize them as a one-time set.
-	        prop.optimizedLiteral = true;
-	      } else {
-	        prop.dynamic = true;
-	        // check non-settable path for two-way bindings
-	        if (process.env.NODE_ENV !== 'production' && prop.mode === propBindingModes.TWO_WAY && !settablePathRE.test(value)) {
-	          prop.mode = propBindingModes.ONE_WAY;
-	          warn('Cannot bind two-way prop with non-settable ' + 'parent path: ' + value);
-	        }
-	      }
-	      prop.parentPath = value;
-
-	      // warn required two-way
-	      if (process.env.NODE_ENV !== 'production' && options.twoWay && prop.mode !== propBindingModes.TWO_WAY) {
-	        warn('Prop "' + name + '" expects a two-way binding type.');
-	      }
-	    } else if ((value = getAttr(el, attr)) !== null) {
-	      // has literal binding!
-	      prop.raw = value;
-	    } else if (process.env.NODE_ENV !== 'production') {
-	      // check possible camelCase prop usage
-	      var lowerCaseName = path.toLowerCase();
-	      value = /[A-Z\-]/.test(name) && (el.getAttribute(lowerCaseName) || el.getAttribute(':' + lowerCaseName) || el.getAttribute('v-bind:' + lowerCaseName) || el.getAttribute(':' + lowerCaseName + '.once') || el.getAttribute('v-bind:' + lowerCaseName + '.once') || el.getAttribute(':' + lowerCaseName + '.sync') || el.getAttribute('v-bind:' + lowerCaseName + '.sync'));
-	      if (value) {
-	        warn('Possible usage error for prop `' + lowerCaseName + '` - ' + 'did you mean `' + attr + '`? HTML is case-insensitive, remember to use ' + 'kebab-case for props in templates.');
-	      } else if (options.required) {
-	        // warn missing required
-	        warn('Missing required prop: ' + name);
-	      }
-	    }
-	    // push prop
-	    props.push(prop);
-	  }
-	  return makePropsLinkFn(props);
-	}
-
-	/**
-	 * Build a function that applies props to a vm.
-	 *
-	 * @param {Array} props
-	 * @return {Function} propsLinkFn
-	 */
-
-	function makePropsLinkFn(props) {
-	  return function propsLinkFn(vm, scope) {
-	    // store resolved props info
-	    vm._props = {};
-	    var i = props.length;
-	    var prop, path, options, value, raw;
-	    while (i--) {
-	      prop = props[i];
-	      raw = prop.raw;
-	      path = prop.path;
-	      options = prop.options;
-	      vm._props[path] = prop;
-	      if (raw === null) {
-	        // initialize absent prop
-	        initProp(vm, prop, getDefault(vm, options));
-	      } else if (prop.dynamic) {
-	        // dynamic prop
-	        if (prop.mode === propBindingModes.ONE_TIME) {
-	          // one time binding
-	          value = (scope || vm._context || vm).$get(prop.parentPath);
-	          initProp(vm, prop, value);
-	        } else {
-	          if (vm._context) {
-	            // dynamic binding
-	            vm._bindDir({
-	              name: 'prop',
-	              def: propDef,
-	              prop: prop
-	            }, null, null, scope); // el, host, scope
-	          } else {
-	              // root instance
-	              initProp(vm, prop, vm.$get(prop.parentPath));
-	            }
-	        }
-	      } else if (prop.optimizedLiteral) {
-	        // optimized literal, cast it and just set once
-	        var stripped = stripQuotes(raw);
-	        value = stripped === raw ? toBoolean(toNumber(raw)) : stripped;
-	        initProp(vm, prop, value);
-	      } else {
-	        // string literal, but we need to cater for
-	        // Boolean props with no value
-	        value = options.type === Boolean && raw === '' ? true : raw;
-	        initProp(vm, prop, value);
-	      }
-	    }
-	  };
-	}
-
-	/**
-	 * Get the default value of a prop.
-	 *
-	 * @param {Vue} vm
-	 * @param {Object} options
-	 * @return {*}
-	 */
-
-	function getDefault(vm, options) {
-	  // no default, return undefined
-	  if (!hasOwn(options, 'default')) {
-	    // absent boolean value defaults to false
-	    return options.type === Boolean ? false : undefined;
-	  }
-	  var def = options['default'];
-	  // warn against non-factory defaults for Object & Array
-	  if (isObject(def)) {
-	    process.env.NODE_ENV !== 'production' && warn('Object/Array as default prop values will be shared ' + 'across multiple instances. Use a factory function ' + 'to return the default value instead.');
-	  }
-	  // call factory function for non-Function types
-	  return typeof def === 'function' && options.type !== Function ? def.call(vm) : def;
-	}
-
 	// special binding prefixes
 	var bindRE = /^v-bind:|^:/;
 	var onRE = /^v-on:|^@/;
@@ -6554,11 +6882,9 @@ webpackJsonp([2,4],[
 	var modifierRE = /\.[^\.]+/g;
 	var transitionRE = /^(v-bind:|:)?transition$/;
 
-	// terminal directives
-	var terminalDirectives = ['for', 'if'];
-
 	// default directive priority
 	var DEFAULT_PRIORITY = 1000;
+	var DEFAULT_TERMINAL_PRIORITY = 2000;
 
 	/**
 	 * Compile a template and return a reusable composite link
@@ -6581,7 +6907,7 @@ webpackJsonp([2,4],[
 	  // link function for the node itself.
 	  var nodeLinkFn = partial || !options._asComponent ? compileNode(el, options) : null;
 	  // link function for the childNodes
-	  var childLinkFn = !(nodeLinkFn && nodeLinkFn.terminal) && el.tagName !== 'SCRIPT' && el.hasChildNodes() ? compileNodeList(el.childNodes, options) : null;
+	  var childLinkFn = !(nodeLinkFn && nodeLinkFn.terminal) && !isScript(el) && el.hasChildNodes() ? compileNodeList(el.childNodes, options) : null;
 
 	  /**
 	   * A composite linker function to be called on a already
@@ -6705,7 +7031,7 @@ webpackJsonp([2,4],[
 	 */
 
 	function compileAndLinkProps(vm, el, props, scope) {
-	  var propsLinkFn = compileProps(el, props);
+	  var propsLinkFn = compileProps(el, props, vm);
 	  var propDirs = linkAndCapture(function () {
 	    propsLinkFn(vm, scope);
 	  }, vm);
@@ -6764,7 +7090,7 @@ webpackJsonp([2,4],[
 	    });
 	    if (names.length) {
 	      var plural = names.length > 1;
-	      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + options.el.tagName.toLowerCase() + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment_Instance');
+	      warn('Attribute' + (plural ? 's ' : ' ') + names.join(', ') + (plural ? ' are' : ' is') + ' ignored on component ' + '<' + options.el.tagName.toLowerCase() + '> because ' + 'the component is a fragment instance: ' + 'http://vuejs.org/guide/components.html#Fragment-Instance');
 	    }
 	  }
 
@@ -6801,7 +7127,7 @@ webpackJsonp([2,4],[
 
 	function compileNode(node, options) {
 	  var type = node.nodeType;
-	  if (type === 1 && node.tagName !== 'SCRIPT') {
+	  if (type === 1 && !isScript(node)) {
 	    return compileElement(node, options);
 	  } else if (type === 3 && node.data.trim()) {
 	    return compileTextNode(node, options);
@@ -6831,9 +7157,10 @@ webpackJsonp([2,4],[
 	  }
 	  var linkFn;
 	  var hasAttrs = el.hasAttributes();
+	  var attrs = hasAttrs && toArray(el.attributes);
 	  // check terminal directives (for & if)
 	  if (hasAttrs) {
-	    linkFn = checkTerminalDirectives(el, options);
+	    linkFn = checkTerminalDirectives(el, attrs, options);
 	  }
 	  // check element directives
 	  if (!linkFn) {
@@ -6845,7 +7172,7 @@ webpackJsonp([2,4],[
 	  }
 	  // normal directives
 	  if (!linkFn && hasAttrs) {
-	    linkFn = compileDirectives(el.attributes, options);
+	    linkFn = compileDirectives(attrs, options);
 	  }
 	  return linkFn;
 	}
@@ -6960,7 +7287,7 @@ webpackJsonp([2,4],[
 	          if (token.html) {
 	            replace(node, parseTemplate(value, true));
 	          } else {
-	            node.data = value;
+	            node.data = _toString(value);
 	          }
 	        } else {
 	          vm._bindDir(token.descriptor, node, host, scope);
@@ -7074,11 +7401,12 @@ webpackJsonp([2,4],[
 	 * If it finds one, return a terminal link function.
 	 *
 	 * @param {Element} el
+	 * @param {Array} attrs
 	 * @param {Object} options
 	 * @return {Function} terminalLinkFn
 	 */
 
-	function checkTerminalDirectives(el, options) {
+	function checkTerminalDirectives(el, attrs, options) {
 	  // skip v-pre
 	  if (getAttr(el, 'v-pre') !== null) {
 	    return skip;
@@ -7090,13 +7418,28 @@ webpackJsonp([2,4],[
 	      return skip;
 	    }
 	  }
-	  var value, dirName;
-	  for (var i = 0, l = terminalDirectives.length; i < l; i++) {
-	    dirName = terminalDirectives[i];
-	    value = el.getAttribute('v-' + dirName);
-	    if (value != null) {
-	      return makeTerminalNodeLinkFn(el, dirName, value, options);
+
+	  var attr, name, value, modifiers, matched, dirName, rawName, arg, def, termDef;
+	  for (var i = 0, j = attrs.length; i < j; i++) {
+	    attr = attrs[i];
+	    name = attr.name.replace(modifierRE, '');
+	    if (matched = name.match(dirAttrRE)) {
+	      def = resolveAsset(options, 'directives', matched[1]);
+	      if (def && def.terminal) {
+	        if (!termDef || (def.priority || DEFAULT_TERMINAL_PRIORITY) > termDef.priority) {
+	          termDef = def;
+	          rawName = attr.name;
+	          modifiers = parseModifiers(attr.name);
+	          value = attr.value;
+	          dirName = matched[1];
+	          arg = matched[2];
+	        }
+	      }
 	    }
+	  }
+
+	  if (termDef) {
+	    return makeTerminalNodeLinkFn(el, dirName, value, options, termDef, rawName, arg, modifiers);
 	  }
 	}
 
@@ -7113,20 +7456,24 @@ webpackJsonp([2,4],[
 	 * @param {String} dirName
 	 * @param {String} value
 	 * @param {Object} options
-	 * @param {Object} [def]
+	 * @param {Object} def
+	 * @param {String} [rawName]
+	 * @param {String} [arg]
+	 * @param {Object} [modifiers]
 	 * @return {Function} terminalLinkFn
 	 */
 
-	function makeTerminalNodeLinkFn(el, dirName, value, options, def) {
+	function makeTerminalNodeLinkFn(el, dirName, value, options, def, rawName, arg, modifiers) {
 	  var parsed = parseDirective(value);
 	  var descriptor = {
 	    name: dirName,
+	    arg: arg,
 	    expression: parsed.expression,
 	    filters: parsed.filters,
 	    raw: value,
-	    // either an element directive, or if/for
-	    // #2366 or custom terminal directive
-	    def: def || resolveAsset(options, 'directives', dirName)
+	    attr: rawName,
+	    modifiers: modifiers,
+	    def: def
 	  };
 	  // check ref for v-for and router-view
 	  if (dirName === 'for' || dirName === 'router-view') {
@@ -7175,7 +7522,7 @@ webpackJsonp([2,4],[
 	        if (name === 'class' && Array.prototype.some.call(attrs, function (attr) {
 	          return attr.name === ':class' || attr.name === 'v-bind:class';
 	        })) {
-	          warn('class="' + rawValue + '": Do not mix mustache interpolation ' + 'and v-bind for "class" on the same element. Use one or the other.');
+	          warn('class="' + rawValue + '": Do not mix mustache interpolation ' + 'and v-bind for "class" on the same element. Use one or the other.', options);
 	        }
 	      }
 	    } else
@@ -7213,12 +7560,7 @@ webpackJsonp([2,4],[
 	                continue;
 	              }
 
-	              dirDef = resolveAsset(options, 'directives', dirName);
-
-	              if (process.env.NODE_ENV !== 'production') {
-	                assertAsset(dirDef, 'directive', dirName);
-	              }
-
+	              dirDef = resolveAsset(options, 'directives', dirName, true);
 	              if (dirDef) {
 	                pushDir(dirName, dirDef);
 	              }
@@ -7306,6 +7648,10 @@ webpackJsonp([2,4],[
 	  while (i--) {
 	    if (tokens[i].oneTime) return true;
 	  }
+	}
+
+	function isScript(el) {
+	  return el.tagName === 'SCRIPT' && (!el.hasAttribute('type') || el.getAttribute('type') === 'text/javascript');
 	}
 
 	var specialCharRE = /[^\w\-:\.]/;
@@ -7437,7 +7783,7 @@ webpackJsonp([2,4],[
 	    value = attrs[i].value;
 	    if (!to.hasAttribute(name) && !specialCharRE.test(name)) {
 	      to.setAttribute(name, value);
-	    } else if (name === 'class' && !parseText(value)) {
+	    } else if (name === 'class' && !parseText(value) && (value = value.trim())) {
 	      value.split(/\s+/).forEach(function (cls) {
 	        addClass(to, cls);
 	      });
@@ -7456,39 +7802,32 @@ webpackJsonp([2,4],[
 	 * @param {Vue} vm
 	 */
 
-	function scanSlots(template, content, vm) {
+	function resolveSlots(vm, content) {
 	  if (!content) {
 	    return;
 	  }
-	  var contents = vm._slotContents = {};
-	  var slots = template.querySelectorAll('slot');
-	  if (slots.length) {
-	    var hasDefault, slot, name;
-	    for (var i = 0, l = slots.length; i < l; i++) {
-	      slot = slots[i];
-	      /* eslint-disable no-cond-assign */
-	      if (name = slot.getAttribute('name')) {
-	        select(slot, name);
-	      } else if (process.env.NODE_ENV !== 'production' && (name = getBindAttr(slot, 'name'))) {
-	        warn('<slot :name="' + name + '">: slot names cannot be dynamic.');
-	      } else {
-	        // default slot
-	        hasDefault = true;
-	      }
-	      /* eslint-enable no-cond-assign */
+	  var contents = vm._slotContents = Object.create(null);
+	  var el, name;
+	  for (var i = 0, l = content.children.length; i < l; i++) {
+	    el = content.children[i];
+	    /* eslint-disable no-cond-assign */
+	    if (name = el.getAttribute('slot')) {
+	      (contents[name] || (contents[name] = [])).push(el);
 	    }
-	    if (hasDefault) {
-	      contents['default'] = extractFragment(content.childNodes, content);
+	    /* eslint-enable no-cond-assign */
+	    if (process.env.NODE_ENV !== 'production' && getBindAttr(el, 'slot')) {
+	      warn('The "slot" attribute must be static.', vm.$parent);
 	    }
 	  }
-
-	  function select(slot, name) {
-	    // named slot
-	    var selector = '[slot="' + name + '"]';
-	    var nodes = content.querySelectorAll(selector);
-	    if (nodes.length) {
-	      contents[name] = extractFragment(nodes, content);
+	  for (name in contents) {
+	    contents[name] = extractFragment(contents[name], content);
+	  }
+	  if (content.hasChildNodes()) {
+	    var nodes = content.childNodes;
+	    if (nodes.length === 1 && nodes[0].nodeType === 3 && !nodes[0].data.trim()) {
+	      return;
 	    }
+	    contents['default'] = extractFragment(content.childNodes, content);
 	  }
 	}
 
@@ -7496,7 +7835,6 @@ webpackJsonp([2,4],[
 	 * Extract qualified content nodes from a node list.
 	 *
 	 * @param {NodeList} nodes
-	 * @param {Element} parent
 	 * @return {DocumentFragment}
 	 */
 
@@ -7505,13 +7843,11 @@ webpackJsonp([2,4],[
 	  nodes = toArray(nodes);
 	  for (var i = 0, l = nodes.length; i < l; i++) {
 	    var node = nodes[i];
-	    if (node.parentNode === parent) {
-	      if (isTemplate(node) && !node.hasAttribute('v-if') && !node.hasAttribute('v-for')) {
-	        parent.removeChild(node);
-	        node = parseTemplate(node);
-	      }
-	      frag.appendChild(node);
+	    if (isTemplate(node) && !node.hasAttribute('v-if') && !node.hasAttribute('v-for')) {
+	      parent.removeChild(node);
+	      node = parseTemplate(node, true);
 	    }
+	    frag.appendChild(node);
 	  }
 	  return frag;
 	}
@@ -7522,9 +7858,8 @@ webpackJsonp([2,4],[
 		compile: compile,
 		compileAndLinkProps: compileAndLinkProps,
 		compileRoot: compileRoot,
-		terminalDirectives: terminalDirectives,
 		transclude: transclude,
-		scanSlots: scanSlots
+		resolveSlots: resolveSlots
 	});
 
 	function stateMixin (Vue) {
@@ -7570,7 +7905,7 @@ webpackJsonp([2,4],[
 	    var el = options.el;
 	    var props = options.props;
 	    if (props && !el) {
-	      process.env.NODE_ENV !== 'production' && warn('Props will not be compiled if no `el` option is ' + 'provided at instantiation.');
+	      process.env.NODE_ENV !== 'production' && warn('Props will not be compiled if no `el` option is ' + 'provided at instantiation.', this);
 	    }
 	    // make sure to convert string selectors into element now
 	    el = options.el = query(el);
@@ -7584,33 +7919,28 @@ webpackJsonp([2,4],[
 	   */
 
 	  Vue.prototype._initData = function () {
-	    var propsData = this._data;
-	    var optionsDataFn = this.$options.data;
-	    var optionsData = optionsDataFn && optionsDataFn();
-	    var runtimeData;
-	    if (process.env.NODE_ENV !== 'production') {
-	      runtimeData = (typeof this._runtimeData === 'function' ? this._runtimeData() : this._runtimeData) || {};
-	      this._runtimeData = null;
+	    var dataFn = this.$options.data;
+	    var data = this._data = dataFn ? dataFn() : {};
+	    if (!isPlainObject(data)) {
+	      data = {};
+	      process.env.NODE_ENV !== 'production' && warn('data functions should return an object.', this);
 	    }
-	    if (optionsData) {
-	      this._data = optionsData;
-	      for (var prop in propsData) {
-	        if (process.env.NODE_ENV !== 'production' && hasOwn(optionsData, prop) && !hasOwn(runtimeData, prop)) {
-	          warn('Data field "' + prop + '" is already defined ' + 'as a prop. Use prop default value instead.');
-	        }
-	        if (this._props[prop].raw !== null || !hasOwn(optionsData, prop)) {
-	          set(optionsData, prop, propsData[prop]);
-	        }
-	      }
-	    }
-	    var data = this._data;
+	    var props = this._props;
 	    // proxy data on instance
 	    var keys = Object.keys(data);
 	    var i, key;
 	    i = keys.length;
 	    while (i--) {
 	      key = keys[i];
-	      this._proxy(key);
+	      // there are two scenarios where we can proxy a data key:
+	      // 1. it's not already defined as a prop
+	      // 2. it's provided via a instantiation option AND there are no
+	      //    template prop present
+	      if (!props || !hasOwn(props, key)) {
+	        this._proxy(key);
+	      } else if (process.env.NODE_ENV !== 'production') {
+	        warn('Data field "' + key + '" is already defined ' + 'as a prop. To provide default value for a prop, use the "default" ' + 'prop option; if you want to pass prop values to an instantiation ' + 'call, use the "propsData" option.', this);
+	      }
 	    }
 	    // observe data
 	    observe(data, this);
@@ -7799,18 +8129,21 @@ webpackJsonp([2,4],[
 
 	  function registerComponentEvents(vm, el) {
 	    var attrs = el.attributes;
-	    var name, handler;
+	    var name, value, handler;
 	    for (var i = 0, l = attrs.length; i < l; i++) {
 	      name = attrs[i].name;
 	      if (eventRE.test(name)) {
 	        name = name.replace(eventRE, '');
-	        handler = (vm._scope || vm._context).$eval(attrs[i].value, true);
-	        if (typeof handler === 'function') {
-	          handler._fromParent = true;
-	          vm.$on(name.replace(eventRE), handler);
-	        } else if (process.env.NODE_ENV !== 'production') {
-	          warn('v-on:' + name + '="' + attrs[i].value + '"' + (vm.$options.name ? ' on component <' + vm.$options.name + '>' : '') + ' expects a function value, got ' + handler);
+	        // force the expression into a statement so that
+	        // it always dynamically resolves the method to call (#2670)
+	        // kinda ugly hack, but does the job.
+	        value = attrs[i].value;
+	        if (isSimplePath(value)) {
+	          value += '.apply(this, $arguments)';
 	        }
+	        handler = (vm._scope || vm._context).$eval(value, true);
+	        handler._fromParent = true;
+	        vm.$on(name.replace(eventRE), handler);
 	      }
 	    }
 	  }
@@ -7858,7 +8191,7 @@ webpackJsonp([2,4],[
 	      if (method) {
 	        vm[action](key, method, options);
 	      } else {
-	        process.env.NODE_ENV !== 'production' && warn('Unknown method: "' + handler + '" when ' + 'registering callback for ' + action + ': "' + key + '".');
+	        process.env.NODE_ENV !== 'production' && warn('Unknown method: "' + handler + '" when ' + 'registering callback for ' + action + ': "' + key + '".', vm);
 	      }
 	    } else if (handler && type === 'object') {
 	      register(vm, action, key, handler.handler, handler);
@@ -7938,7 +8271,7 @@ webpackJsonp([2,4],[
 	  };
 	}
 
-	function noop() {}
+	function noop$1() {}
 
 	/**
 	 * A directive links a DOM element with a piece of data,
@@ -7946,18 +8279,21 @@ webpackJsonp([2,4],[
 	 * It registers a watcher with the expression and calls
 	 * the DOM update function when a change is triggered.
 	 *
-	 * @param {String} name
-	 * @param {Node} el
-	 * @param {Vue} vm
 	 * @param {Object} descriptor
 	 *                 - {String} name
 	 *                 - {Object} def
 	 *                 - {String} expression
 	 *                 - {Array<Object>} [filters]
+	 *                 - {Object} [modifiers]
 	 *                 - {Boolean} literal
 	 *                 - {String} attr
+	 *                 - {String} arg
 	 *                 - {String} raw
-	 * @param {Object} def - directive definition object
+	 *                 - {String} [ref]
+	 *                 - {Array<Object>} [interp]
+	 *                 - {Boolean} [hasOneTime]
+	 * @param {Vue} vm
+	 * @param {Node} el
 	 * @param {Vue} [host] - transclusion host component
 	 * @param {Object} [scope] - v-for scope
 	 * @param {Fragment} [frag] - owner fragment
@@ -7993,8 +8329,6 @@ webpackJsonp([2,4],[
 	 * Initialize the directive, mixin definition properties,
 	 * setup the watcher, call definition bind() and update()
 	 * if present.
-	 *
-	 * @param {Object} def
 	 */
 
 	Directive.prototype._bind = function () {
@@ -8036,7 +8370,7 @@ webpackJsonp([2,4],[
 	        }
 	      };
 	    } else {
-	      this._update = noop;
+	      this._update = noop$1;
 	    }
 	    var preProcess = this._preProcess ? bind(this._preProcess, this) : null;
 	    var postProcess = this._postProcess ? bind(this._postProcess, this) : null;
@@ -8075,7 +8409,7 @@ webpackJsonp([2,4],[
 	  var i = params.length;
 	  var key, val, mappedKey;
 	  while (i--) {
-	    key = params[i];
+	    key = hyphenate(params[i]);
 	    mappedKey = camelize(key);
 	    val = getBindAttr(this.el, key);
 	    if (val != null) {
@@ -8288,9 +8622,8 @@ webpackJsonp([2,4],[
 	    var contextOptions = this._context && this._context.$options;
 	    var rootLinker = compileRoot(el, options, contextOptions);
 
-	    // scan for slot distribution before compiling the content
-	    // so that it's decoupeld from slot/directive compilation order
-	    scanSlots(el, options._content, this);
+	    // resolve slot distribution
+	    resolveSlots(this, options._content);
 
 	    // compile and link the rest
 	    var contentLinkFn;
@@ -8354,10 +8687,8 @@ webpackJsonp([2,4],[
 	  /**
 	   * Create and bind a directive to an element.
 	   *
-	   * @param {String} name - directive name
+	   * @param {Object} descriptor - parsed directive descriptor
 	   * @param {Node} node   - target node
-	   * @param {Object} desc - parsed directive descriptor
-	   * @param {Object} def  - directive definition object
 	   * @param {Vue} [host] - transclusion host component
 	   * @param {Object} [scope] - v-for scope
 	   * @param {Fragment} [frag] - owner fragment
@@ -8463,7 +8794,7 @@ webpackJsonp([2,4],[
 	    }
 	    // remove reference from data ob
 	    // frozen object may not have observer.
-	    if (this._data.__ob__) {
+	    if (this._data && this._data.__ob__) {
 	      this._data.__ob__.removeVm(this);
 	    }
 	    // Clean up references to private properties and other
@@ -8500,11 +8831,8 @@ webpackJsonp([2,4],[
 	  Vue.prototype._applyFilters = function (value, oldValue, filters, write) {
 	    var filter, fn, args, arg, offset, i, l, j, k;
 	    for (i = 0, l = filters.length; i < l; i++) {
-	      filter = filters[i];
-	      fn = resolveAsset(this.$options, 'filters', filter.name);
-	      if (process.env.NODE_ENV !== 'production') {
-	        assertAsset(fn, 'filter', filter.name);
-	      }
+	      filter = filters[write ? l - i - 1 : i];
+	      fn = resolveAsset(this.$options, 'filters', filter.name, true);
 	      if (!fn) continue;
 	      fn = write ? fn.write : fn.read || fn;
 	      if (typeof fn !== 'function') continue;
@@ -8528,15 +8856,18 @@ webpackJsonp([2,4],[
 	   * resolves asynchronously and caches the resolved
 	   * constructor on the factory.
 	   *
-	   * @param {String} id
+	   * @param {String|Function} value
 	   * @param {Function} cb
 	   */
 
-	  Vue.prototype._resolveComponent = function (id, cb) {
-	    var factory = resolveAsset(this.$options, 'components', id);
-	    if (process.env.NODE_ENV !== 'production') {
-	      assertAsset(factory, 'component', id);
+	  Vue.prototype._resolveComponent = function (value, cb) {
+	    var factory;
+	    if (typeof value === 'function') {
+	      factory = value;
+	    } else {
+	      factory = resolveAsset(this.$options, 'components', value, true);
 	    }
+	    /* istanbul ignore if */
 	    if (!factory) {
 	      return;
 	    }
@@ -8562,7 +8893,7 @@ webpackJsonp([2,4],[
 	            cbs[i](res);
 	          }
 	        }, function reject(reason) {
-	          process.env.NODE_ENV !== 'production' && warn('Failed to resolve async component: ' + id + '. ' + (reason ? '\nReason: ' + reason : ''));
+	          process.env.NODE_ENV !== 'production' && warn('Failed to resolve async component' + (typeof value === 'string' ? ': ' + value : '') + '. ' + (reason ? '\nReason: ' + reason : ''));
 	        });
 	      }
 	    } else {
@@ -8586,7 +8917,7 @@ webpackJsonp([2,4],[
 	  Vue.prototype.$get = function (exp, asStatement) {
 	    var res = parseExpression(exp);
 	    if (res) {
-	      if (asStatement && !isSimplePath(exp)) {
+	      if (asStatement) {
 	        var self = this;
 	        return function statementHandler() {
 	          self.$arguments = toArray(arguments);
@@ -8722,8 +9053,14 @@ webpackJsonp([2,4],[
 	    }
 	    // include computed fields
 	    if (!path) {
-	      for (var key in this.$options.computed) {
+	      var key;
+	      for (key in this.$options.computed) {
 	        data[key] = clean(this[key]);
+	      }
+	      if (this._props) {
+	        for (key in this._props) {
+	          data[key] = clean(this[key]);
+	        }
 	      }
 	    }
 	    console.log(data);
@@ -9131,7 +9468,7 @@ webpackJsonp([2,4],[
 
 	  Vue.prototype.$mount = function (el) {
 	    if (this._isCompiled) {
-	      process.env.NODE_ENV !== 'production' && warn('$mount() should be called only once.');
+	      process.env.NODE_ENV !== 'production' && warn('$mount() should be called only once.', this);
 	      return;
 	    }
 	    el = query(el);
@@ -9162,6 +9499,9 @@ webpackJsonp([2,4],[
 	  /**
 	   * Teardown the instance, simply delegate to the internal
 	   * _destroy.
+	   *
+	   * @param {Boolean} remove
+	   * @param {Boolean} deferCleanup
 	   */
 
 	  Vue.prototype.$destroy = function (remove, deferCleanup) {
@@ -9174,6 +9514,8 @@ webpackJsonp([2,4],[
 	   *
 	   * @param {Element|DocumentFragment} el
 	   * @param {Vue} [host]
+	   * @param {Object} [scope]
+	   * @param {Fragment} [frag]
 	   * @return {Function}
 	   */
 
@@ -9285,10 +9627,7 @@ webpackJsonp([2,4],[
 	  },
 
 	  insert: function insert(id) {
-	    var partial = resolveAsset(this.vm.$options, 'partials', id);
-	    if (process.env.NODE_ENV !== 'production') {
-	      assertAsset(partial, 'partial', id);
-	    }
+	    var partial = resolveAsset(this.vm.$options, 'partials', id, true);
 	    if (partial) {
 	      this.factory = new FragmentFactory(this.vm, partial);
 	      vIf.insert.call(this);
@@ -9344,9 +9683,7 @@ webpackJsonp([2,4],[
 	  // because why not
 	  var n = delimiter === 'in' ? 3 : 2;
 	  // extract and flatten keys
-	  var keys = toArray(arguments, n).reduce(function (prev, cur) {
-	    return prev.concat(cur);
-	  }, []);
+	  var keys = Array.prototype.concat.apply([], toArray(arguments, n));
 	  var res = [];
 	  var item, key, val, j;
 	  for (var i = 0, l = arr.length; i < l; i++) {
@@ -9356,12 +9693,12 @@ webpackJsonp([2,4],[
 	    if (j) {
 	      while (j--) {
 	        key = keys[j];
-	        if (key === '$key' && contains$1(item.$key, search) || contains$1(getPath(val, key), search)) {
+	        if (key === '$key' && contains(item.$key, search) || contains(getPath(val, key), search)) {
 	          res.push(item);
 	          break;
 	        }
 	      }
-	    } else if (contains$1(item, search)) {
+	    } else if (contains(item, search)) {
 	      res.push(item);
 	    }
 	  }
@@ -9371,26 +9708,58 @@ webpackJsonp([2,4],[
 	/**
 	 * Filter filter for arrays
 	 *
-	 * @param {String} sortKey
-	 * @param {String} reverse
+	 * @param {String|Array<String>|Function} ...sortKeys
+	 * @param {Number} [order]
 	 */
 
-	function orderBy(arr, sortKey, reverse) {
+	function orderBy(arr) {
+	  var comparator = null;
+	  var sortKeys = undefined;
 	  arr = convertArray(arr);
-	  if (!sortKey) {
-	    return arr;
+
+	  // determine order (last argument)
+	  var args = toArray(arguments, 1);
+	  var order = args[args.length - 1];
+	  if (typeof order === 'number') {
+	    order = order < 0 ? -1 : 1;
+	    args = args.length > 1 ? args.slice(0, -1) : args;
+	  } else {
+	    order = 1;
 	  }
-	  var order = reverse && reverse < 0 ? -1 : 1;
-	  // sort on a copy to avoid mutating original array
-	  return arr.slice().sort(function (a, b) {
-	    if (sortKey !== '$key') {
-	      if (isObject(a) && '$value' in a) a = a.$value;
-	      if (isObject(b) && '$value' in b) b = b.$value;
+
+	  // determine sortKeys & comparator
+	  var firstArg = args[0];
+	  if (!firstArg) {
+	    return arr;
+	  } else if (typeof firstArg === 'function') {
+	    // custom comparator
+	    comparator = function (a, b) {
+	      return firstArg(a, b) * order;
+	    };
+	  } else {
+	    // string keys. flatten first
+	    sortKeys = Array.prototype.concat.apply([], args);
+	    comparator = function (a, b, i) {
+	      i = i || 0;
+	      return i >= sortKeys.length - 1 ? baseCompare(a, b, i) : baseCompare(a, b, i) || comparator(a, b, i + 1);
+	    };
+	  }
+
+	  function baseCompare(a, b, sortKeyIndex) {
+	    var sortKey = sortKeys[sortKeyIndex];
+	    if (sortKey) {
+	      if (sortKey !== '$key') {
+	        if (isObject(a) && '$value' in a) a = a.$value;
+	        if (isObject(b) && '$value' in b) b = b.$value;
+	      }
+	      a = isObject(a) ? getPath(a, sortKey) : a;
+	      b = isObject(b) ? getPath(b, sortKey) : b;
 	    }
-	    a = isObject(a) ? getPath(a, sortKey) : a;
-	    b = isObject(b) ? getPath(b, sortKey) : b;
 	    return a === b ? 0 : a > b ? order : -order;
-	  });
+	  }
+
+	  // sort on a copy to avoid mutating original array
+	  return arr.slice().sort(comparator);
 	}
 
 	/**
@@ -9400,20 +9769,20 @@ webpackJsonp([2,4],[
 	 * @param {String} search
 	 */
 
-	function contains$1(val, search) {
+	function contains(val, search) {
 	  var i;
 	  if (isPlainObject(val)) {
 	    var keys = Object.keys(val);
 	    i = keys.length;
 	    while (i--) {
-	      if (contains$1(val[keys[i]], search)) {
+	      if (contains(val[keys[i]], search)) {
 	        return true;
 	      }
 	    }
 	  } else if (isArray(val)) {
 	    i = val.length;
 	    while (i--) {
-	      if (contains$1(val[i], search)) {
+	      if (contains(val[i], search)) {
 	        return true;
 	      }
 	    }
@@ -9439,7 +9808,7 @@ webpackJsonp([2,4],[
 
 	  json: {
 	    read: function read(value, indent) {
-	      return typeof value === 'string' ? value : JSON.stringify(value, null, Number(indent) || 2);
+	      return typeof value === 'string' ? value : JSON.stringify(value, null, arguments.length > 1 ? indent : 2);
 	    },
 	    write: function write(value) {
 	      try {
@@ -9480,17 +9849,19 @@ webpackJsonp([2,4],[
 	   * 12345 => $12,345.00
 	   *
 	   * @param {String} sign
+	   * @param {Number} decimals Decimal places
 	   */
 
-	  currency: function currency(value, _currency) {
+	  currency: function currency(value, _currency, decimals) {
 	    value = parseFloat(value);
 	    if (!isFinite(value) || !value && value !== 0) return '';
 	    _currency = _currency != null ? _currency : '$';
-	    var stringified = Math.abs(value).toFixed(2);
-	    var _int = stringified.slice(0, -3);
+	    decimals = decimals != null ? decimals : 2;
+	    var stringified = Math.abs(value).toFixed(decimals);
+	    var _int = decimals ? stringified.slice(0, -1 - decimals) : stringified;
 	    var i = _int.length % 3;
 	    var head = i > 0 ? _int.slice(0, i) + (_int.length > 3 ? ',' : '') : '';
-	    var _float = stringified.slice(-3);
+	    var _float = decimals ? stringified.slice(-1 - decimals) : '';
 	    var sign = value < 0 ? '-' : '';
 	    return sign + _currency + head + _int.slice(i).replace(digitsRE, '$1,') + _float;
 	  },
@@ -9695,7 +10066,9 @@ webpackJsonp([2,4],[
 	          }
 	        }
 	        if (type === 'component' && isPlainObject(definition)) {
-	          definition.name = id;
+	          if (!definition.name) {
+	            definition.name = id;
+	          }
 	          definition = Vue.extend(definition);
 	        }
 	        this.options[type + 's'][id] = definition;
@@ -9710,15 +10083,19 @@ webpackJsonp([2,4],[
 
 	installGlobalAPI(Vue);
 
-	Vue.version = '1.0.17';
+	Vue.version = '1.0.25';
 
 	// devtools global hook
 	/* istanbul ignore next */
-	if (devtools) {
-	  devtools.emit('init', Vue);
-	} else if (process.env.NODE_ENV !== 'production' && inBrowser && /Chrome\/\d+/.test(window.navigator.userAgent)) {
-	  console.log('Download the Vue Devtools for a better development experience:\n' + 'https://github.com/vuejs/vue-devtools');
-	}
+	setTimeout(function () {
+	  if (config.devtools) {
+	    if (devtools) {
+	      devtools.emit('init', Vue);
+	    } else if (process.env.NODE_ENV !== 'production' && inBrowser && /Chrome\/\d+/.test(window.navigator.userAgent)) {
+	      console.log('Download the Vue Devtools for a better development experience:\n' + 'https://github.com/vuejs/vue-devtools');
+	    }
+	  }
+	}, 0);
 
 	module.exports = Vue;
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(2)))
@@ -9730,12 +10107,40 @@ webpackJsonp([2,4],[
 	// shim for using process in browser
 
 	var process = module.exports = {};
+
+	// cached from whatever global is present so that test runners that stub it
+	// don't break things.  But we need to wrap it in a try catch in case it is
+	// wrapped in strict mode code which doesn't define any globals.  It's inside a
+	// function because try/catches deoptimize in certain engines.
+
+	var cachedSetTimeout;
+	var cachedClearTimeout;
+
+	(function () {
+	  try {
+	    cachedSetTimeout = setTimeout;
+	  } catch (e) {
+	    cachedSetTimeout = function () {
+	      throw new Error('setTimeout is not defined');
+	    }
+	  }
+	  try {
+	    cachedClearTimeout = clearTimeout;
+	  } catch (e) {
+	    cachedClearTimeout = function () {
+	      throw new Error('clearTimeout is not defined');
+	    }
+	  }
+	} ())
 	var queue = [];
 	var draining = false;
 	var currentQueue;
 	var queueIndex = -1;
 
 	function cleanUpNextTick() {
+	    if (!draining || !currentQueue) {
+	        return;
+	    }
 	    draining = false;
 	    if (currentQueue.length) {
 	        queue = currentQueue.concat(queue);
@@ -9751,7 +10156,7 @@ webpackJsonp([2,4],[
 	    if (draining) {
 	        return;
 	    }
-	    var timeout = setTimeout(cleanUpNextTick);
+	    var timeout = cachedSetTimeout(cleanUpNextTick);
 	    draining = true;
 
 	    var len = queue.length;
@@ -9768,7 +10173,7 @@ webpackJsonp([2,4],[
 	    }
 	    currentQueue = null;
 	    draining = false;
-	    clearTimeout(timeout);
+	    cachedClearTimeout(timeout);
 	}
 
 	process.nextTick = function (fun) {
@@ -9780,7 +10185,7 @@ webpackJsonp([2,4],[
 	    }
 	    queue.push(new Item(fun, args));
 	    if (queue.length === 1 && !draining) {
-	        setTimeout(drainQueue, 0);
+	        cachedSetTimeout(drainQueue, 0);
 	    }
 	};
 
@@ -10509,7 +10914,7 @@ webpackJsonp([2,4],[
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
-	 * Vuex v0.6.2
+	 * Vuex v0.6.3
 	 * (c) 2016 Evan You
 	 * Released under the MIT License.
 	 */
@@ -10668,6 +11073,10 @@ webpackJsonp([2,4],[
 	      _init.call(this, options);
 	    };
 
+	    /**
+	     * Vuex init hook, injected into each instances init hooks list.
+	     */
+
 	    function vuexInit() {
 	      var options = this.$options;
 	      var store = options.store;
@@ -10704,27 +11113,55 @@ webpackJsonp([2,4],[
 	        if (actions) {
 	          options.methods = options.methods || {};
 	          for (var _key in actions) {
-	            options.methods[_key] = makeBoundAction(actions[_key], this.$store);
+	            options.methods[_key] = makeBoundAction(this.$store, actions[_key], _key);
 	          }
 	        }
 	      }
 	    }
 
+	    /**
+	     * Setter for all getter properties.
+	     */
+
 	    function setter() {
 	      throw new Error('vuex getter properties are read-only.');
 	    }
 
+	    /**
+	     * Define a Vuex getter on an instance.
+	     *
+	     * @param {Vue} vm
+	     * @param {String} key
+	     * @param {Function} getter
+	     */
+
 	    function defineVuexGetter(vm, key, getter) {
-	      Object.defineProperty(vm, key, {
-	        enumerable: true,
-	        configurable: true,
-	        get: makeComputedGetter(vm.$store, getter),
-	        set: setter
-	      });
+	      if (typeof getter !== 'function') {
+	        console.warn('[vuex] Getter bound to key \'vuex.getters.' + key + '\' is not a function.');
+	      } else {
+	        Object.defineProperty(vm, key, {
+	          enumerable: true,
+	          configurable: true,
+	          get: makeComputedGetter(vm.$store, getter),
+	          set: setter
+	        });
+	      }
 	    }
+
+	    /**
+	     * Make a computed getter, using the same caching mechanism of computed
+	     * properties. In addition, it is cached on the raw getter function using
+	     * the store's unique cache id. This makes the same getter shared
+	     * across all components use the same underlying watcher, and makes
+	     * the getter evaluated only once during every flush.
+	     *
+	     * @param {Store} store
+	     * @param {Function} getter
+	     */
 
 	    function makeComputedGetter(store, getter) {
 	      var id = store._getterCacheId;
+
 	      // cached
 	      if (getter[id]) {
 	        return getter[id];
@@ -10748,7 +11185,18 @@ webpackJsonp([2,4],[
 	      return computedGetter;
 	    }
 
-	    function makeBoundAction(action, store) {
+	    /**
+	     * Make a bound-to-store version of a raw action function.
+	     *
+	     * @param {Store} store
+	     * @param {Function} action
+	     * @param {String} key
+	     */
+
+	    function makeBoundAction(store, action, key) {
+	      if (typeof action !== 'function') {
+	        console.warn('[vuex] Action bound to key \'vuex.actions.' + key + '\' is not a function.');
+	      }
 	      return function vuexBoundAction() {
 	        for (var _len = arguments.length, args = Array(_len), _key2 = 0; _key2 < _len; _key2++) {
 	          args[_key2] = arguments[_key2];
@@ -10854,22 +11302,19 @@ webpackJsonp([2,4],[
 	       */
 
 	      value: function dispatch(type) {
-	        var _this2 = this;
-
 	        for (var _len2 = arguments.length, payload = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
 	          payload[_key2 - 1] = arguments[_key2];
 	        }
 
+	        var silent = false;
 	        // compatibility for object actions, e.g. FSA
 	        if ((typeof type === 'undefined' ? 'undefined' : babelHelpers.typeof(type)) === 'object' && type.type && arguments.length === 1) {
-	          payload = [type];
+	          payload = [type.payload];
+	          if (type.silent) silent = true;
 	          type = type.type;
 	        }
 	        var mutation = this._mutations[type];
-	        var prevSnapshot = this._prevSnapshot;
 	        var state = this.state;
-	        var snapshot = void 0,
-	            clonedPayload = void 0;
 	        if (mutation) {
 	          this._dispatching = true;
 	          // apply the mutation
@@ -10881,20 +11326,7 @@ webpackJsonp([2,4],[
 	            mutation.apply(undefined, [state].concat(babelHelpers.toConsumableArray(payload)));
 	          }
 	          this._dispatching = false;
-	          // invoke middlewares
-	          if (this._needSnapshots) {
-	            snapshot = this._prevSnapshot = deepClone(state);
-	            clonedPayload = deepClone(payload);
-	          }
-	          this._middlewares.forEach(function (m) {
-	            if (m.onMutation) {
-	              if (m.snapshot) {
-	                m.onMutation({ type: type, payload: clonedPayload }, snapshot, prevSnapshot, _this2);
-	              } else {
-	                m.onMutation({ type: type, payload: payload }, state, _this2);
-	              }
-	            }
-	          });
+	          if (!silent) this._applyMiddlewares(type, payload);
 	        } else {
 	          console.warn('[vuex] Unknown mutation: ' + type);
 	        }
@@ -10913,10 +11345,10 @@ webpackJsonp([2,4],[
 	    }, {
 	      key: 'watch',
 	      value: function watch(expOrFn, cb, options) {
-	        var _this3 = this;
+	        var _this2 = this;
 
 	        return this._vm.$watch(function () {
-	          return typeof expOrFn === 'function' ? expOrFn(_this3.state) : _this3._vm.$get(expOrFn);
+	          return typeof expOrFn === 'function' ? expOrFn(_this2.state) : _this2._vm.$get(expOrFn);
 	        }, cb, options);
 	      }
 
@@ -10950,10 +11382,8 @@ webpackJsonp([2,4],[
 	    }, {
 	      key: '_setupModuleState',
 	      value: function _setupModuleState(state, modules) {
-	        var setPath = Vue.parsers.path.setPath;
-
 	        Object.keys(modules).forEach(function (key) {
-	          setPath(state, key, modules[key].state || {});
+	          Vue.set(state, key, modules[key].state || {});
 	        });
 	      }
 
@@ -10968,8 +11398,6 @@ webpackJsonp([2,4],[
 	      key: '_setupModuleMutations',
 	      value: function _setupModuleMutations(updatedModules) {
 	        var modules = this._modules;
-	        var getPath = Vue.parsers.path.getPath;
-
 	        var allMutations = [this._rootMutations];
 	        Object.keys(updatedModules).forEach(function (key) {
 	          modules[key] = updatedModules[key];
@@ -10986,7 +11414,7 @@ webpackJsonp([2,4],[
 	                args[_key3 - 1] = arguments[_key3];
 	              }
 
-	              original.apply(undefined, [getPath(state, key)].concat(args));
+	              original.apply(undefined, [state[key]].concat(args));
 	            };
 	          });
 	          allMutations.push(mutations);
@@ -11006,12 +11434,12 @@ webpackJsonp([2,4],[
 	    }, {
 	      key: '_setupMutationCheck',
 	      value: function _setupMutationCheck() {
-	        var _this4 = this;
+	        var _this3 = this;
 
 	        var Watcher = getWatcher(this._vm);
 	        /* eslint-disable no-new */
 	        new Watcher(this._vm, '$data', function () {
-	          if (!_this4._dispatching) {
+	          if (!_this3._dispatching) {
 	            throw new Error('[vuex] Do not mutate vuex store state outside mutation handlers.');
 	          }
 	        }, { deep: true, sync: true });
@@ -11032,7 +11460,7 @@ webpackJsonp([2,4],[
 	    }, {
 	      key: '_setupMiddlewares',
 	      value: function _setupMiddlewares(middlewares, state) {
-	        var _this5 = this;
+	        var _this4 = this;
 
 	        this._middlewares = [devtoolMiddleware].concat(middlewares);
 	        this._needSnapshots = middlewares.some(function (m) {
@@ -11045,7 +11473,38 @@ webpackJsonp([2,4],[
 	        // call init hooks
 	        this._middlewares.forEach(function (m) {
 	          if (m.onInit) {
-	            m.onInit(m.snapshot ? initialSnapshot : state, _this5);
+	            m.onInit(m.snapshot ? initialSnapshot : state, _this4);
+	          }
+	        });
+	      }
+
+	      /**
+	       * Apply the middlewares on a given mutation.
+	       *
+	       * @param {String} type
+	       * @param {Array} payload
+	       */
+
+	    }, {
+	      key: '_applyMiddlewares',
+	      value: function _applyMiddlewares(type, payload) {
+	        var _this5 = this;
+
+	        var state = this.state;
+	        var prevSnapshot = this._prevSnapshot;
+	        var snapshot = void 0,
+	            clonedPayload = void 0;
+	        if (this._needSnapshots) {
+	          snapshot = this._prevSnapshot = deepClone(state);
+	          clonedPayload = deepClone(payload);
+	        }
+	        this._middlewares.forEach(function (m) {
+	          if (m.onMutation) {
+	            if (m.snapshot) {
+	              m.onMutation({ type: type, payload: clonedPayload }, snapshot, prevSnapshot, _this5);
+	            } else {
+	              m.onMutation({ type: type, payload: payload }, state, _this5);
+	            }
 	          }
 	        });
 	      }
@@ -11062,6 +11521,10 @@ webpackJsonp([2,4],[
 	  }();
 
 	  function install(_Vue) {
+	    if (Vue) {
+	      console.warn('[vuex] already installed. Vue.use(Vuex) should be called only once.');
+	      return;
+	    }
 	    Vue = _Vue;
 	    override(Vue);
 	  }
@@ -11091,12 +11554,11 @@ webpackJsonp([2,4],[
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/**
 	 * @license
-	 * lodash 4.6.1 (Custom Build) <https://lodash.com/>
-	 * Build: `lodash -d -o ./foo/lodash.js`
-	 * Copyright 2012-2016 The Dojo Foundation <http://dojofoundation.org/>
+	 * lodash <https://lodash.com/>
+	 * Copyright jQuery Foundation and other contributors <https://jquery.org/>
+	 * Released under MIT license <https://lodash.com/license>
 	 * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
-	 * Copyright 2009-2016 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-	 * Available under MIT license <https://lodash.com/license>
+	 * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 */
 	;(function() {
 
@@ -11104,7 +11566,7 @@ webpackJsonp([2,4],[
 	  var undefined;
 
 	  /** Used as the semantic version number. */
-	  var VERSION = '4.6.1';
+	  var VERSION = '4.13.1';
 
 	  /** Used as the size to enable large array optimizations. */
 	  var LARGE_ARRAY_SIZE = 200;
@@ -11169,6 +11631,7 @@ webpackJsonp([2,4],[
 	      mapTag = '[object Map]',
 	      numberTag = '[object Number]',
 	      objectTag = '[object Object]',
+	      promiseTag = '[object Promise]',
 	      regexpTag = '[object RegExp]',
 	      setTag = '[object Set]',
 	      stringTag = '[object String]',
@@ -11177,6 +11640,7 @@ webpackJsonp([2,4],[
 	      weakSetTag = '[object WeakSet]';
 
 	  var arrayBufferTag = '[object ArrayBuffer]',
+	      dataViewTag = '[object DataView]',
 	      float32Tag = '[object Float32Array]',
 	      float64Tag = '[object Float64Array]',
 	      int8Tag = '[object Int8Array]',
@@ -11206,9 +11670,12 @@ webpackJsonp([2,4],[
 	  /** Used to match property names within property paths. */
 	  var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
 	      reIsPlainProp = /^\w*$/,
-	      rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]/g;
+	      rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g;
 
-	  /** Used to match `RegExp` [syntax characters](http://ecma-international.org/ecma-262/6.0/#sec-patterns). */
+	  /**
+	   * Used to match `RegExp`
+	   * [syntax characters](http://ecma-international.org/ecma-262/6.0/#sec-patterns).
+	   */
 	  var reRegExpChar = /[\\^$.*+?()[\]{}|]/g,
 	      reHasRegExpChar = RegExp(reRegExpChar.source);
 
@@ -11217,10 +11684,16 @@ webpackJsonp([2,4],[
 	      reTrimStart = /^\s+/,
 	      reTrimEnd = /\s+$/;
 
+	  /** Used to match non-compound words composed of alphanumeric characters. */
+	  var reBasicWord = /[a-zA-Z0-9]+/g;
+
 	  /** Used to match backslashes in property paths. */
 	  var reEscapeChar = /\\(\\)?/g;
 
-	  /** Used to match [ES template delimiters](http://ecma-international.org/ecma-262/6.0/#sec-template-literal-lexical-components). */
+	  /**
+	   * Used to match
+	   * [ES template delimiters](http://ecma-international.org/ecma-262/6.0/#sec-template-literal-lexical-components).
+	   */
 	  var reEsTemplate = /\$\{([^\\}]*(?:\\.[^\\}]*)*)\}/g;
 
 	  /** Used to match `RegExp` flags from their coerced string values. */
@@ -11235,7 +11708,7 @@ webpackJsonp([2,4],[
 	  /** Used to detect binary string values. */
 	  var reIsBinary = /^0b[01]+$/i;
 
-	  /** Used to detect host constructors (Safari > 5). */
+	  /** Used to detect host constructors (Safari). */
 	  var reIsHostCtor = /^\[object .+?Constructor\]$/;
 
 	  /** Used to detect octal string values. */
@@ -11261,14 +11734,15 @@ webpackJsonp([2,4],[
 	      rsLowerRange = 'a-z\\xdf-\\xf6\\xf8-\\xff',
 	      rsMathOpRange = '\\xac\\xb1\\xd7\\xf7',
 	      rsNonCharRange = '\\x00-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\xbf',
-	      rsQuoteRange = '\\u2018\\u2019\\u201c\\u201d',
+	      rsPunctuationRange = '\\u2000-\\u206f',
 	      rsSpaceRange = ' \\t\\x0b\\f\\xa0\\ufeff\\n\\r\\u2028\\u2029\\u1680\\u180e\\u2000\\u2001\\u2002\\u2003\\u2004\\u2005\\u2006\\u2007\\u2008\\u2009\\u200a\\u202f\\u205f\\u3000',
 	      rsUpperRange = 'A-Z\\xc0-\\xd6\\xd8-\\xde',
 	      rsVarRange = '\\ufe0e\\ufe0f',
-	      rsBreakRange = rsMathOpRange + rsNonCharRange + rsQuoteRange + rsSpaceRange;
+	      rsBreakRange = rsMathOpRange + rsNonCharRange + rsPunctuationRange + rsSpaceRange;
 
 	  /** Used to compose unicode capture groups. */
-	  var rsAstral = '[' + rsAstralRange + ']',
+	  var rsApos = "['\u2019]",
+	      rsAstral = '[' + rsAstralRange + ']',
 	      rsBreak = '[' + rsBreakRange + ']',
 	      rsCombo = '[' + rsComboMarksRange + rsComboSymbolsRange + ']',
 	      rsDigits = '\\d+',
@@ -11286,12 +11760,17 @@ webpackJsonp([2,4],[
 	  /** Used to compose unicode regexes. */
 	  var rsLowerMisc = '(?:' + rsLower + '|' + rsMisc + ')',
 	      rsUpperMisc = '(?:' + rsUpper + '|' + rsMisc + ')',
+	      rsOptLowerContr = '(?:' + rsApos + '(?:d|ll|m|re|s|t|ve))?',
+	      rsOptUpperContr = '(?:' + rsApos + '(?:D|LL|M|RE|S|T|VE))?',
 	      reOptMod = rsModifier + '?',
 	      rsOptVar = '[' + rsVarRange + ']?',
 	      rsOptJoin = '(?:' + rsZWJ + '(?:' + [rsNonAstral, rsRegional, rsSurrPair].join('|') + ')' + rsOptVar + reOptMod + ')*',
 	      rsSeq = rsOptVar + reOptMod + rsOptJoin,
 	      rsEmoji = '(?:' + [rsDingbat, rsRegional, rsSurrPair].join('|') + ')' + rsSeq,
 	      rsSymbol = '(?:' + [rsNonAstral + rsCombo + '?', rsCombo, rsRegional, rsSurrPair, rsAstral].join('|') + ')';
+
+	  /** Used to match apostrophes. */
+	  var reApos = RegExp(rsApos, 'g');
 
 	  /**
 	   * Used to match [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks) and
@@ -11302,32 +11781,29 @@ webpackJsonp([2,4],[
 	  /** Used to match [string symbols](https://mathiasbynens.be/notes/javascript-unicode). */
 	  var reComplexSymbol = RegExp(rsFitz + '(?=' + rsFitz + ')|' + rsSymbol + rsSeq, 'g');
 
-	  /** Used to detect strings with [zero-width joiners or code points from the astral planes](http://eev.ee/blog/2015/09/12/dark-corners-of-unicode/). */
-	  var reHasComplexSymbol = RegExp('[' + rsZWJ + rsAstralRange  + rsComboMarksRange + rsComboSymbolsRange + rsVarRange + ']');
-
-	  /** Used to match non-compound words composed of alphanumeric characters. */
-	  var reBasicWord = /[a-zA-Z0-9]+/g;
-
 	  /** Used to match complex or compound words. */
 	  var reComplexWord = RegExp([
-	    rsUpper + '?' + rsLower + '+(?=' + [rsBreak, rsUpper, '$'].join('|') + ')',
-	    rsUpperMisc + '+(?=' + [rsBreak, rsUpper + rsLowerMisc, '$'].join('|') + ')',
-	    rsUpper + '?' + rsLowerMisc + '+',
-	    rsUpper + '+',
+	    rsUpper + '?' + rsLower + '+' + rsOptLowerContr + '(?=' + [rsBreak, rsUpper, '$'].join('|') + ')',
+	    rsUpperMisc + '+' + rsOptUpperContr + '(?=' + [rsBreak, rsUpper + rsLowerMisc, '$'].join('|') + ')',
+	    rsUpper + '?' + rsLowerMisc + '+' + rsOptLowerContr,
+	    rsUpper + '+' + rsOptUpperContr,
 	    rsDigits,
 	    rsEmoji
 	  ].join('|'), 'g');
 
+	  /** Used to detect strings with [zero-width joiners or code points from the astral planes](http://eev.ee/blog/2015/09/12/dark-corners-of-unicode/). */
+	  var reHasComplexSymbol = RegExp('[' + rsZWJ + rsAstralRange  + rsComboMarksRange + rsComboSymbolsRange + rsVarRange + ']');
+
 	  /** Used to detect strings that need a more robust regexp to match words. */
-	  var reHasComplexWord = /[a-z][A-Z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
+	  var reHasComplexWord = /[a-z][A-Z]|[A-Z]{2,}[a-z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
 
 	  /** Used to assign default `context` object properties. */
 	  var contextProps = [
-	    'Array', 'Buffer', 'Date', 'Error', 'Float32Array', 'Float64Array',
+	    'Array', 'Buffer', 'DataView', 'Date', 'Error', 'Float32Array', 'Float64Array',
 	    'Function', 'Int8Array', 'Int16Array', 'Int32Array', 'Map', 'Math', 'Object',
-	    'Reflect', 'RegExp', 'Set', 'String', 'Symbol', 'TypeError', 'Uint8Array',
-	    'Uint8ClampedArray', 'Uint16Array', 'Uint32Array', 'WeakMap', '_',
-	    'clearTimeout', 'isFinite', 'parseInt', 'setTimeout'
+	    'Promise', 'Reflect', 'RegExp', 'Set', 'String', 'Symbol', 'TypeError',
+	    'Uint8Array', 'Uint8ClampedArray', 'Uint16Array', 'Uint32Array', 'WeakMap',
+	    '_', 'isFinite', 'parseInt', 'setTimeout'
 	  ];
 
 	  /** Used to make template sourceURLs easier to identify. */
@@ -11342,25 +11818,26 @@ webpackJsonp([2,4],[
 	  typedArrayTags[uint32Tag] = true;
 	  typedArrayTags[argsTag] = typedArrayTags[arrayTag] =
 	  typedArrayTags[arrayBufferTag] = typedArrayTags[boolTag] =
-	  typedArrayTags[dateTag] = typedArrayTags[errorTag] =
-	  typedArrayTags[funcTag] = typedArrayTags[mapTag] =
-	  typedArrayTags[numberTag] = typedArrayTags[objectTag] =
-	  typedArrayTags[regexpTag] = typedArrayTags[setTag] =
-	  typedArrayTags[stringTag] = typedArrayTags[weakMapTag] = false;
+	  typedArrayTags[dataViewTag] = typedArrayTags[dateTag] =
+	  typedArrayTags[errorTag] = typedArrayTags[funcTag] =
+	  typedArrayTags[mapTag] = typedArrayTags[numberTag] =
+	  typedArrayTags[objectTag] = typedArrayTags[regexpTag] =
+	  typedArrayTags[setTag] = typedArrayTags[stringTag] =
+	  typedArrayTags[weakMapTag] = false;
 
 	  /** Used to identify `toStringTag` values supported by `_.clone`. */
 	  var cloneableTags = {};
 	  cloneableTags[argsTag] = cloneableTags[arrayTag] =
-	  cloneableTags[arrayBufferTag] = cloneableTags[boolTag] =
-	  cloneableTags[dateTag] = cloneableTags[float32Tag] =
-	  cloneableTags[float64Tag] = cloneableTags[int8Tag] =
-	  cloneableTags[int16Tag] = cloneableTags[int32Tag] =
-	  cloneableTags[mapTag] = cloneableTags[numberTag] =
-	  cloneableTags[objectTag] = cloneableTags[regexpTag] =
-	  cloneableTags[setTag] = cloneableTags[stringTag] =
-	  cloneableTags[symbolTag] = cloneableTags[uint8Tag] =
-	  cloneableTags[uint8ClampedTag] = cloneableTags[uint16Tag] =
-	  cloneableTags[uint32Tag] = true;
+	  cloneableTags[arrayBufferTag] = cloneableTags[dataViewTag] =
+	  cloneableTags[boolTag] = cloneableTags[dateTag] =
+	  cloneableTags[float32Tag] = cloneableTags[float64Tag] =
+	  cloneableTags[int8Tag] = cloneableTags[int16Tag] =
+	  cloneableTags[int32Tag] = cloneableTags[mapTag] =
+	  cloneableTags[numberTag] = cloneableTags[objectTag] =
+	  cloneableTags[regexpTag] = cloneableTags[setTag] =
+	  cloneableTags[stringTag] = cloneableTags[symbolTag] =
+	  cloneableTags[uint8Tag] = cloneableTags[uint8ClampedTag] =
+	  cloneableTags[uint16Tag] = cloneableTags[uint32Tag] = true;
 	  cloneableTags[errorTag] = cloneableTags[funcTag] =
 	  cloneableTags[weakMapTag] = false;
 
@@ -11405,12 +11882,6 @@ webpackJsonp([2,4],[
 	    '&#96;': '`'
 	  };
 
-	  /** Used to determine if values are of the language type `Object`. */
-	  var objectTypes = {
-	    'function': true,
-	    'object': true
-	  };
-
 	  /** Used to escape characters for inclusion in compiled string literals. */
 	  var stringEscapes = {
 	    '\\': '\\',
@@ -11426,41 +11897,25 @@ webpackJsonp([2,4],[
 	      freeParseInt = parseInt;
 
 	  /** Detect free variable `exports`. */
-	  var freeExports = (objectTypes[typeof exports] && exports && !exports.nodeType)
-	    ? exports
-	    : undefined;
+	  var freeExports = typeof exports == 'object' && exports;
 
 	  /** Detect free variable `module`. */
-	  var freeModule = (objectTypes[typeof module] && module && !module.nodeType)
-	    ? module
-	    : undefined;
+	  var freeModule = freeExports && typeof module == 'object' && module;
 
 	  /** Detect the popular CommonJS extension `module.exports`. */
-	  var moduleExports = (freeModule && freeModule.exports === freeExports)
-	    ? freeExports
-	    : undefined;
+	  var moduleExports = freeModule && freeModule.exports === freeExports;
 
 	  /** Detect free variable `global` from Node.js. */
-	  var freeGlobal = checkGlobal(freeExports && freeModule && typeof global == 'object' && global);
+	  var freeGlobal = checkGlobal(typeof global == 'object' && global);
 
 	  /** Detect free variable `self`. */
-	  var freeSelf = checkGlobal(objectTypes[typeof self] && self);
-
-	  /** Detect free variable `window`. */
-	  var freeWindow = checkGlobal(objectTypes[typeof window] && window);
+	  var freeSelf = checkGlobal(typeof self == 'object' && self);
 
 	  /** Detect `this` as the global object. */
-	  var thisGlobal = checkGlobal(objectTypes[typeof this] && this);
+	  var thisGlobal = checkGlobal(typeof this == 'object' && this);
 
-	  /**
-	   * Used as a reference to the global object.
-	   *
-	   * The `this` value is used if it's the global object to avoid Greasemonkey's
-	   * restricted `window` object, otherwise the `window` object is used.
-	   */
-	  var root = freeGlobal ||
-	    ((freeWindow !== (thisGlobal && thisGlobal.window)) && freeWindow) ||
-	      freeSelf || thisGlobal || Function('return this')();
+	  /** Used as a reference to the global object. */
+	  var root = freeGlobal || freeSelf || thisGlobal || Function('return this')();
 
 	  /*--------------------------------------------------------------------------*/
 
@@ -11498,7 +11953,7 @@ webpackJsonp([2,4],[
 	   * @private
 	   * @param {Function} func The function to invoke.
 	   * @param {*} thisArg The `this` binding of `func`.
-	   * @param {...*} args The arguments to invoke `func` with.
+	   * @param {Array} args The arguments to invoke `func` with.
 	   * @returns {*} Returns the result of `func`.
 	   */
 	  function apply(func, thisArg, args) {
@@ -11516,7 +11971,7 @@ webpackJsonp([2,4],[
 	   * A specialized version of `baseAggregator` for arrays.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} setter The function to set `accumulator` values.
 	   * @param {Function} iteratee The iteratee to transform keys.
 	   * @param {Object} accumulator The initial aggregated object.
@@ -11524,7 +11979,7 @@ webpackJsonp([2,4],[
 	   */
 	  function arrayAggregator(array, setter, iteratee, accumulator) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    while (++index < length) {
 	      var value = array[index];
@@ -11534,41 +11989,17 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * Creates a new array concatenating `array` with `other`.
-	   *
-	   * @private
-	   * @param {Array} array The first array to concatenate.
-	   * @param {Array} other The second array to concatenate.
-	   * @returns {Array} Returns the new concatenated array.
-	   */
-	  function arrayConcat(array, other) {
-	    var index = -1,
-	        length = array.length,
-	        othIndex = -1,
-	        othLength = other.length,
-	        result = Array(length + othLength);
-
-	    while (++index < length) {
-	      result[index] = array[index];
-	    }
-	    while (++othIndex < othLength) {
-	      result[index++] = other[othIndex];
-	    }
-	    return result;
-	  }
-
-	  /**
 	   * A specialized version of `_.forEach` for arrays without support for
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @returns {Array} Returns `array`.
 	   */
 	  function arrayEach(array, iteratee) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    while (++index < length) {
 	      if (iteratee(array[index], index, array) === false) {
@@ -11583,12 +12014,12 @@ webpackJsonp([2,4],[
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @returns {Array} Returns `array`.
 	   */
 	  function arrayEachRight(array, iteratee) {
-	    var length = array.length;
+	    var length = array ? array.length : 0;
 
 	    while (length--) {
 	      if (iteratee(array[length], length, array) === false) {
@@ -11603,13 +12034,14 @@ webpackJsonp([2,4],[
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} predicate The function invoked per iteration.
-	   * @returns {boolean} Returns `true` if all elements pass the predicate check, else `false`.
+	   * @returns {boolean} Returns `true` if all elements pass the predicate check,
+	   *  else `false`.
 	   */
 	  function arrayEvery(array, predicate) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    while (++index < length) {
 	      if (!predicate(array[index], index, array)) {
@@ -11624,13 +12056,13 @@ webpackJsonp([2,4],[
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} predicate The function invoked per iteration.
 	   * @returns {Array} Returns the new filtered array.
 	   */
 	  function arrayFilter(array, predicate) {
 	    var index = -1,
-	        length = array.length,
+	        length = array ? array.length : 0,
 	        resIndex = 0,
 	        result = [];
 
@@ -11648,26 +12080,27 @@ webpackJsonp([2,4],[
 	   * specifying an index to search from.
 	   *
 	   * @private
-	   * @param {Array} array The array to search.
+	   * @param {Array} [array] The array to search.
 	   * @param {*} target The value to search for.
 	   * @returns {boolean} Returns `true` if `target` is found, else `false`.
 	   */
 	  function arrayIncludes(array, value) {
-	    return !!array.length && baseIndexOf(array, value, 0) > -1;
+	    var length = array ? array.length : 0;
+	    return !!length && baseIndexOf(array, value, 0) > -1;
 	  }
 
 	  /**
 	   * This function is like `arrayIncludes` except that it accepts a comparator.
 	   *
 	   * @private
-	   * @param {Array} array The array to search.
+	   * @param {Array} [array] The array to search.
 	   * @param {*} target The value to search for.
 	   * @param {Function} comparator The comparator invoked per element.
 	   * @returns {boolean} Returns `true` if `target` is found, else `false`.
 	   */
 	  function arrayIncludesWith(array, value, comparator) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    while (++index < length) {
 	      if (comparator(value, array[index])) {
@@ -11682,13 +12115,13 @@ webpackJsonp([2,4],[
 	   * shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @returns {Array} Returns the new mapped array.
 	   */
 	  function arrayMap(array, iteratee) {
 	    var index = -1,
-	        length = array.length,
+	        length = array ? array.length : 0,
 	        result = Array(length);
 
 	    while (++index < length) {
@@ -11721,15 +12154,16 @@ webpackJsonp([2,4],[
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @param {*} [accumulator] The initial value.
-	   * @param {boolean} [initAccum] Specify using the first element of `array` as the initial value.
+	   * @param {boolean} [initAccum] Specify using the first element of `array` as
+	   *  the initial value.
 	   * @returns {*} Returns the accumulated value.
 	   */
 	  function arrayReduce(array, iteratee, accumulator, initAccum) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    if (initAccum && length) {
 	      accumulator = array[++index];
@@ -11745,14 +12179,15 @@ webpackJsonp([2,4],[
 	   * iteratee shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @param {*} [accumulator] The initial value.
-	   * @param {boolean} [initAccum] Specify using the last element of `array` as the initial value.
+	   * @param {boolean} [initAccum] Specify using the last element of `array` as
+	   *  the initial value.
 	   * @returns {*} Returns the accumulated value.
 	   */
 	  function arrayReduceRight(array, iteratee, accumulator, initAccum) {
-	    var length = array.length;
+	    var length = array ? array.length : 0;
 	    if (initAccum && length) {
 	      accumulator = array[--length];
 	    }
@@ -11767,13 +12202,14 @@ webpackJsonp([2,4],[
 	   * shorthands.
 	   *
 	   * @private
-	   * @param {Array} array The array to iterate over.
+	   * @param {Array} [array] The array to iterate over.
 	   * @param {Function} predicate The function invoked per iteration.
-	   * @returns {boolean} Returns `true` if any element passes the predicate check, else `false`.
+	   * @returns {boolean} Returns `true` if any element passes the predicate check,
+	   *  else `false`.
 	   */
 	  function arraySome(array, predicate) {
 	    var index = -1,
-	        length = array.length;
+	        length = array ? array.length : 0;
 
 	    while (++index < length) {
 	      if (predicate(array[index], index, array)) {
@@ -11784,51 +12220,21 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * The base implementation of methods like `_.max` and `_.min` which accepts a
-	   * `comparator` to determine the extremum value.
-	   *
-	   * @private
-	   * @param {Array} array The array to iterate over.
-	   * @param {Function} iteratee The iteratee invoked per iteration.
-	   * @param {Function} comparator The comparator used to compare values.
-	   * @returns {*} Returns the extremum value.
-	   */
-	  function baseExtremum(array, iteratee, comparator) {
-	    var index = -1,
-	        length = array.length;
-
-	    while (++index < length) {
-	      var value = array[index],
-	          current = iteratee(value);
-
-	      if (current != null && (computed === undefined
-	            ? current === current
-	            : comparator(current, computed)
-	          )) {
-	        var computed = current,
-	            result = value;
-	      }
-	    }
-	    return result;
-	  }
-
-	  /**
-	   * The base implementation of methods like `_.find` and `_.findKey`, without
-	   * support for iteratee shorthands, which iterates over `collection` using
-	   * `eachFunc`.
+	   * The base implementation of methods like `_.findKey` and `_.findLastKey`,
+	   * without support for iteratee shorthands, which iterates over `collection`
+	   * using `eachFunc`.
 	   *
 	   * @private
 	   * @param {Array|Object} collection The collection to search.
 	   * @param {Function} predicate The function invoked per iteration.
 	   * @param {Function} eachFunc The function to iterate over `collection`.
-	   * @param {boolean} [retKey] Specify returning the key of the found element instead of the element itself.
 	   * @returns {*} Returns the found element or its key, else `undefined`.
 	   */
-	  function baseFind(collection, predicate, eachFunc, retKey) {
+	  function baseFindKey(collection, predicate, eachFunc) {
 	    var result;
 	    eachFunc(collection, function(value, key, collection) {
 	      if (predicate(value, key, collection)) {
-	        result = retKey ? key : value;
+	        result = key;
 	        return false;
 	      }
 	    });
@@ -11842,12 +12248,13 @@ webpackJsonp([2,4],[
 	   * @private
 	   * @param {Array} array The array to search.
 	   * @param {Function} predicate The function invoked per iteration.
+	   * @param {number} fromIndex The index to search from.
 	   * @param {boolean} [fromRight] Specify iterating from right to left.
 	   * @returns {number} Returns the index of the matched value, else `-1`.
 	   */
-	  function baseFindIndex(array, predicate, fromRight) {
+	  function baseFindIndex(array, predicate, fromIndex, fromRight) {
 	    var length = array.length,
-	        index = fromRight ? length : -1;
+	        index = fromIndex + (fromRight ? 1 : -1);
 
 	    while ((fromRight ? index-- : ++index < length)) {
 	      if (predicate(array[index], index, array)) {
@@ -11904,6 +12311,20 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
+	   * The base implementation of `_.mean` and `_.meanBy` without support for
+	   * iteratee shorthands.
+	   *
+	   * @private
+	   * @param {Array} array The array to iterate over.
+	   * @param {Function} iteratee The function invoked per iteration.
+	   * @returns {number} Returns the mean.
+	   */
+	  function baseMean(array, iteratee) {
+	    var length = array ? array.length : 0;
+	    return length ? (baseSum(array, iteratee) / length) : NAN;
+	  }
+
+	  /**
 	   * The base implementation of `_.reduce` and `_.reduceRight`, without support
 	   * for iteratee shorthands, which iterates over `collection` using `eachFunc`.
 	   *
@@ -11911,7 +12332,8 @@ webpackJsonp([2,4],[
 	   * @param {Array|Object} collection The collection to iterate over.
 	   * @param {Function} iteratee The function invoked per iteration.
 	   * @param {*} accumulator The initial value.
-	   * @param {boolean} initAccum Specify using the first or last element of `collection` as the initial value.
+	   * @param {boolean} initAccum Specify using the first or last element of
+	   *  `collection` as the initial value.
 	   * @param {Function} eachFunc The function to iterate over `collection`.
 	   * @returns {*} Returns the accumulated value.
 	   */
@@ -11945,7 +12367,8 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * The base implementation of `_.sum` without support for iteratee shorthands.
+	   * The base implementation of `_.sum` and `_.sumBy` without support for
+	   * iteratee shorthands.
 	   *
 	   * @private
 	   * @param {Array} array The array to iterate over.
@@ -11992,7 +12415,7 @@ webpackJsonp([2,4],[
 	   * @private
 	   * @param {Object} object The object to query.
 	   * @param {Array} props The property names to get values for.
-	   * @returns {Object} Returns the new array of key-value pairs.
+	   * @returns {Object} Returns the key-value pairs.
 	   */
 	  function baseToPairs(object, props) {
 	    return arrayMap(props, function(key) {
@@ -12005,7 +12428,7 @@ webpackJsonp([2,4],[
 	   *
 	   * @private
 	   * @param {Function} func The function to cap arguments for.
-	   * @returns {Function} Returns the new function.
+	   * @returns {Function} Returns the new capped function.
 	   */
 	  function baseUnary(func) {
 	    return function(value) {
@@ -12027,6 +12450,18 @@ webpackJsonp([2,4],[
 	    return arrayMap(props, function(key) {
 	      return object[key];
 	    });
+	  }
+
+	  /**
+	   * Checks if a cache value for `key` exists.
+	   *
+	   * @private
+	   * @param {Object} cache The cache to query.
+	   * @param {string} key The key of the entry to check.
+	   * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+	   */
+	  function cacheHas(cache, key) {
+	    return cache.has(key);
 	  }
 
 	  /**
@@ -12071,79 +12506,6 @@ webpackJsonp([2,4],[
 	   */
 	  function checkGlobal(value) {
 	    return (value && value.Object === Object) ? value : null;
-	  }
-
-	  /**
-	   * Compares values to sort them in ascending order.
-	   *
-	   * @private
-	   * @param {*} value The value to compare.
-	   * @param {*} other The other value to compare.
-	   * @returns {number} Returns the sort order indicator for `value`.
-	   */
-	  function compareAscending(value, other) {
-	    if (value !== other) {
-	      var valIsNull = value === null,
-	          valIsUndef = value === undefined,
-	          valIsReflexive = value === value;
-
-	      var othIsNull = other === null,
-	          othIsUndef = other === undefined,
-	          othIsReflexive = other === other;
-
-	      if ((value > other && !othIsNull) || !valIsReflexive ||
-	          (valIsNull && !othIsUndef && othIsReflexive) ||
-	          (valIsUndef && othIsReflexive)) {
-	        return 1;
-	      }
-	      if ((value < other && !valIsNull) || !othIsReflexive ||
-	          (othIsNull && !valIsUndef && valIsReflexive) ||
-	          (othIsUndef && valIsReflexive)) {
-	        return -1;
-	      }
-	    }
-	    return 0;
-	  }
-
-	  /**
-	   * Used by `_.orderBy` to compare multiple properties of a value to another
-	   * and stable sort them.
-	   *
-	   * If `orders` is unspecified, all values are sorted in ascending order. Otherwise,
-	   * specify an order of "desc" for descending or "asc" for ascending sort order
-	   * of corresponding values.
-	   *
-	   * @private
-	   * @param {Object} object The object to compare.
-	   * @param {Object} other The other object to compare.
-	   * @param {boolean[]|string[]} orders The order to sort by for each property.
-	   * @returns {number} Returns the sort order indicator for `object`.
-	   */
-	  function compareMultiple(object, other, orders) {
-	    var index = -1,
-	        objCriteria = object.criteria,
-	        othCriteria = other.criteria,
-	        length = objCriteria.length,
-	        ordersLength = orders.length;
-
-	    while (++index < length) {
-	      var result = compareAscending(objCriteria[index], othCriteria[index]);
-	      if (result) {
-	        if (index >= ordersLength) {
-	          return result;
-	        }
-	        var order = orders[index];
-	        return result * (order == 'desc' ? -1 : 1);
-	      }
-	    }
-	    // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
-	    // that causes it, under certain circumstances, to provide the same value for
-	    // `object` and `other`. See https://github.com/jashkenas/underscore/pull/1247
-	    // for more details.
-	    //
-	    // This also ensures a stable sort in V8 and other engines.
-	    // See https://code.google.com/p/v8/issues/detail?id=90 for more details.
-	    return object.index - other.index;
 	  }
 
 	  /**
@@ -12200,6 +12562,18 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
+	   * Gets the value at `key` of `object`.
+	   *
+	   * @private
+	   * @param {Object} [object] The object to query.
+	   * @param {string} key The key of the property to get.
+	   * @returns {*} Returns the property value.
+	   */
+	  function getValue(object, key) {
+	    return object == null ? undefined : object[key];
+	  }
+
+	  /**
 	   * Gets the index at which the first occurrence of `NaN` is found in `array`.
 	   *
 	   * @private
@@ -12210,7 +12584,7 @@ webpackJsonp([2,4],[
 	   */
 	  function indexOfNaN(array, fromIndex, fromRight) {
 	    var length = array.length,
-	        index = fromIndex + (fromRight ? 0 : -1);
+	        index = fromIndex + (fromRight ? 1 : -1);
 
 	    while ((fromRight ? index-- : ++index < length)) {
 	      var other = array[index];
@@ -12241,20 +12615,6 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * Checks if `value` is a valid array-like index.
-	   *
-	   * @private
-	   * @param {*} value The value to check.
-	   * @param {number} [length=MAX_SAFE_INTEGER] The upper bounds of a valid index.
-	   * @returns {boolean} Returns `true` if `value` is a valid index, else `false`.
-	   */
-	  function isIndex(value, length) {
-	    value = (typeof value == 'number' || reIsUint.test(value)) ? +value : -1;
-	    length = length == null ? MAX_SAFE_INTEGER : length;
-	    return value > -1 && value % 1 == 0 && value < length;
-	  }
-
-	  /**
 	   * Converts `iterator` to an array.
 	   *
 	   * @private
@@ -12272,11 +12632,11 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * Converts `map` to an array.
+	   * Converts `map` to its key-value pairs.
 	   *
 	   * @private
 	   * @param {Object} map The map to convert.
-	   * @returns {Array} Returns the converted array.
+	   * @returns {Array} Returns the key-value pairs.
 	   */
 	  function mapToArray(map) {
 	    var index = -1,
@@ -12314,11 +12674,11 @@ webpackJsonp([2,4],[
 	  }
 
 	  /**
-	   * Converts `set` to an array.
+	   * Converts `set` to an array of its values.
 	   *
 	   * @private
 	   * @param {Object} set The set to convert.
-	   * @returns {Array} Returns the converted array.
+	   * @returns {Array} Returns the values.
 	   */
 	  function setToArray(set) {
 	    var index = -1,
@@ -12326,6 +12686,23 @@ webpackJsonp([2,4],[
 
 	    set.forEach(function(value) {
 	      result[++index] = value;
+	    });
+	    return result;
+	  }
+
+	  /**
+	   * Converts `set` to its value-value pairs.
+	   *
+	   * @private
+	   * @param {Object} set The set to convert.
+	   * @returns {Array} Returns the value-value pairs.
+	   */
+	  function setToPairs(set) {
+	    var index = -1,
+	        result = Array(set.size);
+
+	    set.forEach(function(value) {
+	      result[++index] = [value, value];
 	    });
 	    return result;
 	  }
@@ -12377,6 +12754,7 @@ webpackJsonp([2,4],[
 	   *
 	   * @static
 	   * @memberOf _
+	   * @since 1.1.0
 	   * @category Util
 	   * @param {Object} [context=root] The context object.
 	   * @returns {Function} Returns a new `lodash` function.
@@ -12397,10 +12775,10 @@ webpackJsonp([2,4],[
 	   * lodash.isFunction(lodash.bar);
 	   * // => true
 	   *
-	   * // Use `context` to mock `Date#getTime` use in `_.now`.
-	   * var mock = _.runInContext({
+	   * // Use `context` to stub `Date#getTime` use in `_.now`.
+	   * var stubbed = _.runInContext({
 	   *   'Date': function() {
-	   *     return { 'getTime': getTimeMock };
+	   *     return { 'getTime': stubGetTime };
 	   *   }
 	   * });
 	   *
@@ -12419,7 +12797,17 @@ webpackJsonp([2,4],[
 
 	    /** Used for built-in method references. */
 	    var arrayProto = context.Array.prototype,
-	        objectProto = context.Object.prototype;
+	        objectProto = context.Object.prototype,
+	        stringProto = context.String.prototype;
+
+	    /** Used to detect overreaching core-js shims. */
+	    var coreJsData = context['__core-js_shared__'];
+
+	    /** Used to detect methods masquerading as native. */
+	    var maskSrcKey = (function() {
+	      var uid = /[^.]+$/.exec(coreJsData && coreJsData.keys && coreJsData.keys.IE_PROTO || '');
+	      return uid ? ('Symbol(src)_1.' + uid) : '';
+	    }());
 
 	    /** Used to resolve the decompiled source of functions. */
 	    var funcToString = context.Function.prototype.toString;
@@ -12434,7 +12822,8 @@ webpackJsonp([2,4],[
 	    var objectCtorString = funcToString.call(Object);
 
 	    /**
-	     * Used to resolve the [`toStringTag`](http://ecma-international.org/ecma-262/6.0/#sec-object.prototype.tostring)
+	     * Used to resolve the
+	     * [`toStringTag`](http://ecma-international.org/ecma-262/6.0/#sec-object.prototype.tostring)
 	     * of values.
 	     */
 	    var objectToString = objectProto.toString;
@@ -12453,19 +12842,20 @@ webpackJsonp([2,4],[
 	        Reflect = context.Reflect,
 	        Symbol = context.Symbol,
 	        Uint8Array = context.Uint8Array,
-	        clearTimeout = context.clearTimeout,
 	        enumerate = Reflect ? Reflect.enumerate : undefined,
-	        getPrototypeOf = Object.getPrototypeOf,
 	        getOwnPropertySymbols = Object.getOwnPropertySymbols,
 	        iteratorSymbol = typeof (iteratorSymbol = Symbol && Symbol.iterator) == 'symbol' ? iteratorSymbol : undefined,
 	        objectCreate = Object.create,
 	        propertyIsEnumerable = objectProto.propertyIsEnumerable,
-	        setTimeout = context.setTimeout,
 	        splice = arrayProto.splice;
+
+	    /** Built-in method references that are mockable. */
+	    var setTimeout = function(func, wait) { return context.setTimeout.call(root, func, wait); };
 
 	    /* Built-in method references for those with the same name as other `lodash` methods. */
 	    var nativeCeil = Math.ceil,
 	        nativeFloor = Math.floor,
+	        nativeGetPrototype = Object.getPrototypeOf,
 	        nativeIsFinite = context.isFinite,
 	        nativeJoin = arrayProto.join,
 	        nativeKeys = Object.keys,
@@ -12473,10 +12863,14 @@ webpackJsonp([2,4],[
 	        nativeMin = Math.min,
 	        nativeParseInt = context.parseInt,
 	        nativeRandom = Math.random,
-	        nativeReverse = arrayProto.reverse;
+	        nativeReplace = stringProto.replace,
+	        nativeReverse = arrayProto.reverse,
+	        nativeSplit = stringProto.split;
 
 	    /* Built-in method references that are verified to be native. */
-	    var Map = getNative(context, 'Map'),
+	    var DataView = getNative(context, 'DataView'),
+	        Map = getNative(context, 'Map'),
+	        Promise = getNative(context, 'Promise'),
 	        Set = getNative(context, 'Set'),
 	        WeakMap = getNative(context, 'WeakMap'),
 	        nativeCreate = getNative(Object, 'create');
@@ -12491,9 +12885,11 @@ webpackJsonp([2,4],[
 	    var realNames = {};
 
 	    /** Used to detect maps, sets, and weakmaps. */
-	    var mapCtorString = Map ? funcToString.call(Map) : '',
-	        setCtorString = Set ? funcToString.call(Set) : '',
-	        weakMapCtorString = WeakMap ? funcToString.call(WeakMap) : '';
+	    var dataViewCtorString = toSource(DataView),
+	        mapCtorString = toSource(Map),
+	        promiseCtorString = toSource(Promise),
+	        setCtorString = toSource(Set),
+	        weakMapCtorString = toSource(WeakMap);
 
 	    /** Used to convert symbols to primitives and strings. */
 	    var symbolProto = Symbol ? Symbol.prototype : undefined,
@@ -12504,25 +12900,25 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a `lodash` object which wraps `value` to enable implicit method
-	     * chaining. Methods that operate on and return arrays, collections, and
-	     * functions can be chained together. Methods that retrieve a single value or
-	     * may return a primitive value will automatically end the chain sequence and
-	     * return the unwrapped value. Otherwise, the value must be unwrapped with
-	     * `_#value`.
+	     * chain sequences. Methods that operate on and return arrays, collections,
+	     * and functions can be chained together. Methods that retrieve a single value
+	     * or may return a primitive value will automatically end the chain sequence
+	     * and return the unwrapped value. Otherwise, the value must be unwrapped
+	     * with `_#value`.
 	     *
-	     * Explicit chaining, which must be unwrapped with `_#value` in all cases,
-	     * may be enabled using `_.chain`.
+	     * Explicit chain sequences, which must be unwrapped with `_#value`, may be
+	     * enabled using `_.chain`.
 	     *
 	     * The execution of chained methods is lazy, that is, it's deferred until
 	     * `_#value` is implicitly or explicitly called.
 	     *
-	     * Lazy evaluation allows several methods to support shortcut fusion. Shortcut
-	     * fusion is an optimization to merge iteratee calls; this avoids the creation
-	     * of intermediate arrays and can greatly reduce the number of iteratee executions.
-	     * Sections of a chain sequence qualify for shortcut fusion if the section is
-	     * applied to an array of at least two hundred elements and any iteratees
-	     * accept only one argument. The heuristic for whether a section qualifies
-	     * for shortcut fusion is subject to change.
+	     * Lazy evaluation allows several methods to support shortcut fusion.
+	     * Shortcut fusion is an optimization to merge iteratee calls; this avoids
+	     * the creation of intermediate arrays and can greatly reduce the number of
+	     * iteratee executions. Sections of a chain sequence qualify for shortcut
+	     * fusion if the section is applied to an array of at least `200` elements
+	     * and any iteratees accept only one argument. The heuristic for whether a
+	     * section qualifies for shortcut fusion is subject to change.
 	     *
 	     * Chaining is supported in custom builds as long as the `_#value` method is
 	     * directly or indirectly included in the build.
@@ -12547,48 +12943,51 @@ webpackJsonp([2,4],[
 	     * `curry`, `debounce`, `defaults`, `defaultsDeep`, `defer`, `delay`,
 	     * `difference`, `differenceBy`, `differenceWith`, `drop`, `dropRight`,
 	     * `dropRightWhile`, `dropWhile`, `extend`, `extendWith`, `fill`, `filter`,
-	     * `flatten`, `flattenDeep`, `flattenDepth`, `flip`, `flow`, `flowRight`,
-	     * `fromPairs`, `functions`, `functionsIn`, `groupBy`, `initial`, `intersection`,
-	     * `intersectionBy`, `intersectionWith`, `invert`, `invertBy`, `invokeMap`,
-	     * `iteratee`, `keyBy`, `keys`, `keysIn`, `map`, `mapKeys`, `mapValues`,
-	     * `matches`, `matchesProperty`, `memoize`, `merge`, `mergeWith`, `method`,
-	     * `methodOf`, `mixin`, `negate`, `nthArg`, `omit`, `omitBy`, `once`, `orderBy`,
-	     * `over`, `overArgs`, `overEvery`, `overSome`, `partial`, `partialRight`,
-	     * `partition`, `pick`, `pickBy`, `plant`, `property`, `propertyOf`, `pull`,
-	     * `pullAll`, `pullAllBy`, `pullAllWith`, `pullAt`, `push`, `range`,
-	     * `rangeRight`, `rearg`, `reject`, `remove`, `rest`, `reverse`, `sampleSize`,
-	     * `set`, `setWith`, `shuffle`, `slice`, `sort`, `sortBy`, `splice`, `spread`,
-	     * `tail`, `take`, `takeRight`, `takeRightWhile`, `takeWhile`, `tap`, `throttle`,
-	     * `thru`, `toArray`, `toPairs`, `toPairsIn`, `toPath`, `toPlainObject`,
-	     * `transform`, `unary`, `union`, `unionBy`, `unionWith`, `uniq`, `uniqBy`,
-	     * `uniqWith`, `unset`, `unshift`, `unzip`, `unzipWith`, `update`, `values`,
-	     * `valuesIn`, `without`, `wrap`, `xor`, `xorBy`, `xorWith`, `zip`, `zipObject`,
-	     * `zipObjectDeep`, and `zipWith`
+	     * `flatMap`, `flatMapDeep`, `flatMapDepth`, `flatten`, `flattenDeep`,
+	     * `flattenDepth`, `flip`, `flow`, `flowRight`, `fromPairs`, `functions`,
+	     * `functionsIn`, `groupBy`, `initial`, `intersection`, `intersectionBy`,
+	     * `intersectionWith`, `invert`, `invertBy`, `invokeMap`, `iteratee`, `keyBy`,
+	     * `keys`, `keysIn`, `map`, `mapKeys`, `mapValues`, `matches`, `matchesProperty`,
+	     * `memoize`, `merge`, `mergeWith`, `method`, `methodOf`, `mixin`, `negate`,
+	     * `nthArg`, `omit`, `omitBy`, `once`, `orderBy`, `over`, `overArgs`,
+	     * `overEvery`, `overSome`, `partial`, `partialRight`, `partition`, `pick`,
+	     * `pickBy`, `plant`, `property`, `propertyOf`, `pull`, `pullAll`, `pullAllBy`,
+	     * `pullAllWith`, `pullAt`, `push`, `range`, `rangeRight`, `rearg`, `reject`,
+	     * `remove`, `rest`, `reverse`, `sampleSize`, `set`, `setWith`, `shuffle`,
+	     * `slice`, `sort`, `sortBy`, `splice`, `spread`, `tail`, `take`, `takeRight`,
+	     * `takeRightWhile`, `takeWhile`, `tap`, `throttle`, `thru`, `toArray`,
+	     * `toPairs`, `toPairsIn`, `toPath`, `toPlainObject`, `transform`, `unary`,
+	     * `union`, `unionBy`, `unionWith`, `uniq`, `uniqBy`, `uniqWith`, `unset`,
+	     * `unshift`, `unzip`, `unzipWith`, `update`, `updateWith`, `values`,
+	     * `valuesIn`, `without`, `wrap`, `xor`, `xorBy`, `xorWith`, `zip`,
+	     * `zipObject`, `zipObjectDeep`, and `zipWith`
 	     *
 	     * The wrapper methods that are **not** chainable by default are:
 	     * `add`, `attempt`, `camelCase`, `capitalize`, `ceil`, `clamp`, `clone`,
-	     * `cloneDeep`, `cloneDeepWith`, `cloneWith`, `deburr`, `each`, `eachRight`,
-	     * `endsWith`, `eq`, `escape`, `escapeRegExp`, `every`, `find`, `findIndex`,
-	     * `findKey`, `findLast`, `findLastIndex`, `findLastKey`, `first`, `floor`,
-	     * `forEach`, `forEachRight`, `forIn`, `forInRight`, `forOwn`, `forOwnRight`,
-	     * `get`, `gt`, `gte`, `has`, `hasIn`, `head`, `identity`, `includes`,
-	     * `indexOf`, `inRange`, `invoke`, `isArguments`, `isArray`, `isArrayBuffer`,
-	     * `isArrayLike`, `isArrayLikeObject`, `isBoolean`, `isBuffer`, `isDate`,
-	     * `isElement`, `isEmpty`, `isEqual`, `isEqualWith`, `isError`, `isFinite`,
-	     * `isFunction`, `isInteger`, `isLength`, `isMap`, `isMatch`, `isMatchWith`,
-	     * `isNaN`, `isNative`, `isNil`, `isNull`, `isNumber`, `isObject`, `isObjectLike`,
-	     * `isPlainObject`, `isRegExp`, `isSafeInteger`, `isSet`, `isString`,
-	     * `isUndefined`, `isTypedArray`, `isWeakMap`, `isWeakSet`, `join`, `kebabCase`,
-	     * `last`, `lastIndexOf`, `lowerCase`, `lowerFirst`, `lt`, `lte`, `max`,
-	     * `maxBy`, `mean`, `min`, `minBy`, `noConflict`, `noop`, `now`, `pad`,
+	     * `cloneDeep`, `cloneDeepWith`, `cloneWith`, `deburr`, `divide`, `each`,
+	     * `eachRight`, `endsWith`, `eq`, `escape`, `escapeRegExp`, `every`, `find`,
+	     * `findIndex`, `findKey`, `findLast`, `findLastIndex`, `findLastKey`, `first`,
+	     * `floor`, `forEach`, `forEachRight`, `forIn`, `forInRight`, `forOwn`,
+	     * `forOwnRight`, `get`, `gt`, `gte`, `has`, `hasIn`, `head`, `identity`,
+	     * `includes`, `indexOf`, `inRange`, `invoke`, `isArguments`, `isArray`,
+	     * `isArrayBuffer`, `isArrayLike`, `isArrayLikeObject`, `isBoolean`,
+	     * `isBuffer`, `isDate`, `isElement`, `isEmpty`, `isEqual`, `isEqualWith`,
+	     * `isError`, `isFinite`, `isFunction`, `isInteger`, `isLength`, `isMap`,
+	     * `isMatch`, `isMatchWith`, `isNaN`, `isNative`, `isNil`, `isNull`,
+	     * `isNumber`, `isObject`, `isObjectLike`, `isPlainObject`, `isRegExp`,
+	     * `isSafeInteger`, `isSet`, `isString`, `isUndefined`, `isTypedArray`,
+	     * `isWeakMap`, `isWeakSet`, `join`, `kebabCase`, `last`, `lastIndexOf`,
+	     * `lowerCase`, `lowerFirst`, `lt`, `lte`, `max`, `maxBy`, `mean`, `meanBy`,
+	     * `min`, `minBy`, `multiply`, `noConflict`, `noop`, `now`, `nth`, `pad`,
 	     * `padEnd`, `padStart`, `parseInt`, `pop`, `random`, `reduce`, `reduceRight`,
 	     * `repeat`, `result`, `round`, `runInContext`, `sample`, `shift`, `size`,
 	     * `snakeCase`, `some`, `sortedIndex`, `sortedIndexBy`, `sortedLastIndex`,
-	     * `sortedLastIndexBy`, `startCase`, `startsWith`, `subtract`, `sum`, `sumBy`,
-	     * `template`, `times`, `toInteger`, `toJSON`, `toLength`, `toLower`,
-	     * `toNumber`, `toSafeInteger`, `toString`, `toUpper`, `trim`, `trimEnd`,
-	     * `trimStart`, `truncate`, `unescape`, `uniqueId`, `upperCase`, `upperFirst`,
-	     * `value`, and `words`
+	     * `sortedLastIndexBy`, `startCase`, `startsWith`, `stubArray`, `stubFalse`,
+	     * `stubObject`, `stubString`, `stubTrue`, `subtract`, `sum`, `sumBy`,
+	     * `template`, `times`, `toFinite`, `toInteger`, `toJSON`, `toLength`,
+	     * `toLower`, `toNumber`, `toSafeInteger`, `toString`, `toUpper`, `trim`,
+	     * `trimEnd`, `trimStart`, `truncate`, `unescape`, `uniqueId`, `upperCase`,
+	     * `upperFirst`, `value`, and `words`
 	     *
 	     * @name _
 	     * @constructor
@@ -12629,7 +13028,7 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * The function whose prototype all chaining wrappers inherit from.
+	     * The function whose prototype chain sequence wrappers inherit from.
 	     *
 	     * @private
 	     */
@@ -12642,7 +13041,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {*} value The value to wrap.
-	     * @param {boolean} [chainAll] Enable chaining for all wrapper methods.
+	     * @param {boolean} [chainAll] Enable explicit method chain sequences.
 	     */
 	    function LodashWrapper(value, chainAll) {
 	      this.__wrapped__ = value;
@@ -12712,6 +13111,13 @@ webpackJsonp([2,4],[
 	        '_': lodash
 	      }
 	    };
+
+	    // Ensure wrappers are instances of `baseLodash`.
+	    lodash.prototype = baseLodash.prototype;
+	    lodash.prototype.constructor = lodash;
+
+	    LodashWrapper.prototype = baseCreate(baseLodash.prototype);
+	    LodashWrapper.prototype.constructor = LodashWrapper;
 
 	    /*------------------------------------------------------------------------*/
 
@@ -12829,68 +13235,223 @@ webpackJsonp([2,4],[
 	      return result;
 	    }
 
+	    // Ensure `LazyWrapper` is an instance of `baseLodash`.
+	    LazyWrapper.prototype = baseCreate(baseLodash.prototype);
+	    LazyWrapper.prototype.constructor = LazyWrapper;
+
 	    /*------------------------------------------------------------------------*/
 
 	    /**
-	     * Creates an hash object.
+	     * Creates a hash object.
 	     *
 	     * @private
 	     * @constructor
-	     * @returns {Object} Returns the new hash object.
+	     * @param {Array} [entries] The key-value pairs to cache.
 	     */
-	    function Hash() {}
+	    function Hash(entries) {
+	      var index = -1,
+	          length = entries ? entries.length : 0;
+
+	      this.clear();
+	      while (++index < length) {
+	        var entry = entries[index];
+	        this.set(entry[0], entry[1]);
+	      }
+	    }
+
+	    /**
+	     * Removes all key-value entries from the hash.
+	     *
+	     * @private
+	     * @name clear
+	     * @memberOf Hash
+	     */
+	    function hashClear() {
+	      this.__data__ = nativeCreate ? nativeCreate(null) : {};
+	    }
 
 	    /**
 	     * Removes `key` and its value from the hash.
 	     *
 	     * @private
+	     * @name delete
+	     * @memberOf Hash
 	     * @param {Object} hash The hash to modify.
 	     * @param {string} key The key of the value to remove.
 	     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	     */
-	    function hashDelete(hash, key) {
-	      return hashHas(hash, key) && delete hash[key];
+	    function hashDelete(key) {
+	      return this.has(key) && delete this.__data__[key];
 	    }
 
 	    /**
 	     * Gets the hash value for `key`.
 	     *
 	     * @private
-	     * @param {Object} hash The hash to query.
+	     * @name get
+	     * @memberOf Hash
 	     * @param {string} key The key of the value to get.
 	     * @returns {*} Returns the entry value.
 	     */
-	    function hashGet(hash, key) {
+	    function hashGet(key) {
+	      var data = this.__data__;
 	      if (nativeCreate) {
-	        var result = hash[key];
+	        var result = data[key];
 	        return result === HASH_UNDEFINED ? undefined : result;
 	      }
-	      return hasOwnProperty.call(hash, key) ? hash[key] : undefined;
+	      return hasOwnProperty.call(data, key) ? data[key] : undefined;
 	    }
 
 	    /**
 	     * Checks if a hash value for `key` exists.
 	     *
 	     * @private
-	     * @param {Object} hash The hash to query.
+	     * @name has
+	     * @memberOf Hash
 	     * @param {string} key The key of the entry to check.
 	     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
 	     */
-	    function hashHas(hash, key) {
-	      return nativeCreate ? hash[key] !== undefined : hasOwnProperty.call(hash, key);
+	    function hashHas(key) {
+	      var data = this.__data__;
+	      return nativeCreate ? data[key] !== undefined : hasOwnProperty.call(data, key);
 	    }
 
 	    /**
 	     * Sets the hash `key` to `value`.
 	     *
 	     * @private
-	     * @param {Object} hash The hash to modify.
+	     * @name set
+	     * @memberOf Hash
 	     * @param {string} key The key of the value to set.
 	     * @param {*} value The value to set.
+	     * @returns {Object} Returns the hash instance.
 	     */
-	    function hashSet(hash, key, value) {
-	      hash[key] = (nativeCreate && value === undefined) ? HASH_UNDEFINED : value;
+	    function hashSet(key, value) {
+	      var data = this.__data__;
+	      data[key] = (nativeCreate && value === undefined) ? HASH_UNDEFINED : value;
+	      return this;
 	    }
+
+	    // Add methods to `Hash`.
+	    Hash.prototype.clear = hashClear;
+	    Hash.prototype['delete'] = hashDelete;
+	    Hash.prototype.get = hashGet;
+	    Hash.prototype.has = hashHas;
+	    Hash.prototype.set = hashSet;
+
+	    /*------------------------------------------------------------------------*/
+
+	    /**
+	     * Creates an list cache object.
+	     *
+	     * @private
+	     * @constructor
+	     * @param {Array} [entries] The key-value pairs to cache.
+	     */
+	    function ListCache(entries) {
+	      var index = -1,
+	          length = entries ? entries.length : 0;
+
+	      this.clear();
+	      while (++index < length) {
+	        var entry = entries[index];
+	        this.set(entry[0], entry[1]);
+	      }
+	    }
+
+	    /**
+	     * Removes all key-value entries from the list cache.
+	     *
+	     * @private
+	     * @name clear
+	     * @memberOf ListCache
+	     */
+	    function listCacheClear() {
+	      this.__data__ = [];
+	    }
+
+	    /**
+	     * Removes `key` and its value from the list cache.
+	     *
+	     * @private
+	     * @name delete
+	     * @memberOf ListCache
+	     * @param {string} key The key of the value to remove.
+	     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
+	     */
+	    function listCacheDelete(key) {
+	      var data = this.__data__,
+	          index = assocIndexOf(data, key);
+
+	      if (index < 0) {
+	        return false;
+	      }
+	      var lastIndex = data.length - 1;
+	      if (index == lastIndex) {
+	        data.pop();
+	      } else {
+	        splice.call(data, index, 1);
+	      }
+	      return true;
+	    }
+
+	    /**
+	     * Gets the list cache value for `key`.
+	     *
+	     * @private
+	     * @name get
+	     * @memberOf ListCache
+	     * @param {string} key The key of the value to get.
+	     * @returns {*} Returns the entry value.
+	     */
+	    function listCacheGet(key) {
+	      var data = this.__data__,
+	          index = assocIndexOf(data, key);
+
+	      return index < 0 ? undefined : data[index][1];
+	    }
+
+	    /**
+	     * Checks if a list cache value for `key` exists.
+	     *
+	     * @private
+	     * @name has
+	     * @memberOf ListCache
+	     * @param {string} key The key of the entry to check.
+	     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+	     */
+	    function listCacheHas(key) {
+	      return assocIndexOf(this.__data__, key) > -1;
+	    }
+
+	    /**
+	     * Sets the list cache `key` to `value`.
+	     *
+	     * @private
+	     * @name set
+	     * @memberOf ListCache
+	     * @param {string} key The key of the value to set.
+	     * @param {*} value The value to set.
+	     * @returns {Object} Returns the list cache instance.
+	     */
+	    function listCacheSet(key, value) {
+	      var data = this.__data__,
+	          index = assocIndexOf(data, key);
+
+	      if (index < 0) {
+	        data.push([key, value]);
+	      } else {
+	        data[index][1] = value;
+	      }
+	      return this;
+	    }
+
+	    // Add methods to `ListCache`.
+	    ListCache.prototype.clear = listCacheClear;
+	    ListCache.prototype['delete'] = listCacheDelete;
+	    ListCache.prototype.get = listCacheGet;
+	    ListCache.prototype.has = listCacheHas;
+	    ListCache.prototype.set = listCacheSet;
 
 	    /*------------------------------------------------------------------------*/
 
@@ -12899,15 +13460,15 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @constructor
-	     * @param {Array} [values] The values to cache.
+	     * @param {Array} [entries] The key-value pairs to cache.
 	     */
-	    function MapCache(values) {
+	    function MapCache(entries) {
 	      var index = -1,
-	          length = values ? values.length : 0;
+	          length = entries ? entries.length : 0;
 
 	      this.clear();
 	      while (++index < length) {
-	        var entry = values[index];
+	        var entry = entries[index];
 	        this.set(entry[0], entry[1]);
 	      }
 	    }
@@ -12919,10 +13480,10 @@ webpackJsonp([2,4],[
 	     * @name clear
 	     * @memberOf MapCache
 	     */
-	    function mapClear() {
+	    function mapCacheClear() {
 	      this.__data__ = {
 	        'hash': new Hash,
-	        'map': Map ? new Map : [],
+	        'map': new (Map || ListCache),
 	        'string': new Hash
 	      };
 	    }
@@ -12936,12 +13497,8 @@ webpackJsonp([2,4],[
 	     * @param {string} key The key of the value to remove.
 	     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	     */
-	    function mapDelete(key) {
-	      var data = this.__data__;
-	      if (isKeyable(key)) {
-	        return hashDelete(typeof key == 'string' ? data.string : data.hash, key);
-	      }
-	      return Map ? data.map['delete'](key) : assocDelete(data.map, key);
+	    function mapCacheDelete(key) {
+	      return getMapData(this, key)['delete'](key);
 	    }
 
 	    /**
@@ -12953,12 +13510,8 @@ webpackJsonp([2,4],[
 	     * @param {string} key The key of the value to get.
 	     * @returns {*} Returns the entry value.
 	     */
-	    function mapGet(key) {
-	      var data = this.__data__;
-	      if (isKeyable(key)) {
-	        return hashGet(typeof key == 'string' ? data.string : data.hash, key);
-	      }
-	      return Map ? data.map.get(key) : assocGet(data.map, key);
+	    function mapCacheGet(key) {
+	      return getMapData(this, key).get(key);
 	    }
 
 	    /**
@@ -12970,12 +13523,8 @@ webpackJsonp([2,4],[
 	     * @param {string} key The key of the entry to check.
 	     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
 	     */
-	    function mapHas(key) {
-	      var data = this.__data__;
-	      if (isKeyable(key)) {
-	        return hashHas(typeof key == 'string' ? data.string : data.hash, key);
-	      }
-	      return Map ? data.map.has(key) : assocHas(data.map, key);
+	    function mapCacheHas(key) {
+	      return getMapData(this, key).has(key);
 	    }
 
 	    /**
@@ -12986,25 +13535,25 @@ webpackJsonp([2,4],[
 	     * @memberOf MapCache
 	     * @param {string} key The key of the value to set.
 	     * @param {*} value The value to set.
-	     * @returns {Object} Returns the map cache object.
+	     * @returns {Object} Returns the map cache instance.
 	     */
-	    function mapSet(key, value) {
-	      var data = this.__data__;
-	      if (isKeyable(key)) {
-	        hashSet(typeof key == 'string' ? data.string : data.hash, key, value);
-	      } else if (Map) {
-	        data.map.set(key, value);
-	      } else {
-	        assocSet(data.map, key, value);
-	      }
+	    function mapCacheSet(key, value) {
+	      getMapData(this, key).set(key, value);
 	      return this;
 	    }
+
+	    // Add methods to `MapCache`.
+	    MapCache.prototype.clear = mapCacheClear;
+	    MapCache.prototype['delete'] = mapCacheDelete;
+	    MapCache.prototype.get = mapCacheGet;
+	    MapCache.prototype.has = mapCacheHas;
+	    MapCache.prototype.set = mapCacheSet;
 
 	    /*------------------------------------------------------------------------*/
 
 	    /**
 	     *
-	     * Creates a set cache object to store unique values.
+	     * Creates an array cache object to store unique values.
 	     *
 	     * @private
 	     * @constructor
@@ -13016,49 +13565,41 @@ webpackJsonp([2,4],[
 
 	      this.__data__ = new MapCache;
 	      while (++index < length) {
-	        this.push(values[index]);
+	        this.add(values[index]);
 	      }
 	    }
 
 	    /**
-	     * Checks if `value` is in `cache`.
+	     * Adds `value` to the array cache.
 	     *
 	     * @private
-	     * @param {Object} cache The set cache to search.
+	     * @name add
+	     * @memberOf SetCache
+	     * @alias push
+	     * @param {*} value The value to cache.
+	     * @returns {Object} Returns the cache instance.
+	     */
+	    function setCacheAdd(value) {
+	      this.__data__.set(value, HASH_UNDEFINED);
+	      return this;
+	    }
+
+	    /**
+	     * Checks if `value` is in the array cache.
+	     *
+	     * @private
+	     * @name has
+	     * @memberOf SetCache
 	     * @param {*} value The value to search for.
 	     * @returns {number} Returns `true` if `value` is found, else `false`.
 	     */
-	    function cacheHas(cache, value) {
-	      var map = cache.__data__;
-	      if (isKeyable(value)) {
-	        var data = map.__data__,
-	            hash = typeof value == 'string' ? data.string : data.hash;
-
-	        return hash[value] === HASH_UNDEFINED;
-	      }
-	      return map.has(value);
+	    function setCacheHas(value) {
+	      return this.__data__.has(value);
 	    }
 
-	    /**
-	     * Adds `value` to the set cache.
-	     *
-	     * @private
-	     * @name push
-	     * @memberOf SetCache
-	     * @param {*} value The value to cache.
-	     */
-	    function cachePush(value) {
-	      var map = this.__data__;
-	      if (isKeyable(value)) {
-	        var data = map.__data__,
-	            hash = typeof value == 'string' ? data.string : data.hash;
-
-	        hash[value] = HASH_UNDEFINED;
-	      }
-	      else {
-	        map.set(value, HASH_UNDEFINED);
-	      }
-	    }
+	    // Add methods to `SetCache`.
+	    SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
+	    SetCache.prototype.has = setCacheHas;
 
 	    /*------------------------------------------------------------------------*/
 
@@ -13067,17 +13608,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @constructor
-	     * @param {Array} [values] The values to cache.
+	     * @param {Array} [entries] The key-value pairs to cache.
 	     */
-	    function Stack(values) {
-	      var index = -1,
-	          length = values ? values.length : 0;
-
-	      this.clear();
-	      while (++index < length) {
-	        var entry = values[index];
-	        this.set(entry[0], entry[1]);
-	      }
+	    function Stack(entries) {
+	      this.__data__ = new ListCache(entries);
 	    }
 
 	    /**
@@ -13088,7 +13622,7 @@ webpackJsonp([2,4],[
 	     * @memberOf Stack
 	     */
 	    function stackClear() {
-	      this.__data__ = { 'array': [], 'map': null };
+	      this.__data__ = new ListCache;
 	    }
 
 	    /**
@@ -13101,10 +13635,7 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	     */
 	    function stackDelete(key) {
-	      var data = this.__data__,
-	          array = data.array;
-
-	      return array ? assocDelete(array, key) : data.map['delete'](key);
+	      return this.__data__['delete'](key);
 	    }
 
 	    /**
@@ -13117,10 +13648,7 @@ webpackJsonp([2,4],[
 	     * @returns {*} Returns the entry value.
 	     */
 	    function stackGet(key) {
-	      var data = this.__data__,
-	          array = data.array;
-
-	      return array ? assocGet(array, key) : data.map.get(key);
+	      return this.__data__.get(key);
 	    }
 
 	    /**
@@ -13133,10 +13661,7 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
 	     */
 	    function stackHas(key) {
-	      var data = this.__data__,
-	          array = data.array;
-
-	      return array ? assocHas(array, key) : data.map.has(key);
+	      return this.__data__.has(key);
 	    }
 
 	    /**
@@ -13147,111 +13672,23 @@ webpackJsonp([2,4],[
 	     * @memberOf Stack
 	     * @param {string} key The key of the value to set.
 	     * @param {*} value The value to set.
-	     * @returns {Object} Returns the stack cache object.
+	     * @returns {Object} Returns the stack cache instance.
 	     */
 	    function stackSet(key, value) {
-	      var data = this.__data__,
-	          array = data.array;
-
-	      if (array) {
-	        if (array.length < (LARGE_ARRAY_SIZE - 1)) {
-	          assocSet(array, key, value);
-	        } else {
-	          data.array = null;
-	          data.map = new MapCache(array);
-	        }
+	      var cache = this.__data__;
+	      if (cache instanceof ListCache && cache.__data__.length == LARGE_ARRAY_SIZE) {
+	        cache = this.__data__ = new MapCache(cache.__data__);
 	      }
-	      var map = data.map;
-	      if (map) {
-	        map.set(key, value);
-	      }
+	      cache.set(key, value);
 	      return this;
 	    }
 
-	    /*------------------------------------------------------------------------*/
-
-	    /**
-	     * Removes `key` and its value from the associative array.
-	     *
-	     * @private
-	     * @param {Array} array The array to query.
-	     * @param {string} key The key of the value to remove.
-	     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
-	     */
-	    function assocDelete(array, key) {
-	      var index = assocIndexOf(array, key);
-	      if (index < 0) {
-	        return false;
-	      }
-	      var lastIndex = array.length - 1;
-	      if (index == lastIndex) {
-	        array.pop();
-	      } else {
-	        splice.call(array, index, 1);
-	      }
-	      return true;
-	    }
-
-	    /**
-	     * Gets the associative array value for `key`.
-	     *
-	     * @private
-	     * @param {Array} array The array to query.
-	     * @param {string} key The key of the value to get.
-	     * @returns {*} Returns the entry value.
-	     */
-	    function assocGet(array, key) {
-	      var index = assocIndexOf(array, key);
-	      return index < 0 ? undefined : array[index][1];
-	    }
-
-	    /**
-	     * Checks if an associative array value for `key` exists.
-	     *
-	     * @private
-	     * @param {Array} array The array to query.
-	     * @param {string} key The key of the entry to check.
-	     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
-	     */
-	    function assocHas(array, key) {
-	      return assocIndexOf(array, key) > -1;
-	    }
-
-	    /**
-	     * Gets the index at which the first occurrence of `key` is found in `array`
-	     * of key-value pairs.
-	     *
-	     * @private
-	     * @param {Array} array The array to search.
-	     * @param {*} key The key to search for.
-	     * @returns {number} Returns the index of the matched value, else `-1`.
-	     */
-	    function assocIndexOf(array, key) {
-	      var length = array.length;
-	      while (length--) {
-	        if (eq(array[length][0], key)) {
-	          return length;
-	        }
-	      }
-	      return -1;
-	    }
-
-	    /**
-	     * Sets the associative array `key` to `value`.
-	     *
-	     * @private
-	     * @param {Array} array The array to modify.
-	     * @param {string} key The key of the value to set.
-	     * @param {*} value The value to set.
-	     */
-	    function assocSet(array, key, value) {
-	      var index = assocIndexOf(array, key);
-	      if (index < 0) {
-	        array.push([key, value]);
-	      } else {
-	        array[index][1] = value;
-	      }
-	    }
+	    // Add methods to `Stack`.
+	    Stack.prototype.clear = stackClear;
+	    Stack.prototype['delete'] = stackDelete;
+	    Stack.prototype.get = stackGet;
+	    Stack.prototype.has = stackHas;
+	    Stack.prototype.set = stackSet;
 
 	    /*------------------------------------------------------------------------*/
 
@@ -13308,6 +13745,24 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Gets the index at which the `key` is found in `array` of key-value pairs.
+	     *
+	     * @private
+	     * @param {Array} array The array to search.
+	     * @param {*} key The key to search for.
+	     * @returns {number} Returns the index of the matched value, else `-1`.
+	     */
+	    function assocIndexOf(array, key) {
+	      var length = array.length;
+	      while (length--) {
+	        if (eq(array[length][0], key)) {
+	          return length;
+	        }
+	      }
+	      return -1;
+	    }
+
+	    /**
 	     * Aggregates elements of `collection` on `accumulator` with keys transformed
 	     * by `iteratee` and values set by `setter`.
 	     *
@@ -13344,7 +13799,7 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Object} object The object to iterate over.
 	     * @param {string[]} paths The property paths of elements to pick.
-	     * @returns {Array} Returns the new array of picked elements.
+	     * @returns {Array} Returns the picked elements.
 	     */
 	    function baseAt(object, paths) {
 	      var index = -1,
@@ -13356,39 +13811,6 @@ webpackJsonp([2,4],[
 	        result[index] = isNil ? undefined : get(object, paths[index]);
 	      }
 	      return result;
-	    }
-
-	    /**
-	     * Casts `value` to an empty array if it's not an array like object.
-	     *
-	     * @private
-	     * @param {*} value The value to inspect.
-	     * @returns {Array} Returns the array-like object.
-	     */
-	    function baseCastArrayLikeObject(value) {
-	      return isArrayLikeObject(value) ? value : [];
-	    }
-
-	    /**
-	     * Casts `value` to `identity` if it's not a function.
-	     *
-	     * @private
-	     * @param {*} value The value to inspect.
-	     * @returns {Array} Returns the array-like object.
-	     */
-	    function baseCastFunction(value) {
-	      return typeof value == 'function' ? value : identity;
-	    }
-
-	    /**
-	     * Casts `value` to a path array if it's not one.
-	     *
-	     * @private
-	     * @param {*} value The value to inspect.
-	     * @returns {Array} Returns the cast property path array.
-	     */
-	    function baseCastPath(value) {
-	      return isArray(value) ? value : stringToPath(value);
 	    }
 
 	    /**
@@ -13456,14 +13878,13 @@ webpackJsonp([2,4],[
 	          }
 	          result = initCloneObject(isFunc ? {} : value);
 	          if (!isDeep) {
-	            result = baseAssign(result, value);
-	            return isFull ? copySymbols(value, result) : result;
+	            return copySymbols(value, baseAssign(result, value));
 	          }
 	        } else {
 	          if (!cloneableTags[tag]) {
 	            return object ? value : {};
 	          }
-	          result = initCloneByTag(value, tag, isDeep);
+	          result = initCloneByTag(value, tag, baseClone, isDeep);
 	        }
 	      }
 	      // Check for circular references and return its corresponding clone.
@@ -13474,11 +13895,18 @@ webpackJsonp([2,4],[
 	      }
 	      stack.set(value, result);
 
+	      if (!isArr) {
+	        var props = isFull ? getAllKeys(value) : keys(value);
+	      }
 	      // Recursively populate clone (susceptible to call stack limits).
-	      (isArr ? arrayEach : baseForOwn)(value, function(subValue, key) {
+	      arrayEach(props || value, function(subValue, key) {
+	        if (props) {
+	          key = subValue;
+	          subValue = value[key];
+	        }
 	        assignValue(result, key, baseClone(subValue, isDeep, isFull, customizer, key, value, stack));
 	      });
-	      return (isFull && !isArr) ? copySymbols(value, result) : result;
+	      return result;
 	    }
 
 	    /**
@@ -13486,7 +13914,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Object} source The object of property predicates to conform to.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     */
 	    function baseConforms(source) {
 	      var props = keys(source),
@@ -13502,7 +13930,8 @@ webpackJsonp([2,4],[
 	              predicate = source[key],
 	              value = object[key];
 
-	          if ((value === undefined && !(key in Object(object))) || !predicate(value)) {
+	          if ((value === undefined &&
+	              !(key in Object(object))) || !predicate(value)) {
 	            return false;
 	          }
 	        }
@@ -13540,8 +13969,8 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * The base implementation of methods like `_.difference` without support for
-	     * excluding multiple arrays or iteratee shorthands.
+	     * The base implementation of methods like `_.difference` without support
+	     * for excluding multiple arrays or iteratee shorthands.
 	     *
 	     * @private
 	     * @param {Array} array The array to inspect.
@@ -13578,6 +14007,7 @@ webpackJsonp([2,4],[
 	        var value = array[index],
 	            computed = iteratee ? iteratee(value) : value;
 
+	        value = (comparator || value !== 0) ? value : 0;
 	        if (isCommon && computed === computed) {
 	          var valuesIndex = valuesLength;
 	          while (valuesIndex--) {
@@ -13620,7 +14050,8 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} predicate The function invoked per iteration.
-	     * @returns {boolean} Returns `true` if all elements pass the predicate check, else `false`
+	     * @returns {boolean} Returns `true` if all elements pass the predicate check,
+	     *  else `false`
 	     */
 	    function baseEvery(collection, predicate) {
 	      var result = true;
@@ -13628,6 +14059,35 @@ webpackJsonp([2,4],[
 	        result = !!predicate(value, index, collection);
 	        return result;
 	      });
+	      return result;
+	    }
+
+	    /**
+	     * The base implementation of methods like `_.max` and `_.min` which accepts a
+	     * `comparator` to determine the extremum value.
+	     *
+	     * @private
+	     * @param {Array} array The array to iterate over.
+	     * @param {Function} iteratee The iteratee invoked per iteration.
+	     * @param {Function} comparator The comparator used to compare values.
+	     * @returns {*} Returns the extremum value.
+	     */
+	    function baseExtremum(array, iteratee, comparator) {
+	      var index = -1,
+	          length = array.length;
+
+	      while (++index < length) {
+	        var value = array[index],
+	            current = iteratee(value);
+
+	        if (current != null && (computed === undefined
+	              ? (current === current && !isSymbol(current))
+	              : comparator(current, computed)
+	            )) {
+	          var computed = current,
+	              result = value;
+	        }
+	      }
 	      return result;
 	    }
 
@@ -13683,23 +14143,24 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Array} array The array to flatten.
 	     * @param {number} depth The maximum recursion depth.
-	     * @param {boolean} [isStrict] Restrict flattening to arrays-like objects.
+	     * @param {boolean} [predicate=isFlattenable] The function invoked per iteration.
+	     * @param {boolean} [isStrict] Restrict to values that pass `predicate` checks.
 	     * @param {Array} [result=[]] The initial result value.
 	     * @returns {Array} Returns the new flattened array.
 	     */
-	    function baseFlatten(array, depth, isStrict, result) {
-	      result || (result = []);
-
+	    function baseFlatten(array, depth, predicate, isStrict, result) {
 	      var index = -1,
 	          length = array.length;
 
+	      predicate || (predicate = isFlattenable);
+	      result || (result = []);
+
 	      while (++index < length) {
 	        var value = array[index];
-	        if (depth > 0 && isArrayLikeObject(value) &&
-	            (isStrict || isArray(value) || isArguments(value))) {
+	        if (depth > 0 && predicate(value)) {
 	          if (depth > 1) {
 	            // Recursively flatten arrays (susceptible to call stack limits).
-	            baseFlatten(value, depth - 1, isStrict, result);
+	            baseFlatten(value, depth - 1, predicate, isStrict, result);
 	          } else {
 	            arrayPush(result, value);
 	          }
@@ -13711,10 +14172,9 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * The base implementation of `baseForIn` and `baseForOwn` which iterates
-	     * over `object` properties returned by `keysFunc` invoking `iteratee` for
-	     * each property. Iteratee functions may exit iteration early by explicitly
-	     * returning `false`.
+	     * The base implementation of `baseForOwn` which iterates over `object`
+	     * properties returned by `keysFunc` and invokes `iteratee` for each property.
+	     * Iteratee functions may exit iteration early by explicitly returning `false`.
 	     *
 	     * @private
 	     * @param {Object} object The object to iterate over.
@@ -13735,18 +14195,6 @@ webpackJsonp([2,4],[
 	     * @returns {Object} Returns `object`.
 	     */
 	    var baseForRight = createBaseFor(true);
-
-	    /**
-	     * The base implementation of `_.forIn` without support for iteratee shorthands.
-	     *
-	     * @private
-	     * @param {Object} object The object to iterate over.
-	     * @param {Function} iteratee The function invoked per iteration.
-	     * @returns {Object} Returns `object`.
-	     */
-	    function baseForIn(object, iteratee) {
-	      return object == null ? object : baseFor(object, iteratee, keysIn);
-	    }
 
 	    /**
 	     * The base implementation of `_.forOwn` without support for iteratee shorthands.
@@ -13779,7 +14227,7 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Object} object The object to inspect.
 	     * @param {Array} props The property names to filter.
-	     * @returns {Array} Returns the new array of filtered property names.
+	     * @returns {Array} Returns the function names.
 	     */
 	    function baseFunctions(object, props) {
 	      return arrayFilter(props, function(key) {
@@ -13796,22 +14244,51 @@ webpackJsonp([2,4],[
 	     * @returns {*} Returns the resolved value.
 	     */
 	    function baseGet(object, path) {
-	      path = isKey(path, object) ? [path + ''] : baseCastPath(path);
+	      path = isKey(path, object) ? [path] : castPath(path);
 
 	      var index = 0,
 	          length = path.length;
 
 	      while (object != null && index < length) {
-	        object = object[path[index++]];
+	        object = object[toKey(path[index++])];
 	      }
 	      return (index && index == length) ? object : undefined;
+	    }
+
+	    /**
+	     * The base implementation of `getAllKeys` and `getAllKeysIn` which uses
+	     * `keysFunc` and `symbolsFunc` to get the enumerable property names and
+	     * symbols of `object`.
+	     *
+	     * @private
+	     * @param {Object} object The object to query.
+	     * @param {Function} keysFunc The function to get the keys of `object`.
+	     * @param {Function} symbolsFunc The function to get the symbols of `object`.
+	     * @returns {Array} Returns the array of property names and symbols.
+	     */
+	    function baseGetAllKeys(object, keysFunc, symbolsFunc) {
+	      var result = keysFunc(object);
+	      return isArray(object) ? result : arrayPush(result, symbolsFunc(object));
+	    }
+
+	    /**
+	     * The base implementation of `_.gt` which doesn't coerce arguments to numbers.
+	     *
+	     * @private
+	     * @param {*} value The value to compare.
+	     * @param {*} other The other value to compare.
+	     * @returns {boolean} Returns `true` if `value` is greater than `other`,
+	     *  else `false`.
+	     */
+	    function baseGt(value, other) {
+	      return value > other;
 	    }
 
 	    /**
 	     * The base implementation of `_.has` without support for deep paths.
 	     *
 	     * @private
-	     * @param {Object} object The object to query.
+	     * @param {Object} [object] The object to query.
 	     * @param {Array|string} key The key to check.
 	     * @returns {boolean} Returns `true` if `key` exists, else `false`.
 	     */
@@ -13819,20 +14296,21 @@ webpackJsonp([2,4],[
 	      // Avoid a bug in IE 10-11 where objects with a [[Prototype]] of `null`,
 	      // that are composed entirely of index properties, return `false` for
 	      // `hasOwnProperty` checks of them.
-	      return hasOwnProperty.call(object, key) ||
-	        (typeof object == 'object' && key in object && getPrototypeOf(object) === null);
+	      return object != null &&
+	        (hasOwnProperty.call(object, key) ||
+	          (typeof object == 'object' && key in object && getPrototype(object) === null));
 	    }
 
 	    /**
 	     * The base implementation of `_.hasIn` without support for deep paths.
 	     *
 	     * @private
-	     * @param {Object} object The object to query.
+	     * @param {Object} [object] The object to query.
 	     * @param {Array|string} key The key to check.
 	     * @returns {boolean} Returns `true` if `key` exists, else `false`.
 	     */
 	    function baseHasIn(object, key) {
-	      return key in Object(object);
+	      return object != null && key in Object(object);
 	    }
 
 	    /**
@@ -13887,6 +14365,7 @@ webpackJsonp([2,4],[
 	        var value = array[index],
 	            computed = iteratee ? iteratee(value) : value;
 
+	        value = (comparator || value !== 0) ? value : 0;
 	        if (!(seen
 	              ? cacheHas(seen, computed)
 	              : includes(result, computed, comparator)
@@ -13940,11 +14419,11 @@ webpackJsonp([2,4],[
 	     */
 	    function baseInvoke(object, path, args) {
 	      if (!isKey(path, object)) {
-	        path = baseCastPath(path);
+	        path = castPath(path);
 	        object = parent(object, path);
 	        path = last(path);
 	      }
-	      var func = object == null ? object : object[path];
+	      var func = object == null ? object : object[toKey(path)];
 	      return func == null ? undefined : apply(func, object, args);
 	    }
 
@@ -13983,7 +14462,8 @@ webpackJsonp([2,4],[
 	     * @param {Object} other The other object to compare.
 	     * @param {Function} equalFunc The function to determine equivalents of values.
 	     * @param {Function} [customizer] The function to customize comparisons.
-	     * @param {number} [bitmask] The bitmask of comparison flags. See `baseIsEqual` for more details.
+	     * @param {number} [bitmask] The bitmask of comparison flags. See `baseIsEqual`
+	     *  for more details.
 	     * @param {Object} [stack] Tracks traversed `object` and `other` objects.
 	     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	     */
@@ -14016,8 +14496,11 @@ webpackJsonp([2,4],[
 	            othIsWrapped = othIsObj && hasOwnProperty.call(other, '__wrapped__');
 
 	        if (objIsWrapped || othIsWrapped) {
+	          var objUnwrapped = objIsWrapped ? object.value() : object,
+	              othUnwrapped = othIsWrapped ? other.value() : other;
+
 	          stack || (stack = new Stack);
-	          return equalFunc(objIsWrapped ? object.value() : object, othIsWrapped ? other.value() : other, customizer, bitmask, stack);
+	          return equalFunc(objUnwrapped, othUnwrapped, customizer, bitmask, stack);
 	        }
 	      }
 	      if (!isSameTag) {
@@ -14066,9 +14549,10 @@ webpackJsonp([2,4],[
 	            return false;
 	          }
 	        } else {
-	          var stack = new Stack,
-	              result = customizer ? customizer(objValue, srcValue, key, object, source, stack) : undefined;
-
+	          var stack = new Stack;
+	          if (customizer) {
+	            var result = customizer(objValue, srcValue, key, object, source, stack);
+	          }
 	          if (!(result === undefined
 	                ? baseIsEqual(srcValue, objValue, customizer, UNORDERED_COMPARE_FLAG | PARTIAL_COMPARE_FLAG, stack)
 	                : result
@@ -14081,6 +14565,22 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * The base implementation of `_.isNative` without bad shim checks.
+	     *
+	     * @private
+	     * @param {*} value The value to check.
+	     * @returns {boolean} Returns `true` if `value` is a native function,
+	     *  else `false`.
+	     */
+	    function baseIsNative(value) {
+	      if (!isObject(value) || isMasked(value)) {
+	        return false;
+	      }
+	      var pattern = (isFunction(value) || isHostObject(value)) ? reIsNative : reIsHostCtor;
+	      return pattern.test(toSource(value));
+	    }
+
+	    /**
 	     * The base implementation of `_.iteratee`.
 	     *
 	     * @private
@@ -14088,14 +14588,15 @@ webpackJsonp([2,4],[
 	     * @returns {Function} Returns the iteratee.
 	     */
 	    function baseIteratee(value) {
-	      var type = typeof value;
-	      if (type == 'function') {
+	      // Don't store the `typeof` result in a variable to avoid a JIT bug in Safari 9.
+	      // See https://bugs.webkit.org/show_bug.cgi?id=156034 for more details.
+	      if (typeof value == 'function') {
 	        return value;
 	      }
 	      if (value == null) {
 	        return identity;
 	      }
-	      if (type == 'object') {
+	      if (typeof value == 'object') {
 	        return isArray(value)
 	          ? baseMatchesProperty(value[0], value[1])
 	          : baseMatches(value);
@@ -14141,6 +14642,19 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * The base implementation of `_.lt` which doesn't coerce arguments to numbers.
+	     *
+	     * @private
+	     * @param {*} value The value to compare.
+	     * @param {*} other The other value to compare.
+	     * @returns {boolean} Returns `true` if `value` is less than `other`,
+	     *  else `false`.
+	     */
+	    function baseLt(value, other) {
+	      return value < other;
+	    }
+
+	    /**
 	     * The base implementation of `_.map` without support for iteratee shorthands.
 	     *
 	     * @private
@@ -14163,21 +14677,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Object} source The object of property values to match.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     */
 	    function baseMatches(source) {
 	      var matchData = getMatchData(source);
 	      if (matchData.length == 1 && matchData[0][2]) {
-	        var key = matchData[0][0],
-	            value = matchData[0][1];
-
-	        return function(object) {
-	          if (object == null) {
-	            return false;
-	          }
-	          return object[key] === value &&
-	            (value !== undefined || (key in Object(object)));
-	        };
+	        return matchesStrictComparable(matchData[0][0], matchData[0][1]);
 	      }
 	      return function(object) {
 	        return object === source || baseIsMatch(object, source, matchData);
@@ -14190,9 +14695,12 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {string} path The path of the property to get.
 	     * @param {*} srcValue The value to match.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     */
 	    function baseMatchesProperty(path, srcValue) {
+	      if (isKey(path) && isStrictComparable(srcValue)) {
+	        return matchesStrictComparable(toKey(path), srcValue);
+	      }
 	      return function(object) {
 	        var objValue = get(object, path);
 	        return (objValue === undefined && objValue === srcValue)
@@ -14209,16 +14717,16 @@ webpackJsonp([2,4],[
 	     * @param {Object} source The source object.
 	     * @param {number} srcIndex The index of `source`.
 	     * @param {Function} [customizer] The function to customize merged values.
-	     * @param {Object} [stack] Tracks traversed source values and their merged counterparts.
+	     * @param {Object} [stack] Tracks traversed source values and their merged
+	     *  counterparts.
 	     */
 	    function baseMerge(object, source, srcIndex, customizer, stack) {
 	      if (object === source) {
 	        return;
 	      }
-	      var props = (isArray(source) || isTypedArray(source))
-	        ? undefined
-	        : keysIn(source);
-
+	      if (!(isArray(source) || isTypedArray(source))) {
+	        var props = keysIn(source);
+	      }
 	      arrayEach(props || source, function(srcValue, key) {
 	        if (props) {
 	          key = srcValue;
@@ -14253,7 +14761,8 @@ webpackJsonp([2,4],[
 	     * @param {number} srcIndex The index of `source`.
 	     * @param {Function} mergeFunc The function to merge values.
 	     * @param {Function} [customizer] The function to customize assigned values.
-	     * @param {Object} [stack] Tracks traversed source values and their merged counterparts.
+	     * @param {Object} [stack] Tracks traversed source values and their merged
+	     *  counterparts.
 	     */
 	    function baseMergeDeep(object, source, key, srcIndex, mergeFunc, customizer, stack) {
 	      var objValue = object[key],
@@ -14281,7 +14790,7 @@ webpackJsonp([2,4],[
 	          }
 	          else {
 	            isCommon = false;
-	            newValue = baseClone(srcValue, !customizer);
+	            newValue = baseClone(srcValue, true);
 	          }
 	        }
 	        else if (isPlainObject(srcValue) || isArguments(srcValue)) {
@@ -14290,7 +14799,7 @@ webpackJsonp([2,4],[
 	          }
 	          else if (!isObject(objValue) || (srcIndex && isFunction(objValue))) {
 	            isCommon = false;
-	            newValue = baseClone(srcValue, !customizer);
+	            newValue = baseClone(srcValue, true);
 	          }
 	          else {
 	            newValue = objValue;
@@ -14311,6 +14820,23 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * The base implementation of `_.nth` which doesn't coerce `n` to an integer.
+	     *
+	     * @private
+	     * @param {Array} array The array to query.
+	     * @param {number} n The index of the element to return.
+	     * @returns {*} Returns the nth element of `array`.
+	     */
+	    function baseNth(array, n) {
+	      var length = array.length;
+	      if (!length) {
+	        return;
+	      }
+	      n += n < 0 ? length : 0;
+	      return isIndex(n, length) ? array[n] : undefined;
+	    }
+
+	    /**
 	     * The base implementation of `_.orderBy` without param guards.
 	     *
 	     * @private
@@ -14321,7 +14847,7 @@ webpackJsonp([2,4],[
 	     */
 	    function baseOrderBy(collection, iteratees, orders) {
 	      var index = -1;
-	      iteratees = arrayMap(iteratees.length ? iteratees : Array(1), getIteratee());
+	      iteratees = arrayMap(iteratees.length ? iteratees : [identity], baseUnary(getIteratee()));
 
 	      var result = baseMap(collection, function(value, key, collection) {
 	        var criteria = arrayMap(iteratees, function(iteratee) {
@@ -14337,11 +14863,11 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * The base implementation of `_.pick` without support for individual
-	     * property names.
+	     * property identifiers.
 	     *
 	     * @private
 	     * @param {Object} object The source object.
-	     * @param {string[]} props The property names to pick.
+	     * @param {string[]} props The property identifiers to pick.
 	     * @returns {Object} Returns the new object.
 	     */
 	    function basePick(object, props) {
@@ -14363,12 +14889,19 @@ webpackJsonp([2,4],[
 	     * @returns {Object} Returns the new object.
 	     */
 	    function basePickBy(object, predicate) {
-	      var result = {};
-	      baseForIn(object, function(value, key) {
+	      var index = -1,
+	          props = getAllKeysIn(object),
+	          length = props.length,
+	          result = {};
+
+	      while (++index < length) {
+	        var key = props[index],
+	            value = object[key];
+
 	        if (predicate(value, key)) {
 	          result[key] = value;
 	        }
-	      });
+	      }
 	      return result;
 	    }
 
@@ -14377,7 +14910,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {string} key The key of the property to get.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new accessor function.
 	     */
 	    function baseProperty(key) {
 	      return function(object) {
@@ -14390,7 +14923,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Array|string} path The path of the property to get.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new accessor function.
 	     */
 	    function basePropertyDeep(path) {
 	      return function(object) {
@@ -14415,6 +14948,9 @@ webpackJsonp([2,4],[
 	          length = values.length,
 	          seen = array;
 
+	      if (array === values) {
+	        values = copyArray(values);
+	      }
 	      if (iteratee) {
 	        seen = arrayMap(array, baseUnary(iteratee));
 	      }
@@ -14448,21 +14984,21 @@ webpackJsonp([2,4],[
 
 	      while (length--) {
 	        var index = indexes[length];
-	        if (lastIndex == length || index != previous) {
+	        if (length == lastIndex || index !== previous) {
 	          var previous = index;
 	          if (isIndex(index)) {
 	            splice.call(array, index, 1);
 	          }
 	          else if (!isKey(index, array)) {
-	            var path = baseCastPath(index),
+	            var path = castPath(index),
 	                object = parent(array, path);
 
 	            if (object != null) {
-	              delete object[last(path)];
+	              delete object[toKey(last(path))];
 	            }
 	          }
 	          else {
-	            delete array[index];
+	            delete array[toKey(index)];
 	          }
 	        }
 	      }
@@ -14491,7 +15027,7 @@ webpackJsonp([2,4],[
 	     * @param {number} end The end of the range.
 	     * @param {number} step The value to increment or decrement by.
 	     * @param {boolean} [fromRight] Specify iterating from right to left.
-	     * @returns {Array} Returns the new array of numbers.
+	     * @returns {Array} Returns the range of numbers.
 	     */
 	    function baseRange(start, end, step, fromRight) {
 	      var index = -1,
@@ -14506,6 +15042,34 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * The base implementation of `_.repeat` which doesn't coerce arguments.
+	     *
+	     * @private
+	     * @param {string} string The string to repeat.
+	     * @param {number} n The number of times to repeat the string.
+	     * @returns {string} Returns the repeated string.
+	     */
+	    function baseRepeat(string, n) {
+	      var result = '';
+	      if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
+	        return result;
+	      }
+	      // Leverage the exponentiation by squaring algorithm for a faster repeat.
+	      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
+	      do {
+	        if (n % 2) {
+	          result += string;
+	        }
+	        n = nativeFloor(n / 2);
+	        if (n) {
+	          string += string;
+	        }
+	      } while (n);
+
+	      return result;
+	    }
+
+	    /**
 	     * The base implementation of `_.set`.
 	     *
 	     * @private
@@ -14516,7 +15080,7 @@ webpackJsonp([2,4],[
 	     * @returns {Object} Returns `object`.
 	     */
 	    function baseSet(object, path, value, customizer) {
-	      path = isKey(path, object) ? [path + ''] : baseCastPath(path);
+	      path = isKey(path, object) ? [path] : castPath(path);
 
 	      var index = -1,
 	          length = path.length,
@@ -14524,7 +15088,7 @@ webpackJsonp([2,4],[
 	          nested = object;
 
 	      while (nested != null && ++index < length) {
-	        var key = path[index];
+	        var key = toKey(path[index]);
 	        if (isObject(nested)) {
 	          var newValue = value;
 	          if (index != lastIndex) {
@@ -14592,7 +15156,8 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} predicate The function invoked per iteration.
-	     * @returns {boolean} Returns `true` if any element passes the predicate check, else `false`.
+	     * @returns {boolean} Returns `true` if any element passes the predicate check,
+	     *  else `false`.
 	     */
 	    function baseSome(collection, predicate) {
 	      var result;
@@ -14625,7 +15190,8 @@ webpackJsonp([2,4],[
 	          var mid = (low + high) >>> 1,
 	              computed = array[mid];
 
-	          if ((retHighest ? (computed <= value) : (computed < value)) && computed !== null) {
+	          if (computed !== null && !isSymbol(computed) &&
+	              (retHighest ? (computed <= value) : (computed < value))) {
 	            low = mid + 1;
 	          } else {
 	            high = mid;
@@ -14646,7 +15212,8 @@ webpackJsonp([2,4],[
 	     * @param {*} value The value to evaluate.
 	     * @param {Function} iteratee The iteratee invoked per element.
 	     * @param {boolean} [retHighest] Specify returning the highest qualified index.
-	     * @returns {number} Returns the index at which `value` should be inserted into `array`.
+	     * @returns {number} Returns the index at which `value` should be inserted
+	     *  into `array`.
 	     */
 	    function baseSortedIndexBy(array, value, iteratee, retHighest) {
 	      value = iteratee(value);
@@ -14655,21 +15222,26 @@ webpackJsonp([2,4],[
 	          high = array ? array.length : 0,
 	          valIsNaN = value !== value,
 	          valIsNull = value === null,
-	          valIsUndef = value === undefined;
+	          valIsSymbol = isSymbol(value),
+	          valIsUndefined = value === undefined;
 
 	      while (low < high) {
 	        var mid = nativeFloor((low + high) / 2),
 	            computed = iteratee(array[mid]),
-	            isDef = computed !== undefined,
-	            isReflexive = computed === computed;
+	            othIsDefined = computed !== undefined,
+	            othIsNull = computed === null,
+	            othIsReflexive = computed === computed,
+	            othIsSymbol = isSymbol(computed);
 
 	        if (valIsNaN) {
-	          var setLow = isReflexive || retHighest;
+	          var setLow = retHighest || othIsReflexive;
+	        } else if (valIsUndefined) {
+	          setLow = othIsReflexive && (retHighest || othIsDefined);
 	        } else if (valIsNull) {
-	          setLow = isReflexive && isDef && (retHighest || computed != null);
-	        } else if (valIsUndef) {
-	          setLow = isReflexive && (retHighest || isDef);
-	        } else if (computed == null) {
+	          setLow = othIsReflexive && othIsDefined && (retHighest || !othIsNull);
+	        } else if (valIsSymbol) {
+	          setLow = othIsReflexive && othIsDefined && !othIsNull && (retHighest || !othIsSymbol);
+	        } else if (othIsNull || othIsSymbol) {
 	          setLow = false;
 	        } else {
 	          setLow = retHighest ? (computed <= value) : (computed < value);
@@ -14684,44 +15256,68 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * The base implementation of `_.sortedUniq`.
-	     *
-	     * @private
-	     * @param {Array} array The array to inspect.
-	     * @returns {Array} Returns the new duplicate free array.
-	     */
-	    function baseSortedUniq(array) {
-	      return baseSortedUniqBy(array);
-	    }
-
-	    /**
-	     * The base implementation of `_.sortedUniqBy` without support for iteratee
-	     * shorthands.
+	     * The base implementation of `_.sortedUniq` and `_.sortedUniqBy` without
+	     * support for iteratee shorthands.
 	     *
 	     * @private
 	     * @param {Array} array The array to inspect.
 	     * @param {Function} [iteratee] The iteratee invoked per element.
 	     * @returns {Array} Returns the new duplicate free array.
 	     */
-	    function baseSortedUniqBy(array, iteratee) {
-	      var index = 0,
+	    function baseSortedUniq(array, iteratee) {
+	      var index = -1,
 	          length = array.length,
-	          value = array[0],
-	          computed = iteratee ? iteratee(value) : value,
-	          seen = computed,
-	          resIndex = 1,
-	          result = [value];
+	          resIndex = 0,
+	          result = [];
 
 	      while (++index < length) {
-	        value = array[index],
-	        computed = iteratee ? iteratee(value) : value;
+	        var value = array[index],
+	            computed = iteratee ? iteratee(value) : value;
 
-	        if (!eq(computed, seen)) {
-	          seen = computed;
-	          result[resIndex++] = value;
+	        if (!index || !eq(computed, seen)) {
+	          var seen = computed;
+	          result[resIndex++] = value === 0 ? 0 : value;
 	        }
 	      }
 	      return result;
+	    }
+
+	    /**
+	     * The base implementation of `_.toNumber` which doesn't ensure correct
+	     * conversions of binary, hexadecimal, or octal string values.
+	     *
+	     * @private
+	     * @param {*} value The value to process.
+	     * @returns {number} Returns the number.
+	     */
+	    function baseToNumber(value) {
+	      if (typeof value == 'number') {
+	        return value;
+	      }
+	      if (isSymbol(value)) {
+	        return NAN;
+	      }
+	      return +value;
+	    }
+
+	    /**
+	     * The base implementation of `_.toString` which doesn't convert nullish
+	     * values to empty strings.
+	     *
+	     * @private
+	     * @param {*} value The value to process.
+	     * @returns {string} Returns the string.
+	     */
+	    function baseToString(value) {
+	      // Exit early for strings to avoid a performance hit in some environments.
+	      if (typeof value == 'string') {
+	        return value;
+	      }
+	      if (isSymbol(value)) {
+	        return symbolToString ? symbolToString.call(value) : '';
+	      }
+	      var result = (value + '');
+	      return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
 	    }
 
 	    /**
@@ -14762,6 +15358,7 @@ webpackJsonp([2,4],[
 	        var value = array[index],
 	            computed = iteratee ? iteratee(value) : value;
 
+	        value = (comparator || value !== 0) ? value : 0;
 	        if (isCommon && computed === computed) {
 	          var seenIndex = seen.length;
 	          while (seenIndex--) {
@@ -14793,10 +15390,11 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if the property is deleted, else `false`.
 	     */
 	    function baseUnset(object, path) {
-	      path = isKey(path, object) ? [path + ''] : baseCastPath(path);
+	      path = isKey(path, object) ? [path] : castPath(path);
 	      object = parent(object, path);
-	      var key = last(path);
-	      return (object != null && has(object, key)) ? delete object[key] : true;
+
+	      var key = toKey(last(path));
+	      return !(object != null && baseHas(object, key)) || delete object[key];
 	    }
 
 	    /**
@@ -14885,7 +15483,7 @@ webpackJsonp([2,4],[
 	     * This base implementation of `_.zipObject` which assigns values using `assignFunc`.
 	     *
 	     * @private
-	     * @param {Array} props The property names.
+	     * @param {Array} props The property identifiers.
 	     * @param {Array} values The property values.
 	     * @param {Function} assignFunc The function to assign values.
 	     * @returns {Object} Returns the new object.
@@ -14897,9 +15495,58 @@ webpackJsonp([2,4],[
 	          result = {};
 
 	      while (++index < length) {
-	        assignFunc(result, props[index], index < valsLength ? values[index] : undefined);
+	        var value = index < valsLength ? values[index] : undefined;
+	        assignFunc(result, props[index], value);
 	      }
 	      return result;
+	    }
+
+	    /**
+	     * Casts `value` to an empty array if it's not an array like object.
+	     *
+	     * @private
+	     * @param {*} value The value to inspect.
+	     * @returns {Array|Object} Returns the cast array-like object.
+	     */
+	    function castArrayLikeObject(value) {
+	      return isArrayLikeObject(value) ? value : [];
+	    }
+
+	    /**
+	     * Casts `value` to `identity` if it's not a function.
+	     *
+	     * @private
+	     * @param {*} value The value to inspect.
+	     * @returns {Function} Returns cast function.
+	     */
+	    function castFunction(value) {
+	      return typeof value == 'function' ? value : identity;
+	    }
+
+	    /**
+	     * Casts `value` to a path array if it's not one.
+	     *
+	     * @private
+	     * @param {*} value The value to inspect.
+	     * @returns {Array} Returns the cast property path array.
+	     */
+	    function castPath(value) {
+	      return isArray(value) ? value : stringToPath(value);
+	    }
+
+	    /**
+	     * Casts `array` to a slice if it's needed.
+	     *
+	     * @private
+	     * @param {Array} array The array to inspect.
+	     * @param {number} start The start position.
+	     * @param {number} [end=array.length] The end position.
+	     * @returns {Array} Returns the cast slice.
+	     */
+	    function castSlice(array, start, end) {
+	      var length = array.length;
+	      end = end === undefined ? length : end;
+	      return (!start && end >= length) ? array : baseSlice(array, start, end);
 	    }
 
 	    /**
@@ -14933,14 +15580,30 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Creates a clone of `dataView`.
+	     *
+	     * @private
+	     * @param {Object} dataView The data view to clone.
+	     * @param {boolean} [isDeep] Specify a deep clone.
+	     * @returns {Object} Returns the cloned data view.
+	     */
+	    function cloneDataView(dataView, isDeep) {
+	      var buffer = isDeep ? cloneArrayBuffer(dataView.buffer) : dataView.buffer;
+	      return new dataView.constructor(buffer, dataView.byteOffset, dataView.byteLength);
+	    }
+
+	    /**
 	     * Creates a clone of `map`.
 	     *
 	     * @private
 	     * @param {Object} map The map to clone.
+	     * @param {Function} cloneFunc The function to clone values.
+	     * @param {boolean} [isDeep] Specify a deep clone.
 	     * @returns {Object} Returns the cloned map.
 	     */
-	    function cloneMap(map) {
-	      return arrayReduce(mapToArray(map), addMapEntry, new map.constructor);
+	    function cloneMap(map, isDeep, cloneFunc) {
+	      var array = isDeep ? cloneFunc(mapToArray(map), true) : mapToArray(map);
+	      return arrayReduce(array, addMapEntry, new map.constructor);
 	    }
 
 	    /**
@@ -14961,10 +15624,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Object} set The set to clone.
+	     * @param {Function} cloneFunc The function to clone values.
+	     * @param {boolean} [isDeep] Specify a deep clone.
 	     * @returns {Object} Returns the cloned set.
 	     */
-	    function cloneSet(set) {
-	      return arrayReduce(setToArray(set), addSetEntry, new set.constructor);
+	    function cloneSet(set, isDeep, cloneFunc) {
+	      var array = isDeep ? cloneFunc(setToArray(set), true) : setToArray(set);
+	      return arrayReduce(array, addSetEntry, new set.constructor);
 	    }
 
 	    /**
@@ -14992,11 +15658,90 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Compares values to sort them in ascending order.
+	     *
+	     * @private
+	     * @param {*} value The value to compare.
+	     * @param {*} other The other value to compare.
+	     * @returns {number} Returns the sort order indicator for `value`.
+	     */
+	    function compareAscending(value, other) {
+	      if (value !== other) {
+	        var valIsDefined = value !== undefined,
+	            valIsNull = value === null,
+	            valIsReflexive = value === value,
+	            valIsSymbol = isSymbol(value);
+
+	        var othIsDefined = other !== undefined,
+	            othIsNull = other === null,
+	            othIsReflexive = other === other,
+	            othIsSymbol = isSymbol(other);
+
+	        if ((!othIsNull && !othIsSymbol && !valIsSymbol && value > other) ||
+	            (valIsSymbol && othIsDefined && othIsReflexive && !othIsNull && !othIsSymbol) ||
+	            (valIsNull && othIsDefined && othIsReflexive) ||
+	            (!valIsDefined && othIsReflexive) ||
+	            !valIsReflexive) {
+	          return 1;
+	        }
+	        if ((!valIsNull && !valIsSymbol && !othIsSymbol && value < other) ||
+	            (othIsSymbol && valIsDefined && valIsReflexive && !valIsNull && !valIsSymbol) ||
+	            (othIsNull && valIsDefined && valIsReflexive) ||
+	            (!othIsDefined && valIsReflexive) ||
+	            !othIsReflexive) {
+	          return -1;
+	        }
+	      }
+	      return 0;
+	    }
+
+	    /**
+	     * Used by `_.orderBy` to compare multiple properties of a value to another
+	     * and stable sort them.
+	     *
+	     * If `orders` is unspecified, all values are sorted in ascending order. Otherwise,
+	     * specify an order of "desc" for descending or "asc" for ascending sort order
+	     * of corresponding values.
+	     *
+	     * @private
+	     * @param {Object} object The object to compare.
+	     * @param {Object} other The other object to compare.
+	     * @param {boolean[]|string[]} orders The order to sort by for each property.
+	     * @returns {number} Returns the sort order indicator for `object`.
+	     */
+	    function compareMultiple(object, other, orders) {
+	      var index = -1,
+	          objCriteria = object.criteria,
+	          othCriteria = other.criteria,
+	          length = objCriteria.length,
+	          ordersLength = orders.length;
+
+	      while (++index < length) {
+	        var result = compareAscending(objCriteria[index], othCriteria[index]);
+	        if (result) {
+	          if (index >= ordersLength) {
+	            return result;
+	          }
+	          var order = orders[index];
+	          return result * (order == 'desc' ? -1 : 1);
+	        }
+	      }
+	      // Fixes an `Array#sort` bug in the JS engine embedded in Adobe applications
+	      // that causes it, under certain circumstances, to provide the same value for
+	      // `object` and `other`. See https://github.com/jashkenas/underscore/pull/1247
+	      // for more details.
+	      //
+	      // This also ensures a stable sort in V8 and other engines.
+	      // See https://bugs.chromium.org/p/v8/issues/detail?id=90 for more details.
+	      return object.index - other.index;
+	    }
+
+	    /**
 	     * Creates an array that is the composition of partially applied arguments,
 	     * placeholders, and provided arguments into a single array of arguments.
 	     *
 	     * @private
-	     * @param {Array|Object} args The provided arguments.
+	     * @param {Array} args The provided arguments.
 	     * @param {Array} partials The arguments to prepend to those provided.
 	     * @param {Array} holders The `partials` placeholder indexes.
 	     * @params {boolean} [isCurried] Specify composing for a curried function.
@@ -15031,7 +15776,7 @@ webpackJsonp([2,4],[
 	     * is tailored for `_.partialRight`.
 	     *
 	     * @private
-	     * @param {Array|Object} args The provided arguments.
+	     * @param {Array} args The provided arguments.
 	     * @param {Array} partials The arguments to append to those provided.
 	     * @param {Array} holders The `partials` placeholder indexes.
 	     * @params {boolean} [isCurried] Specify composing for a curried function.
@@ -15087,26 +15832,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Object} source The object to copy properties from.
-	     * @param {Array} props The property names to copy.
-	     * @param {Object} [object={}] The object to copy properties to.
-	     * @returns {Object} Returns `object`.
-	     */
-	    function copyObject(source, props, object) {
-	      return copyObjectWith(source, props, object);
-	    }
-
-	    /**
-	     * This function is like `copyObject` except that it accepts a function to
-	     * customize copied values.
-	     *
-	     * @private
-	     * @param {Object} source The object to copy properties from.
-	     * @param {Array} props The property names to copy.
+	     * @param {Array} props The property identifiers to copy.
 	     * @param {Object} [object={}] The object to copy properties to.
 	     * @param {Function} [customizer] The function to customize copied values.
 	     * @returns {Object} Returns `object`.
 	     */
-	    function copyObjectWith(source, props, object, customizer) {
+	    function copyObject(source, props, object, customizer) {
 	      object || (object = {});
 
 	      var index = -1,
@@ -15167,7 +15898,7 @@ webpackJsonp([2,4],[
 	            customizer = length > 1 ? sources[length - 1] : undefined,
 	            guard = length > 2 ? sources[2] : undefined;
 
-	        customizer = typeof customizer == 'function'
+	        customizer = (assigner.length > 3 && typeof customizer == 'function')
 	          ? (length--, customizer)
 	          : undefined;
 
@@ -15216,7 +15947,7 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates a base function for methods like `_.forIn`.
+	     * Creates a base function for methods like `_.forIn` and `_.forOwn`.
 	     *
 	     * @private
 	     * @param {boolean} [fromRight] Specify iterating from right to left.
@@ -15245,7 +15976,8 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Function} func The function to wrap.
-	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper` for more details.
+	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper`
+	     *  for more details.
 	     * @param {*} [thisArg] The `this` binding of `func`.
 	     * @returns {Function} Returns the new wrapped function.
 	     */
@@ -15265,7 +15997,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {string} methodName The name of the `String` case method to use.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new case function.
 	     */
 	    function createCaseFirst(methodName) {
 	      return function(string) {
@@ -15275,8 +16007,13 @@ webpackJsonp([2,4],[
 	          ? stringToArray(string)
 	          : undefined;
 
-	        var chr = strSymbols ? strSymbols[0] : string.charAt(0),
-	            trailing = strSymbols ? strSymbols.slice(1).join('') : string.slice(1);
+	        var chr = strSymbols
+	          ? strSymbols[0]
+	          : string.charAt(0);
+
+	        var trailing = strSymbols
+	          ? castSlice(strSymbols, 1).join('')
+	          : string.slice(1);
 
 	        return chr[methodName]() + trailing;
 	      };
@@ -15291,7 +16028,7 @@ webpackJsonp([2,4],[
 	     */
 	    function createCompounder(callback) {
 	      return function(string) {
-	        return arrayReduce(words(deburr(string)), callback, '');
+	        return arrayReduce(words(deburr(string).replace(reApos, '')), callback, '');
 	      };
 	    }
 
@@ -15305,8 +16042,8 @@ webpackJsonp([2,4],[
 	     */
 	    function createCtorWrapper(Ctor) {
 	      return function() {
-	        // Use a `switch` statement to work with class constructors.
-	        // See http://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist
+	        // Use a `switch` statement to work with class constructors. See
+	        // http://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist
 	        // for more details.
 	        var args = arguments;
 	        switch (args.length) {
@@ -15333,7 +16070,8 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Function} func The function to wrap.
-	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper` for more details.
+	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper`
+	     *  for more details.
 	     * @param {number} arity The arity of `func`.
 	     * @returns {Function} Returns the new wrapped function.
 	     */
@@ -15344,7 +16082,7 @@ webpackJsonp([2,4],[
 	        var length = arguments.length,
 	            args = Array(length),
 	            index = length,
-	            placeholder = getPlaceholder(wrapper);
+	            placeholder = getHolder(wrapper);
 
 	        while (index--) {
 	          args[index] = arguments[index];
@@ -15363,6 +16101,31 @@ webpackJsonp([2,4],[
 	        return apply(fn, this, args);
 	      }
 	      return wrapper;
+	    }
+
+	    /**
+	     * Creates a `_.find` or `_.findLast` function.
+	     *
+	     * @private
+	     * @param {Function} findIndexFunc The function to find the collection index.
+	     * @returns {Function} Returns the new find function.
+	     */
+	    function createFind(findIndexFunc) {
+	      return function(collection, predicate, fromIndex) {
+	        var iterable = Object(collection);
+	        predicate = getIteratee(predicate, 3);
+	        if (!isArrayLike(collection)) {
+	          var props = keys(collection);
+	        }
+	        var index = findIndexFunc(props || collection, function(value, key) {
+	          if (props) {
+	            key = value;
+	            value = iterable[key];
+	          }
+	          return predicate(value, key, iterable);
+	        }, fromIndex);
+	        return index > -1 ? collection[props ? props[index] : index] : undefined;
+	      };
 	    }
 
 	    /**
@@ -15405,7 +16168,9 @@ webpackJsonp([2,4],[
 	              ) {
 	            wrapper = wrapper[getFuncName(data[0])].apply(wrapper, data[3]);
 	          } else {
-	            wrapper = (func.length == 1 && isLaziable(func)) ? wrapper[funcName]() : wrapper.thru(func);
+	            wrapper = (func.length == 1 && isLaziable(func))
+	              ? wrapper[funcName]()
+	              : wrapper.thru(func);
 	          }
 	        }
 	        return function() {
@@ -15433,11 +16198,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Function|string} func The function or method name to wrap.
-	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper` for more details.
+	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper`
+	     *  for more details.
 	     * @param {*} [thisArg] The `this` binding of `func`.
-	     * @param {Array} [partials] The arguments to prepend to those provided to the new function.
+	     * @param {Array} [partials] The arguments to prepend to those provided to
+	     *  the new function.
 	     * @param {Array} [holders] The `partials` placeholder indexes.
-	     * @param {Array} [partialsRight] The arguments to append to those provided to the new function.
+	     * @param {Array} [partialsRight] The arguments to append to those provided
+	     *  to the new function.
 	     * @param {Array} [holdersRight] The `partialsRight` placeholder indexes.
 	     * @param {Array} [argPos] The argument positions of the new function.
 	     * @param {number} [ary] The arity cap of `func`.
@@ -15454,14 +16222,14 @@ webpackJsonp([2,4],[
 
 	      function wrapper() {
 	        var length = arguments.length,
-	            index = length,
-	            args = Array(length);
+	            args = Array(length),
+	            index = length;
 
 	        while (index--) {
 	          args[index] = arguments[index];
 	        }
 	        if (isCurried) {
-	          var placeholder = getPlaceholder(wrapper),
+	          var placeholder = getHolder(wrapper),
 	              holdersCount = countHolders(args, placeholder);
 	        }
 	        if (partials) {
@@ -15513,15 +16281,51 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Creates a function that performs a mathematical operation on two values.
+	     *
+	     * @private
+	     * @param {Function} operator The function to perform the operation.
+	     * @returns {Function} Returns the new mathematical operation function.
+	     */
+	    function createMathOperation(operator) {
+	      return function(value, other) {
+	        var result;
+	        if (value === undefined && other === undefined) {
+	          return 0;
+	        }
+	        if (value !== undefined) {
+	          result = value;
+	        }
+	        if (other !== undefined) {
+	          if (result === undefined) {
+	            return other;
+	          }
+	          if (typeof value == 'string' || typeof other == 'string') {
+	            value = baseToString(value);
+	            other = baseToString(other);
+	          } else {
+	            value = baseToNumber(value);
+	            other = baseToNumber(other);
+	          }
+	          result = operator(value, other);
+	        }
+	        return result;
+	      };
+	    }
+
+	    /**
 	     * Creates a function like `_.over`.
 	     *
 	     * @private
 	     * @param {Function} arrayFunc The function to iterate over iteratees.
-	     * @returns {Function} Returns the new invoker function.
+	     * @returns {Function} Returns the new over function.
 	     */
 	    function createOver(arrayFunc) {
 	      return rest(function(iteratees) {
-	        iteratees = arrayMap(baseFlatten(iteratees, 1), getIteratee());
+	        iteratees = (iteratees.length == 1 && isArray(iteratees[0]))
+	          ? arrayMap(iteratees[0], baseUnary(getIteratee()))
+	          : arrayMap(baseFlatten(iteratees, 1, isFlattenableIteratee), baseUnary(getIteratee()));
+
 	        return rest(function(args) {
 	          var thisArg = this;
 	          return arrayFunc(iteratees, function(iteratee) {
@@ -15536,37 +16340,34 @@ webpackJsonp([2,4],[
 	     * is truncated if the number of characters exceeds `length`.
 	     *
 	     * @private
-	     * @param {string} string The string to create padding for.
-	     * @param {number} [length=0] The padding length.
+	     * @param {number} length The padding length.
 	     * @param {string} [chars=' '] The string used as padding.
 	     * @returns {string} Returns the padding for `string`.
 	     */
-	    function createPadding(string, length, chars) {
-	      length = toInteger(length);
+	    function createPadding(length, chars) {
+	      chars = chars === undefined ? ' ' : baseToString(chars);
 
-	      var strLength = stringSize(string);
-	      if (!length || strLength >= length) {
-	        return '';
+	      var charsLength = chars.length;
+	      if (charsLength < 2) {
+	        return charsLength ? baseRepeat(chars, length) : chars;
 	      }
-	      var padLength = length - strLength;
-	      chars = chars === undefined ? ' ' : (chars + '');
-
-	      var result = repeat(chars, nativeCeil(padLength / stringSize(chars)));
+	      var result = baseRepeat(chars, nativeCeil(length / stringSize(chars)));
 	      return reHasComplexSymbol.test(chars)
-	        ? stringToArray(result).slice(0, padLength).join('')
-	        : result.slice(0, padLength);
+	        ? castSlice(stringToArray(result), 0, length).join('')
+	        : result.slice(0, length);
 	    }
 
 	    /**
-	     * Creates a function that wraps `func` to invoke it with the optional `this`
-	     * binding of `thisArg` and the `partials` prepended to those provided to
-	     * the wrapper.
+	     * Creates a function that wraps `func` to invoke it with the `this` binding
+	     * of `thisArg` and `partials` prepended to the arguments it receives.
 	     *
 	     * @private
 	     * @param {Function} func The function to wrap.
-	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper` for more details.
+	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper`
+	     *  for more details.
 	     * @param {*} thisArg The `this` binding of `func`.
-	     * @param {Array} partials The arguments to prepend to those provided to the new function.
+	     * @param {Array} partials The arguments to prepend to those provided to
+	     *  the new function.
 	     * @returns {Function} Returns the new wrapped function.
 	     */
 	    function createPartialWrapper(func, bitmask, thisArg, partials) {
@@ -15619,15 +16420,34 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Creates a function that performs a relational operation on two values.
+	     *
+	     * @private
+	     * @param {Function} operator The function to perform the operation.
+	     * @returns {Function} Returns the new relational operation function.
+	     */
+	    function createRelationalOperation(operator) {
+	      return function(value, other) {
+	        if (!(typeof value == 'string' && typeof other == 'string')) {
+	          value = toNumber(value);
+	          other = toNumber(other);
+	        }
+	        return operator(value, other);
+	      };
+	    }
+
+	    /**
 	     * Creates a function that wraps `func` to continue currying.
 	     *
 	     * @private
 	     * @param {Function} func The function to wrap.
-	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper` for more details.
+	     * @param {number} bitmask The bitmask of wrapper flags. See `createWrapper`
+	     *  for more details.
 	     * @param {Function} wrapFunc The function to create the `func` wrapper.
 	     * @param {*} placeholder The placeholder value.
 	     * @param {*} [thisArg] The `this` binding of `func`.
-	     * @param {Array} [partials] The arguments to prepend to those provided to the new function.
+	     * @param {Array} [partials] The arguments to prepend to those provided to
+	     *  the new function.
 	     * @param {Array} [holders] The `partials` placeholder indexes.
 	     * @param {Array} [argPos] The argument positions of the new function.
 	     * @param {number} [ary] The arity cap of `func`.
@@ -15636,7 +16456,6 @@ webpackJsonp([2,4],[
 	     */
 	    function createRecurryWrapper(func, bitmask, wrapFunc, placeholder, thisArg, partials, holders, argPos, ary, arity) {
 	      var isCurry = bitmask & CURRY_FLAG,
-	          newArgPos = argPos ? copyArray(argPos) : undefined,
 	          newHolders = isCurry ? holders : undefined,
 	          newHoldersRight = isCurry ? undefined : holders,
 	          newPartials = isCurry ? partials : undefined,
@@ -15650,7 +16469,7 @@ webpackJsonp([2,4],[
 	      }
 	      var newData = [
 	        func, bitmask, thisArg, newPartials, newHolders, newPartialsRight,
-	        newHoldersRight, newArgPos, ary, arity
+	        newHoldersRight, argPos, ary, arity
 	      ];
 
 	      var result = wrapFunc.apply(undefined, newData);
@@ -15672,7 +16491,7 @@ webpackJsonp([2,4],[
 	      var func = Math[methodName];
 	      return function(number, precision) {
 	        number = toNumber(number);
-	        precision = toInteger(precision);
+	        precision = nativeMin(toInteger(precision), 292);
 	        if (precision) {
 	          // Shift with exponential notation to avoid floating-point issues.
 	          // See [MDN](https://mdn.io/round#Examples) for more details.
@@ -15693,9 +16512,29 @@ webpackJsonp([2,4],[
 	     * @param {Array} values The values to add to the set.
 	     * @returns {Object} Returns the new set.
 	     */
-	    var createSet = !(Set && new Set([1, 2]).size === 2) ? noop : function(values) {
+	    var createSet = !(Set && (1 / setToArray(new Set([,-0]))[1]) == INFINITY) ? noop : function(values) {
 	      return new Set(values);
 	    };
+
+	    /**
+	     * Creates a `_.toPairs` or `_.toPairsIn` function.
+	     *
+	     * @private
+	     * @param {Function} keysFunc The function to get the keys of a given object.
+	     * @returns {Function} Returns the new pairs function.
+	     */
+	    function createToPairs(keysFunc) {
+	      return function(object) {
+	        var tag = getTag(object);
+	        if (tag == mapTag) {
+	          return mapToArray(object);
+	        }
+	        if (tag == setTag) {
+	          return setToPairs(object);
+	        }
+	        return baseToPairs(object, keysFunc(object));
+	      };
+	    }
 
 	    /**
 	     * Creates a function that either curries or invokes `func` with optional
@@ -15714,6 +16553,7 @@ webpackJsonp([2,4],[
 	     *    64 - `_.partialRight`
 	     *   128 - `_.rearg`
 	     *   256 - `_.ary`
+	     *   512 - `_.flip`
 	     * @param {*} [thisArg] The `this` binding of `func`.
 	     * @param {Array} [partials] The arguments to be partially applied.
 	     * @param {Array} [holders] The `partials` placeholder indexes.
@@ -15786,14 +16626,13 @@ webpackJsonp([2,4],[
 	     * @param {Array} other The other array to compare.
 	     * @param {Function} equalFunc The function to determine equivalents of values.
 	     * @param {Function} customizer The function to customize comparisons.
-	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual` for more details.
+	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
+	     *  for more details.
 	     * @param {Object} stack Tracks traversed `array` and `other` objects.
 	     * @returns {boolean} Returns `true` if the arrays are equivalent, else `false`.
 	     */
 	    function equalArrays(array, other, equalFunc, customizer, bitmask, stack) {
-	      var index = -1,
-	          isPartial = bitmask & PARTIAL_COMPARE_FLAG,
-	          isUnordered = bitmask & UNORDERED_COMPARE_FLAG,
+	      var isPartial = bitmask & PARTIAL_COMPARE_FLAG,
 	          arrLength = array.length,
 	          othLength = other.length;
 
@@ -15805,7 +16644,10 @@ webpackJsonp([2,4],[
 	      if (stacked) {
 	        return stacked == other;
 	      }
-	      var result = true;
+	      var index = -1,
+	          result = true,
+	          seen = (bitmask & UNORDERED_COMPARE_FLAG) ? new SetCache : undefined;
+
 	      stack.set(array, other);
 
 	      // Ignore non-index properties.
@@ -15826,14 +16668,20 @@ webpackJsonp([2,4],[
 	          break;
 	        }
 	        // Recursively compare arrays (susceptible to call stack limits).
-	        if (isUnordered) {
-	          if (!arraySome(other, function(othValue) {
-	                return arrValue === othValue || equalFunc(arrValue, othValue, customizer, bitmask, stack);
+	        if (seen) {
+	          if (!arraySome(other, function(othValue, othIndex) {
+	                if (!seen.has(othIndex) &&
+	                    (arrValue === othValue || equalFunc(arrValue, othValue, customizer, bitmask, stack))) {
+	                  return seen.add(othIndex);
+	                }
 	              })) {
 	            result = false;
 	            break;
 	          }
-	        } else if (!(arrValue === othValue || equalFunc(arrValue, othValue, customizer, bitmask, stack))) {
+	        } else if (!(
+	              arrValue === othValue ||
+	                equalFunc(arrValue, othValue, customizer, bitmask, stack)
+	            )) {
 	          result = false;
 	          break;
 	        }
@@ -15855,12 +16703,21 @@ webpackJsonp([2,4],[
 	     * @param {string} tag The `toStringTag` of the objects to compare.
 	     * @param {Function} equalFunc The function to determine equivalents of values.
 	     * @param {Function} customizer The function to customize comparisons.
-	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual` for more details.
+	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
+	     *  for more details.
 	     * @param {Object} stack Tracks traversed `object` and `other` objects.
 	     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	     */
 	    function equalByTag(object, other, tag, equalFunc, customizer, bitmask, stack) {
 	      switch (tag) {
+	        case dataViewTag:
+	          if ((object.byteLength != other.byteLength) ||
+	              (object.byteOffset != other.byteOffset)) {
+	            return false;
+	          }
+	          object = object.buffer;
+	          other = other.buffer;
+
 	        case arrayBufferTag:
 	          if ((object.byteLength != other.byteLength) ||
 	              !equalFunc(new Uint8Array(object), new Uint8Array(other))) {
@@ -15870,8 +16727,9 @@ webpackJsonp([2,4],[
 
 	        case boolTag:
 	        case dateTag:
-	          // Coerce dates and booleans to numbers, dates to milliseconds and booleans
-	          // to `1` or `0` treating invalid dates coerced to `NaN` as not equal.
+	          // Coerce dates and booleans to numbers, dates to milliseconds and
+	          // booleans to `1` or `0` treating invalid dates coerced to `NaN` as
+	          // not equal.
 	          return +object == +other;
 
 	        case errorTag:
@@ -15883,8 +16741,9 @@ webpackJsonp([2,4],[
 
 	        case regexpTag:
 	        case stringTag:
-	          // Coerce regexes to strings and treat strings primitives and string
-	          // objects as equal. See https://es5.github.io/#x15.10.6.4 for more details.
+	          // Coerce regexes to strings and treat strings, primitives and objects,
+	          // as equal. See http://www.ecma-international.org/ecma-262/6.0/#sec-regexp.prototype.tostring
+	          // for more details.
 	          return object == (other + '');
 
 	        case mapTag:
@@ -15902,8 +16761,11 @@ webpackJsonp([2,4],[
 	          if (stacked) {
 	            return stacked == other;
 	          }
+	          bitmask |= UNORDERED_COMPARE_FLAG;
+	          stack.set(object, other);
+
 	          // Recursively compare objects (susceptible to call stack limits).
-	          return equalArrays(convert(object), convert(other), equalFunc, customizer, bitmask | UNORDERED_COMPARE_FLAG, stack.set(object, other));
+	          return equalArrays(convert(object), convert(other), equalFunc, customizer, bitmask, stack);
 
 	        case symbolTag:
 	          if (symbolValueOf) {
@@ -15922,7 +16784,8 @@ webpackJsonp([2,4],[
 	     * @param {Object} other The other object to compare.
 	     * @param {Function} equalFunc The function to determine equivalents of values.
 	     * @param {Function} customizer The function to customize comparisons.
-	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual` for more details.
+	     * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
+	     *  for more details.
 	     * @param {Object} stack Tracks traversed `object` and `other` objects.
 	     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	     */
@@ -15989,6 +16852,29 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Creates an array of own enumerable property names and symbols of `object`.
+	     *
+	     * @private
+	     * @param {Object} object The object to query.
+	     * @returns {Array} Returns the array of property names and symbols.
+	     */
+	    function getAllKeys(object) {
+	      return baseGetAllKeys(object, keys, getSymbols);
+	    }
+
+	    /**
+	     * Creates an array of own and inherited enumerable property names and
+	     * symbols of `object`.
+	     *
+	     * @private
+	     * @param {Object} object The object to query.
+	     * @returns {Array} Returns the array of property names and symbols.
+	     */
+	    function getAllKeysIn(object) {
+	      return baseGetAllKeys(object, keysIn, getSymbolsIn);
+	    }
+
+	    /**
 	     * Gets metadata for `func`.
 	     *
 	     * @private
@@ -16022,10 +16908,22 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Gets the appropriate "iteratee" function. If the `_.iteratee` method is
-	     * customized this function returns the custom method, otherwise it returns
-	     * `baseIteratee`. If arguments are provided the chosen function is invoked
-	     * with them and its result is returned.
+	     * Gets the argument placeholder value for `func`.
+	     *
+	     * @private
+	     * @param {Function} func The function to inspect.
+	     * @returns {*} Returns the placeholder value.
+	     */
+	    function getHolder(func) {
+	      var object = hasOwnProperty.call(lodash, 'placeholder') ? lodash : func;
+	      return object.placeholder;
+	    }
+
+	    /**
+	     * Gets the appropriate "iteratee" function. If `_.iteratee` is customized,
+	     * this function returns the custom method, otherwise it returns `baseIteratee`.
+	     * If arguments are provided, the chosen function is invoked with them and
+	     * its result is returned.
 	     *
 	     * @private
 	     * @param {*} [value] The value to convert to an iteratee.
@@ -16041,14 +16939,30 @@ webpackJsonp([2,4],[
 	    /**
 	     * Gets the "length" property value of `object`.
 	     *
-	     * **Note:** This function is used to avoid a [JIT bug](https://bugs.webkit.org/show_bug.cgi?id=142792)
-	     * that affects Safari on at least iOS 8.1-8.3 ARM64.
+	     * **Note:** This function is used to avoid a
+	     * [JIT bug](https://bugs.webkit.org/show_bug.cgi?id=142792) that affects
+	     * Safari on at least iOS 8.1-8.3 ARM64.
 	     *
 	     * @private
 	     * @param {Object} object The object to query.
 	     * @returns {*} Returns the "length" value.
 	     */
 	    var getLength = baseProperty('length');
+
+	    /**
+	     * Gets the data for `map`.
+	     *
+	     * @private
+	     * @param {Object} map The map to query.
+	     * @param {string} key The reference key.
+	     * @returns {*} Returns the map data.
+	     */
+	    function getMapData(map, key) {
+	      var data = map.__data__;
+	      return isKeyable(key)
+	        ? data[typeof key == 'string' ? 'string' : 'hash']
+	        : data.map;
+	    }
 
 	    /**
 	     * Gets the property names, values, and compare flags of `object`.
@@ -16058,11 +16972,14 @@ webpackJsonp([2,4],[
 	     * @returns {Array} Returns the match data of `object`.
 	     */
 	    function getMatchData(object) {
-	      var result = toPairs(object),
+	      var result = keys(object),
 	          length = result.length;
 
 	      while (length--) {
-	        result[length][2] = isStrictComparable(result[length][1]);
+	        var key = result[length],
+	            value = object[key];
+
+	        result[length] = [key, value, isStrictComparable(value)];
 	      }
 	      return result;
 	    }
@@ -16076,31 +16993,54 @@ webpackJsonp([2,4],[
 	     * @returns {*} Returns the function if it's native, else `undefined`.
 	     */
 	    function getNative(object, key) {
-	      var value = object[key];
-	      return isNative(value) ? value : undefined;
+	      var value = getValue(object, key);
+	      return baseIsNative(value) ? value : undefined;
 	    }
 
 	    /**
-	     * Gets the argument placeholder value for `func`.
+	     * Gets the `[[Prototype]]` of `value`.
 	     *
 	     * @private
-	     * @param {Function} func The function to inspect.
-	     * @returns {*} Returns the placeholder value.
+	     * @param {*} value The value to query.
+	     * @returns {null|Object} Returns the `[[Prototype]]`.
 	     */
-	    function getPlaceholder(func) {
-	      var object = hasOwnProperty.call(lodash, 'placeholder') ? lodash : func;
-	      return object.placeholder;
+	    function getPrototype(value) {
+	      return nativeGetPrototype(Object(value));
 	    }
 
 	    /**
-	     * Creates an array of the own symbol properties of `object`.
+	     * Creates an array of the own enumerable symbol properties of `object`.
 	     *
 	     * @private
 	     * @param {Object} object The object to query.
 	     * @returns {Array} Returns the array of symbols.
 	     */
-	    var getSymbols = getOwnPropertySymbols || function() {
-	      return [];
+	    function getSymbols(object) {
+	      // Coerce `object` to an object to avoid non-object errors in V8.
+	      // See https://bugs.chromium.org/p/v8/issues/detail?id=3443 for more details.
+	      return getOwnPropertySymbols(Object(object));
+	    }
+
+	    // Fallback for IE < 11.
+	    if (!getOwnPropertySymbols) {
+	      getSymbols = stubArray;
+	    }
+
+	    /**
+	     * Creates an array of the own and inherited enumerable symbol properties
+	     * of `object`.
+	     *
+	     * @private
+	     * @param {Object} object The object to query.
+	     * @returns {Array} Returns the array of symbols.
+	     */
+	    var getSymbolsIn = !getOwnPropertySymbols ? getSymbols : function(object) {
+	      var result = [];
+	      while (object) {
+	        arrayPush(result, getSymbols(object));
+	        object = getPrototype(object);
+	      }
+	      return result;
 	    };
 
 	    /**
@@ -16114,18 +17054,23 @@ webpackJsonp([2,4],[
 	      return objectToString.call(value);
 	    }
 
-	    // Fallback for IE 11 providing `toStringTag` values for maps, sets, and weakmaps.
-	    if ((Map && getTag(new Map) != mapTag) ||
+	    // Fallback for data views, maps, sets, and weak maps in IE 11,
+	    // for data views in Edge, and promises in Node.js.
+	    if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
+	        (Map && getTag(new Map) != mapTag) ||
+	        (Promise && getTag(Promise.resolve()) != promiseTag) ||
 	        (Set && getTag(new Set) != setTag) ||
 	        (WeakMap && getTag(new WeakMap) != weakMapTag)) {
 	      getTag = function(value) {
 	        var result = objectToString.call(value),
-	            Ctor = result == objectTag ? value.constructor : null,
-	            ctorString = typeof Ctor == 'function' ? funcToString.call(Ctor) : '';
+	            Ctor = result == objectTag ? value.constructor : undefined,
+	            ctorString = Ctor ? toSource(Ctor) : undefined;
 
 	        if (ctorString) {
 	          switch (ctorString) {
+	            case dataViewCtorString: return dataViewTag;
 	            case mapCtorString: return mapTag;
+	            case promiseCtorString: return promiseTag;
 	            case setCtorString: return setTag;
 	            case weakMapCtorString: return weakMapTag;
 	          }
@@ -16172,23 +17117,25 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if `path` exists, else `false`.
 	     */
 	    function hasPath(object, path, hasFunc) {
-	      if (object == null) {
-	        return false;
-	      }
-	      var result = hasFunc(object, path);
-	      if (!result && !isKey(path)) {
-	        path = baseCastPath(path);
-	        object = parent(object, path);
-	        if (object != null) {
-	          path = last(path);
-	          result = hasFunc(object, path);
+	      path = isKey(path, object) ? [path] : castPath(path);
+
+	      var result,
+	          index = -1,
+	          length = path.length;
+
+	      while (++index < length) {
+	        var key = toKey(path[index]);
+	        if (!(result = object != null && hasFunc(object, key))) {
+	          break;
 	        }
+	        object = object[key];
 	      }
-	      var length = object ? object.length : undefined;
-	      return result || (
-	        !!length && isLength(length) && isIndex(path, length) &&
-	        (isArray(object) || isString(object) || isArguments(object))
-	      );
+	      if (result) {
+	        return result;
+	      }
+	      var length = object ? object.length : 0;
+	      return !!length && isLength(length) && isIndex(key, length) &&
+	        (isArray(object) || isString(object) || isArguments(object));
 	    }
 
 	    /**
@@ -16219,7 +17166,7 @@ webpackJsonp([2,4],[
 	     */
 	    function initCloneObject(object) {
 	      return (typeof object.constructor == 'function' && !isPrototype(object))
-	        ? baseCreate(getPrototypeOf(object))
+	        ? baseCreate(getPrototype(object))
 	        : {};
 	    }
 
@@ -16232,10 +17179,11 @@ webpackJsonp([2,4],[
 	     * @private
 	     * @param {Object} object The object to clone.
 	     * @param {string} tag The `toStringTag` of the object to clone.
+	     * @param {Function} cloneFunc The function to clone values.
 	     * @param {boolean} [isDeep] Specify a deep clone.
 	     * @returns {Object} Returns the initialized clone.
 	     */
-	    function initCloneByTag(object, tag, isDeep) {
+	    function initCloneByTag(object, tag, cloneFunc, isDeep) {
 	      var Ctor = object.constructor;
 	      switch (tag) {
 	        case arrayBufferTag:
@@ -16245,13 +17193,16 @@ webpackJsonp([2,4],[
 	        case dateTag:
 	          return new Ctor(+object);
 
+	        case dataViewTag:
+	          return cloneDataView(object, isDeep);
+
 	        case float32Tag: case float64Tag:
 	        case int8Tag: case int16Tag: case int32Tag:
 	        case uint8Tag: case uint8ClampedTag: case uint16Tag: case uint32Tag:
 	          return cloneTypedArray(object, isDeep);
 
 	        case mapTag:
-	          return cloneMap(object);
+	          return cloneMap(object, isDeep, cloneFunc);
 
 	        case numberTag:
 	        case stringTag:
@@ -16261,7 +17212,7 @@ webpackJsonp([2,4],[
 	          return cloneRegExp(object);
 
 	        case setTag:
-	          return cloneSet(object);
+	          return cloneSet(object, isDeep, cloneFunc);
 
 	        case symbolTag:
 	          return cloneSymbol(object);
@@ -16286,13 +17237,52 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * Checks if `value` is a flattenable `arguments` object or array.
+	     *
+	     * @private
+	     * @param {*} value The value to check.
+	     * @returns {boolean} Returns `true` if `value` is flattenable, else `false`.
+	     */
+	    function isFlattenable(value) {
+	      return isArray(value) || isArguments(value);
+	    }
+
+	    /**
+	     * Checks if `value` is a flattenable array and not a `_.matchesProperty`
+	     * iteratee shorthand.
+	     *
+	     * @private
+	     * @param {*} value The value to check.
+	     * @returns {boolean} Returns `true` if `value` is flattenable, else `false`.
+	     */
+	    function isFlattenableIteratee(value) {
+	      return isArray(value) && !(value.length == 2 && !isFunction(value[0]));
+	    }
+
+	    /**
+	     * Checks if `value` is a valid array-like index.
+	     *
+	     * @private
+	     * @param {*} value The value to check.
+	     * @param {number} [length=MAX_SAFE_INTEGER] The upper bounds of a valid index.
+	     * @returns {boolean} Returns `true` if `value` is a valid index, else `false`.
+	     */
+	    function isIndex(value, length) {
+	      length = length == null ? MAX_SAFE_INTEGER : length;
+	      return !!length &&
+	        (typeof value == 'number' || reIsUint.test(value)) &&
+	        (value > -1 && value % 1 == 0 && value < length);
+	    }
+
+	    /**
 	     * Checks if the given arguments are from an iteratee call.
 	     *
 	     * @private
 	     * @param {*} value The potential iteratee value argument.
 	     * @param {*} index The potential iteratee index or key argument.
 	     * @param {*} object The potential iteratee object argument.
-	     * @returns {boolean} Returns `true` if the arguments are from an iteratee call, else `false`.
+	     * @returns {boolean} Returns `true` if the arguments are from an iteratee call,
+	     *  else `false`.
 	     */
 	    function isIterateeCall(value, index, object) {
 	      if (!isObject(object)) {
@@ -16300,8 +17290,9 @@ webpackJsonp([2,4],[
 	      }
 	      var type = typeof index;
 	      if (type == 'number'
-	          ? (isArrayLike(object) && isIndex(index, object.length))
-	          : (type == 'string' && index in object)) {
+	            ? (isArrayLike(object) && isIndex(index, object.length))
+	            : (type == 'string' && index in object)
+	          ) {
 	        return eq(object[index], value);
 	      }
 	      return false;
@@ -16316,12 +17307,16 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if `value` is a property name, else `false`.
 	     */
 	    function isKey(value, object) {
-	      if (typeof value == 'number') {
+	      if (isArray(value)) {
+	        return false;
+	      }
+	      var type = typeof value;
+	      if (type == 'number' || type == 'symbol' || type == 'boolean' ||
+	          value == null || isSymbol(value)) {
 	        return true;
 	      }
-	      return !isArray(value) &&
-	        (reIsPlainProp.test(value) || !reIsDeepProp.test(value) ||
-	          (object != null && value in Object(object)));
+	      return reIsPlainProp.test(value) || !reIsDeepProp.test(value) ||
+	        (object != null && value in Object(object));
 	    }
 
 	    /**
@@ -16333,8 +17328,9 @@ webpackJsonp([2,4],[
 	     */
 	    function isKeyable(value) {
 	      var type = typeof value;
-	      return type == 'number' || type == 'boolean' ||
-	        (type == 'string' && value != '__proto__') || value == null;
+	      return (type == 'string' || type == 'number' || type == 'symbol' || type == 'boolean')
+	        ? (value !== '__proto__')
+	        : (value === null);
 	    }
 
 	    /**
@@ -16342,7 +17338,8 @@ webpackJsonp([2,4],[
 	     *
 	     * @private
 	     * @param {Function} func The function to check.
-	     * @returns {boolean} Returns `true` if `func` has a lazy counterpart, else `false`.
+	     * @returns {boolean} Returns `true` if `func` has a lazy counterpart,
+	     *  else `false`.
 	     */
 	    function isLaziable(func) {
 	      var funcName = getFuncName(func),
@@ -16357,6 +17354,26 @@ webpackJsonp([2,4],[
 	      var data = getData(other);
 	      return !!data && func === data[0];
 	    }
+
+	    /**
+	     * Checks if `func` has its source masked.
+	     *
+	     * @private
+	     * @param {Function} func The function to check.
+	     * @returns {boolean} Returns `true` if `func` is masked, else `false`.
+	     */
+	    function isMasked(func) {
+	      return !!maskSrcKey && (maskSrcKey in func);
+	    }
+
+	    /**
+	     * Checks if `func` is capable of being masked.
+	     *
+	     * @private
+	     * @param {*} value The value to check.
+	     * @returns {boolean} Returns `true` if `func` is maskable, else `false`.
+	     */
+	    var isMaskable = coreJsData ? isFunction : stubFalse;
 
 	    /**
 	     * Checks if `value` is likely a prototype object.
@@ -16385,14 +17402,34 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
+	     * A specialized version of `matchesProperty` for source values suitable
+	     * for strict equality comparisons, i.e. `===`.
+	     *
+	     * @private
+	     * @param {string} key The key of the property to get.
+	     * @param {*} srcValue The value to match.
+	     * @returns {Function} Returns the new spec function.
+	     */
+	    function matchesStrictComparable(key, srcValue) {
+	      return function(object) {
+	        if (object == null) {
+	          return false;
+	        }
+	        return object[key] === srcValue &&
+	          (srcValue !== undefined || (key in Object(object)));
+	      };
+	    }
+
+	    /**
 	     * Merges the function metadata of `source` into `data`.
 	     *
 	     * Merging metadata reduces the number of wrappers used to invoke a function.
 	     * This is possible because methods like `_.bind`, `_.curry`, and `_.partial`
-	     * may be applied regardless of execution order. Methods like `_.ary` and `_.rearg`
-	     * modify function arguments, making the order in which they are executed important,
-	     * preventing the merging of metadata. However, we make an exception for a safe
-	     * combined case where curried functions have `_.ary` and or `_.rearg` applied.
+	     * may be applied regardless of execution order. Methods like `_.ary` and
+	     * `_.rearg` modify function arguments, making the order in which they are
+	     * executed important, preventing the merging of metadata. However, we make
+	     * an exception for a safe combined case where curried functions have `_.ary`
+	     * and or `_.rearg` applied.
 	     *
 	     * @private
 	     * @param {Array} data The destination metadata.
@@ -16424,20 +17461,20 @@ webpackJsonp([2,4],[
 	      var value = source[3];
 	      if (value) {
 	        var partials = data[3];
-	        data[3] = partials ? composeArgs(partials, value, source[4]) : copyArray(value);
-	        data[4] = partials ? replaceHolders(data[3], PLACEHOLDER) : copyArray(source[4]);
+	        data[3] = partials ? composeArgs(partials, value, source[4]) : value;
+	        data[4] = partials ? replaceHolders(data[3], PLACEHOLDER) : source[4];
 	      }
 	      // Compose partial right arguments.
 	      value = source[5];
 	      if (value) {
 	        partials = data[5];
-	        data[5] = partials ? composeArgsRight(partials, value, source[6]) : copyArray(value);
-	        data[6] = partials ? replaceHolders(data[5], PLACEHOLDER) : copyArray(source[6]);
+	        data[5] = partials ? composeArgsRight(partials, value, source[6]) : value;
+	        data[6] = partials ? replaceHolders(data[5], PLACEHOLDER) : source[6];
 	      }
 	      // Use source `argPos` if available.
 	      value = source[7];
 	      if (value) {
-	        data[7] = copyArray(value);
+	        data[7] = value;
 	      }
 	      // Use source `ary` if it's smaller.
 	      if (srcBitmask & ARY_FLAG) {
@@ -16463,7 +17500,8 @@ webpackJsonp([2,4],[
 	     * @param {string} key The key of the property to merge.
 	     * @param {Object} object The parent object of `objValue`.
 	     * @param {Object} source The parent object of `srcValue`.
-	     * @param {Object} [stack] Tracks traversed source values and their merged counterparts.
+	     * @param {Object} [stack] Tracks traversed source values and their merged
+	     *  counterparts.
 	     * @returns {*} Returns the value to assign.
 	     */
 	    function mergeDefaults(objValue, srcValue, key, object, source, stack) {
@@ -16482,7 +17520,7 @@ webpackJsonp([2,4],[
 	     * @returns {*} Returns the parent value.
 	     */
 	    function parent(object, path) {
-	      return path.length == 1 ? object : get(object, baseSlice(path, 0, -1));
+	      return path.length == 1 ? object : baseGet(object, baseSlice(path, 0, -1));
 	    }
 
 	    /**
@@ -16511,8 +17549,9 @@ webpackJsonp([2,4],[
 	     * Sets metadata for `func`.
 	     *
 	     * **Note:** If this function becomes hot, i.e. is invoked a lot in a short
-	     * period of time, it will trip its breaker and transition to an identity function
-	     * to avoid garbage collection pauses in V8. See [V8 issue 2070](https://code.google.com/p/v8/issues/detail?id=2070)
+	     * period of time, it will trip its breaker and transition to an identity
+	     * function to avoid garbage collection pauses in V8. See
+	     * [V8 issue 2070](https://bugs.chromium.org/p/v8/issues/detail?id=2070)
 	     * for more details.
 	     *
 	     * @private
@@ -16547,12 +17586,46 @@ webpackJsonp([2,4],[
 	     * @param {string} string The string to convert.
 	     * @returns {Array} Returns the property path array.
 	     */
-	    function stringToPath(string) {
+	    var stringToPath = memoize(function(string) {
 	      var result = [];
 	      toString(string).replace(rePropName, function(match, number, quote, string) {
 	        result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
 	      });
 	      return result;
+	    });
+
+	    /**
+	     * Converts `value` to a string key if it's not a string or symbol.
+	     *
+	     * @private
+	     * @param {*} value The value to inspect.
+	     * @returns {string|symbol} Returns the key.
+	     */
+	    function toKey(value) {
+	      if (typeof value == 'string' || isSymbol(value)) {
+	        return value;
+	      }
+	      var result = (value + '');
+	      return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
+	    }
+
+	    /**
+	     * Converts `func` to its source code.
+	     *
+	     * @private
+	     * @param {Function} func The function to process.
+	     * @returns {string} Returns the source code.
+	     */
+	    function toSource(func) {
+	      if (func != null) {
+	        try {
+	          return funcToString.call(func);
+	        } catch (e) {}
+	        try {
+	          return (func + '');
+	        } catch (e) {}
+	      }
+	      return '';
 	    }
 
 	    /**
@@ -16582,10 +17655,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to process.
-	     * @param {number} [size=0] The length of each chunk.
-	     * @returns {Array} Returns the new array containing chunks.
+	     * @param {number} [size=1] The length of each chunk
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
+	     * @returns {Array} Returns the new array of chunks.
 	     * @example
 	     *
 	     * _.chunk(['a', 'b', 'c', 'd'], 2);
@@ -16594,9 +17669,12 @@ webpackJsonp([2,4],[
 	     * _.chunk(['a', 'b', 'c', 'd'], 3);
 	     * // => [['a', 'b', 'c'], ['d']]
 	     */
-	    function chunk(array, size) {
-	      size = nativeMax(toInteger(size), 0);
-
+	    function chunk(array, size, guard) {
+	      if ((guard ? isIterateeCall(array, size, guard) : size === undefined)) {
+	        size = 1;
+	      } else {
+	        size = nativeMax(toInteger(size), 0);
+	      }
 	      var length = array ? array.length : 0;
 	      if (!length || size < 1) {
 	        return [];
@@ -16617,6 +17695,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to compact.
 	     * @returns {Array} Returns the new array of filtered values.
@@ -16646,6 +17725,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to concatenate.
 	     * @param {...*} [values] The values to concatenate.
@@ -16661,34 +17741,42 @@ webpackJsonp([2,4],[
 	     * console.log(array);
 	     * // => [1]
 	     */
-	    var concat = rest(function(array, values) {
-	      if (!isArray(array)) {
-	        array = array == null ? [] : [Object(array)];
+	    function concat() {
+	      var length = arguments.length,
+	          args = Array(length ? length - 1 : 0),
+	          array = arguments[0],
+	          index = length;
+
+	      while (index--) {
+	        args[index - 1] = arguments[index];
 	      }
-	      values = baseFlatten(values, 1);
-	      return arrayConcat(array, values);
-	    });
+	      return length
+	        ? arrayPush(isArray(array) ? copyArray(array) : [array], baseFlatten(args, 1))
+	        : [];
+	    }
 
 	    /**
-	     * Creates an array of unique `array` values not included in the other
-	     * given arrays using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+	     * Creates an array of unique `array` values not included in the other given
+	     * arrays using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
 	     * for equality comparisons. The order of result values is determined by the
 	     * order they occur in the first array.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @param {...Array} [values] The values to exclude.
 	     * @returns {Array} Returns the new array of filtered values.
+	     * @see _.without, _.xor
 	     * @example
 	     *
-	     * _.difference([3, 2, 1], [4, 2]);
-	     * // => [3, 1]
+	     * _.difference([2, 1], [2, 3]);
+	     * // => [1]
 	     */
 	    var difference = rest(function(array, values) {
 	      return isArrayLikeObject(array)
-	        ? baseDifference(array, baseFlatten(values, 1, true))
+	        ? baseDifference(array, baseFlatten(values, 1, isArrayLikeObject, true))
 	        : [];
 	    });
 
@@ -16700,15 +17788,17 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @param {...Array} [values] The values to exclude.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Array} Returns the new array of filtered values.
 	     * @example
 	     *
-	     * _.differenceBy([3.1, 2.2, 1.3], [4.4, 2.5], Math.floor);
-	     * // => [3.1, 1.3]
+	     * _.differenceBy([2.1, 1.2], [2.3, 3.4], Math.floor);
+	     * // => [1.2]
 	     *
 	     * // The `_.property` iteratee shorthand.
 	     * _.differenceBy([{ 'x': 2 }, { 'x': 1 }], [{ 'x': 1 }], 'x');
@@ -16720,7 +17810,7 @@ webpackJsonp([2,4],[
 	        iteratee = undefined;
 	      }
 	      return isArrayLikeObject(array)
-	        ? baseDifference(array, baseFlatten(values, 1, true), getIteratee(iteratee))
+	        ? baseDifference(array, baseFlatten(values, 1, isArrayLikeObject, true), getIteratee(iteratee))
 	        : [];
 	    });
 
@@ -16732,6 +17822,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @param {...Array} [values] The values to exclude.
@@ -16750,7 +17841,7 @@ webpackJsonp([2,4],[
 	        comparator = undefined;
 	      }
 	      return isArrayLikeObject(array)
-	        ? baseDifference(array, baseFlatten(values, 1, true), undefined, comparator)
+	        ? baseDifference(array, baseFlatten(values, 1, isArrayLikeObject, true), undefined, comparator)
 	        : [];
 	    });
 
@@ -16759,10 +17850,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.5.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {number} [n=1] The number of elements to drop.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -16792,10 +17884,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {number} [n=1] The number of elements to drop.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -16828,9 +17921,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -16868,9 +17963,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -16909,6 +18006,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.2.0
 	     * @category Array
 	     * @param {Array} array The array to fill.
 	     * @param {*} value The value to fill `array` with.
@@ -16947,9 +18045,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.1.0
 	     * @category Array
 	     * @param {Array} array The array to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param {number} [fromIndex=0] The index to search from.
 	     * @returns {number} Returns the index of the found element, else `-1`.
 	     * @example
 	     *
@@ -16974,10 +18075,16 @@ webpackJsonp([2,4],[
 	     * _.findIndex(users, 'active');
 	     * // => 2
 	     */
-	    function findIndex(array, predicate) {
-	      return (array && array.length)
-	        ? baseFindIndex(array, getIteratee(predicate, 3))
-	        : -1;
+	    function findIndex(array, predicate, fromIndex) {
+	      var length = array ? array.length : 0;
+	      if (!length) {
+	        return -1;
+	      }
+	      var index = fromIndex == null ? 0 : toInteger(fromIndex);
+	      if (index < 0) {
+	        index = nativeMax(length + index, 0);
+	      }
+	      return baseFindIndex(array, getIteratee(predicate, 3), index);
 	    }
 
 	    /**
@@ -16986,9 +18093,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Array
 	     * @param {Array} array The array to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param {number} [fromIndex=array.length-1] The index to search from.
 	     * @returns {number} Returns the index of the found element, else `-1`.
 	     * @example
 	     *
@@ -17013,10 +18123,19 @@ webpackJsonp([2,4],[
 	     * _.findLastIndex(users, 'active');
 	     * // => 0
 	     */
-	    function findLastIndex(array, predicate) {
-	      return (array && array.length)
-	        ? baseFindIndex(array, getIteratee(predicate, 3), true)
-	        : -1;
+	    function findLastIndex(array, predicate, fromIndex) {
+	      var length = array ? array.length : 0;
+	      if (!length) {
+	        return -1;
+	      }
+	      var index = length - 1;
+	      if (fromIndex !== undefined) {
+	        index = toInteger(fromIndex);
+	        index = fromIndex < 0
+	          ? nativeMax(length + index, 0)
+	          : nativeMin(index, length - 1);
+	      }
+	      return baseFindIndex(array, getIteratee(predicate, 3), index, true);
 	    }
 
 	    /**
@@ -17024,6 +18143,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to flatten.
 	     * @returns {Array} Returns the new flattened array.
@@ -17042,6 +18162,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to flatten.
 	     * @returns {Array} Returns the new flattened array.
@@ -17060,6 +18181,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.4.0
 	     * @category Array
 	     * @param {Array} array The array to flatten.
 	     * @param {number} [depth=1] The maximum recursion depth.
@@ -17089,6 +18211,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} pairs The key-value pairs.
 	     * @returns {Object} Returns the new object.
@@ -17114,6 +18237,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @alias first
 	     * @category Array
 	     * @param {Array} array The array to query.
@@ -17127,17 +18251,18 @@ webpackJsonp([2,4],[
 	     * // => undefined
 	     */
 	    function head(array) {
-	      return array ? array[0] : undefined;
+	      return (array && array.length) ? array[0] : undefined;
 	    }
 
 	    /**
 	     * Gets the index at which the first occurrence of `value` is found in `array`
 	     * using [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
-	     * for equality comparisons. If `fromIndex` is negative, it's used as the offset
-	     * from the end of `array`.
+	     * for equality comparisons. If `fromIndex` is negative, it's used as the
+	     * offset from the end of `array`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {*} value The value to search for.
@@ -17157,11 +18282,11 @@ webpackJsonp([2,4],[
 	      if (!length) {
 	        return -1;
 	      }
-	      fromIndex = toInteger(fromIndex);
-	      if (fromIndex < 0) {
-	        fromIndex = nativeMax(length + fromIndex, 0);
+	      var index = fromIndex == null ? 0 : toInteger(fromIndex);
+	      if (index < 0) {
+	        index = nativeMax(length + index, 0);
 	      }
-	      return baseIndexOf(array, value, fromIndex);
+	      return baseIndexOf(array, value, index);
 	    }
 
 	    /**
@@ -17169,6 +18294,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @returns {Array} Returns the slice of `array`.
@@ -17189,16 +18315,17 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @returns {Array} Returns the new array of intersecting values.
 	     * @example
 	     *
-	     * _.intersection([2, 1], [4, 2], [1, 2]);
+	     * _.intersection([2, 1], [2, 3]);
 	     * // => [2]
 	     */
 	    var intersection = rest(function(arrays) {
-	      var mapped = arrayMap(arrays, baseCastArrayLikeObject);
+	      var mapped = arrayMap(arrays, castArrayLikeObject);
 	      return (mapped.length && mapped[0] === arrays[0])
 	        ? baseIntersection(mapped)
 	        : [];
@@ -17212,13 +18339,15 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Array} Returns the new array of intersecting values.
 	     * @example
 	     *
-	     * _.intersectionBy([2.1, 1.2], [4.3, 2.4], Math.floor);
+	     * _.intersectionBy([2.1, 1.2], [2.3, 3.4], Math.floor);
 	     * // => [2.1]
 	     *
 	     * // The `_.property` iteratee shorthand.
@@ -17227,7 +18356,7 @@ webpackJsonp([2,4],[
 	     */
 	    var intersectionBy = rest(function(arrays) {
 	      var iteratee = last(arrays),
-	          mapped = arrayMap(arrays, baseCastArrayLikeObject);
+	          mapped = arrayMap(arrays, castArrayLikeObject);
 
 	      if (iteratee === last(mapped)) {
 	        iteratee = undefined;
@@ -17247,6 +18376,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @param {Function} [comparator] The comparator invoked per element.
@@ -17261,7 +18391,7 @@ webpackJsonp([2,4],[
 	     */
 	    var intersectionWith = rest(function(arrays) {
 	      var comparator = last(arrays),
-	          mapped = arrayMap(arrays, baseCastArrayLikeObject);
+	          mapped = arrayMap(arrays, castArrayLikeObject);
 
 	      if (comparator === last(mapped)) {
 	        comparator = undefined;
@@ -17278,6 +18408,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to convert.
 	     * @param {string} [separator=','] The element separator.
@@ -17296,6 +18427,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @returns {*} Returns the last element of `array`.
@@ -17315,6 +18447,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {*} value The value to search for.
@@ -17337,10 +18470,14 @@ webpackJsonp([2,4],[
 	      var index = length;
 	      if (fromIndex !== undefined) {
 	        index = toInteger(fromIndex);
-	        index = (index < 0 ? nativeMax(length + index, 0) : nativeMin(index, length - 1)) + 1;
+	        index = (
+	          index < 0
+	            ? nativeMax(length + index, 0)
+	            : nativeMin(index, length - 1)
+	        ) + 1;
 	      }
 	      if (value !== value) {
-	        return indexOfNaN(array, index, true);
+	        return indexOfNaN(array, index - 1, true);
 	      }
 	      while (index--) {
 	        if (array[index] === value) {
@@ -17348,6 +18485,31 @@ webpackJsonp([2,4],[
 	        }
 	      }
 	      return -1;
+	    }
+
+	    /**
+	     * Gets the element at index `n` of `array`. If `n` is negative, the nth
+	     * element from the end is returned.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.11.0
+	     * @category Array
+	     * @param {Array} array The array to query.
+	     * @param {number} [n=0] The index of the element to return.
+	     * @returns {*} Returns the nth element of `array`.
+	     * @example
+	     *
+	     * var array = ['a', 'b', 'c', 'd'];
+	     *
+	     * _.nth(array, 1);
+	     * // => 'b'
+	     *
+	     * _.nth(array, -2);
+	     * // => 'c';
+	     */
+	    function nth(array, n) {
+	      return (array && array.length) ? baseNth(array, toInteger(n)) : undefined;
 	    }
 
 	    /**
@@ -17360,17 +18522,18 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
 	     * @param {...*} [values] The values to remove.
 	     * @returns {Array} Returns `array`.
 	     * @example
 	     *
-	     * var array = [1, 2, 3, 1, 2, 3];
+	     * var array = ['a', 'b', 'c', 'a', 'b', 'c'];
 	     *
-	     * _.pull(array, 2, 3);
+	     * _.pull(array, 'a', 'c');
 	     * console.log(array);
-	     * // => [1, 1]
+	     * // => ['b', 'b']
 	     */
 	    var pull = rest(pullAll);
 
@@ -17381,17 +18544,18 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
 	     * @param {Array} values The values to remove.
 	     * @returns {Array} Returns `array`.
 	     * @example
 	     *
-	     * var array = [1, 2, 3, 1, 2, 3];
+	     * var array = ['a', 'b', 'c', 'a', 'b', 'c'];
 	     *
-	     * _.pullAll(array, [2, 3]);
+	     * _.pullAll(array, ['a', 'c']);
 	     * console.log(array);
-	     * // => [1, 1]
+	     * // => ['b', 'b']
 	     */
 	    function pullAll(array, values) {
 	      return (array && array.length && values && values.length)
@@ -17408,10 +18572,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
 	     * @param {Array} values The values to remove.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Array} Returns `array`.
 	     * @example
 	     *
@@ -17436,6 +18602,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.6.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
 	     * @param {Array} values The values to remove.
@@ -17463,27 +18630,32 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
-	     * @param {...(number|number[])} [indexes] The indexes of elements to remove,
-	     *  specified individually or in arrays.
+	     * @param {...(number|number[])} [indexes] The indexes of elements to remove.
 	     * @returns {Array} Returns the new array of removed elements.
 	     * @example
 	     *
-	     * var array = [5, 10, 15, 20];
-	     * var evens = _.pullAt(array, 1, 3);
+	     * var array = ['a', 'b', 'c', 'd'];
+	     * var pulled = _.pullAt(array, [1, 3]);
 	     *
 	     * console.log(array);
-	     * // => [5, 15]
+	     * // => ['a', 'c']
 	     *
-	     * console.log(evens);
-	     * // => [10, 20]
+	     * console.log(pulled);
+	     * // => ['b', 'd']
 	     */
 	    var pullAt = rest(function(array, indexes) {
-	      indexes = arrayMap(baseFlatten(indexes, 1), String);
+	      indexes = baseFlatten(indexes, 1);
 
-	      var result = baseAt(array, indexes);
-	      basePullAt(array, indexes.sort(compareAscending));
+	      var length = array ? array.length : 0,
+	          result = baseAt(array, indexes);
+
+	      basePullAt(array, arrayMap(indexes, function(index) {
+	        return isIndex(index, length) ? +index : index;
+	      }).sort(compareAscending));
+
 	      return result;
 	    });
 
@@ -17497,9 +18669,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Array
 	     * @param {Array} array The array to modify.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the new array of removed elements.
 	     * @example
 	     *
@@ -17544,7 +18718,9 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
+	     * @param {Array} array The array to modify.
 	     * @returns {Array} Returns `array`.
 	     * @example
 	     *
@@ -17563,11 +18739,13 @@ webpackJsonp([2,4],[
 	    /**
 	     * Creates a slice of `array` from `start` up to, but not including, `end`.
 	     *
-	     * **Note:** This method is used instead of [`Array#slice`](https://mdn.io/Array/slice)
-	     * to ensure dense arrays are returned.
+	     * **Note:** This method is used instead of
+	     * [`Array#slice`](https://mdn.io/Array/slice) to ensure dense arrays are
+	     * returned.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to slice.
 	     * @param {number} [start=0] The start position.
@@ -17591,22 +18769,21 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Uses a binary search to determine the lowest index at which `value` should
-	     * be inserted into `array` in order to maintain its sort order.
+	     * Uses a binary search to determine the lowest index at which `value`
+	     * should be inserted into `array` in order to maintain its sort order.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
-	     * @returns {number} Returns the index at which `value` should be inserted into `array`.
+	     * @returns {number} Returns the index at which `value` should be inserted
+	     *  into `array`.
 	     * @example
 	     *
 	     * _.sortedIndex([30, 50], 40);
 	     * // => 1
-	     *
-	     * _.sortedIndex([4, 5], 4);
-	     * // => 0
 	     */
 	    function sortedIndex(array, value) {
 	      return baseSortedIndex(array, value);
@@ -17619,20 +18796,23 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
-	     * @returns {number} Returns the index at which `value` should be inserted into `array`.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
+	     * @returns {number} Returns the index at which `value` should be inserted
+	     *  into `array`.
 	     * @example
 	     *
-	     * var dict = { 'thirty': 30, 'forty': 40, 'fifty': 50 };
+	     * var objects = [{ 'x': 4 }, { 'x': 5 }];
 	     *
-	     * _.sortedIndexBy(['thirty', 'fifty'], 'forty', _.propertyOf(dict));
-	     * // => 1
+	     * _.sortedIndexBy(objects, { 'x': 4 }, function(o) { return o.x; });
+	     * // => 0
 	     *
 	     * // The `_.property` iteratee shorthand.
-	     * _.sortedIndexBy([{ 'x': 4 }, { 'x': 5 }], { 'x': 4 }, 'x');
+	     * _.sortedIndexBy(objects, { 'x': 4 }, 'x');
 	     * // => 0
 	     */
 	    function sortedIndexBy(array, value, iteratee) {
@@ -17645,14 +18825,15 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {*} value The value to search for.
 	     * @returns {number} Returns the index of the matched value, else `-1`.
 	     * @example
 	     *
-	     * _.sortedIndexOf([1, 1, 2, 2], 2);
-	     * // => 2
+	     * _.sortedIndexOf([4, 5, 5, 5, 6], 5);
+	     * // => 1
 	     */
 	    function sortedIndexOf(array, value) {
 	      var length = array ? array.length : 0;
@@ -17672,14 +18853,16 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
-	     * @returns {number} Returns the index at which `value` should be inserted into `array`.
+	     * @returns {number} Returns the index at which `value` should be inserted
+	     *  into `array`.
 	     * @example
 	     *
-	     * _.sortedLastIndex([4, 5], 4);
-	     * // => 1
+	     * _.sortedLastIndex([4, 5, 5, 5, 6], 5);
+	     * // => 4
 	     */
 	    function sortedLastIndex(array, value) {
 	      return baseSortedIndex(array, value, true);
@@ -17692,15 +18875,23 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
-	     * @returns {number} Returns the index at which `value` should be inserted into `array`.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
+	     * @returns {number} Returns the index at which `value` should be inserted
+	     *  into `array`.
 	     * @example
 	     *
+	     * var objects = [{ 'x': 4 }, { 'x': 5 }];
+	     *
+	     * _.sortedLastIndexBy(objects, { 'x': 4 }, function(o) { return o.x; });
+	     * // => 1
+	     *
 	     * // The `_.property` iteratee shorthand.
-	     * _.sortedLastIndexBy([{ 'x': 4 }, { 'x': 5 }], { 'x': 4 }, 'x');
+	     * _.sortedLastIndexBy(objects, { 'x': 4 }, 'x');
 	     * // => 1
 	     */
 	    function sortedLastIndexBy(array, value, iteratee) {
@@ -17713,13 +18904,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {*} value The value to search for.
 	     * @returns {number} Returns the index of the matched value, else `-1`.
 	     * @example
 	     *
-	     * _.sortedLastIndexOf([1, 1, 2, 2], 2);
+	     * _.sortedLastIndexOf([4, 5, 5, 5, 6], 5);
 	     * // => 3
 	     */
 	    function sortedLastIndexOf(array, value) {
@@ -17739,6 +18931,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @returns {Array} Returns the new duplicate free array.
@@ -17759,6 +18952,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @param {Function} [iteratee] The iteratee invoked per element.
@@ -17770,7 +18964,7 @@ webpackJsonp([2,4],[
 	     */
 	    function sortedUniqBy(array, iteratee) {
 	      return (array && array.length)
-	        ? baseSortedUniqBy(array, getIteratee(iteratee))
+	        ? baseSortedUniq(array, getIteratee(iteratee))
 	        : [];
 	    }
 
@@ -17779,6 +18973,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @returns {Array} Returns the slice of `array`.
@@ -17796,10 +18991,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {number} [n=1] The number of elements to take.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -17828,10 +19024,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {number} [n=1] The number of elements to take.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -17859,14 +19056,16 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a slice of `array` with elements taken from the end. Elements are
-	     * taken until `predicate` returns falsey. The predicate is invoked with three
-	     * arguments: (value, index, array).
+	     * taken until `predicate` returns falsey. The predicate is invoked with
+	     * three arguments: (value, index, array).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -17904,9 +19103,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Array
 	     * @param {Array} array The array to query.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
@@ -17944,33 +19145,37 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @returns {Array} Returns the new array of combined values.
 	     * @example
 	     *
-	     * _.union([2, 1], [4, 2], [1, 2]);
-	     * // => [2, 1, 4]
+	     * _.union([2], [1, 2]);
+	     * // => [2, 1]
 	     */
 	    var union = rest(function(arrays) {
-	      return baseUniq(baseFlatten(arrays, 1, true));
+	      return baseUniq(baseFlatten(arrays, 1, isArrayLikeObject, true));
 	    });
 
 	    /**
 	     * This method is like `_.union` except that it accepts `iteratee` which is
-	     * invoked for each element of each `arrays` to generate the criterion by which
-	     * uniqueness is computed. The iteratee is invoked with one argument: (value).
+	     * invoked for each element of each `arrays` to generate the criterion by
+	     * which uniqueness is computed. The iteratee is invoked with one argument:
+	     * (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Array} Returns the new array of combined values.
 	     * @example
 	     *
-	     * _.unionBy([2.1, 1.2], [4.3, 2.4], Math.floor);
-	     * // => [2.1, 1.2, 4.3]
+	     * _.unionBy([2.1], [1.2, 2.3], Math.floor);
+	     * // => [2.1, 1.2]
 	     *
 	     * // The `_.property` iteratee shorthand.
 	     * _.unionBy([{ 'x': 1 }], [{ 'x': 2 }, { 'x': 1 }], 'x');
@@ -17981,7 +19186,7 @@ webpackJsonp([2,4],[
 	      if (isArrayLikeObject(iteratee)) {
 	        iteratee = undefined;
 	      }
-	      return baseUniq(baseFlatten(arrays, 1, true), getIteratee(iteratee));
+	      return baseUniq(baseFlatten(arrays, 1, isArrayLikeObject, true), getIteratee(iteratee));
 	    });
 
 	    /**
@@ -17991,6 +19196,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @param {Function} [comparator] The comparator invoked per element.
@@ -18008,17 +19214,18 @@ webpackJsonp([2,4],[
 	      if (isArrayLikeObject(comparator)) {
 	        comparator = undefined;
 	      }
-	      return baseUniq(baseFlatten(arrays, 1, true), undefined, comparator);
+	      return baseUniq(baseFlatten(arrays, 1, isArrayLikeObject, true), undefined, comparator);
 	    });
 
 	    /**
 	     * Creates a duplicate-free version of an array, using
 	     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
-	     * for equality comparisons, in which only the first occurrence of each element
-	     * is kept.
+	     * for equality comparisons, in which only the first occurrence of each
+	     * element is kept.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @returns {Array} Returns the new duplicate free array.
@@ -18040,9 +19247,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Array} Returns the new duplicate free array.
 	     * @example
 	     *
@@ -18066,13 +19275,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {Array} array The array to inspect.
 	     * @param {Function} [comparator] The comparator invoked per element.
 	     * @returns {Array} Returns the new duplicate free array.
 	     * @example
 	     *
-	     * var objects = [{ 'x': 1, 'y': 2 }, { 'x': 2, 'y': 1 },  { 'x': 1, 'y': 2 }];
+	     * var objects = [{ 'x': 1, 'y': 2 }, { 'x': 2, 'y': 1 }, { 'x': 1, 'y': 2 }];
 	     *
 	     * _.uniqWith(objects, _.isEqual);
 	     * // => [{ 'x': 1, 'y': 2 }, { 'x': 2, 'y': 1 }]
@@ -18090,6 +19300,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.2.0
 	     * @category Array
 	     * @param {Array} array The array of grouped elements to process.
 	     * @returns {Array} Returns the new array of regrouped elements.
@@ -18124,9 +19335,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.8.0
 	     * @category Array
 	     * @param {Array} array The array of grouped elements to process.
-	     * @param {Function} [iteratee=_.identity] The function to combine regrouped values.
+	     * @param {Function} [iteratee=_.identity] The function to combine
+	     *  regrouped values.
 	     * @returns {Array} Returns the new array of regrouped elements.
 	     * @example
 	     *
@@ -18156,13 +19369,15 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
-	     * @param {Array} array The array to filter.
+	     * @param {Array} array The array to inspect.
 	     * @param {...*} [values] The values to exclude.
 	     * @returns {Array} Returns the new array of filtered values.
+	     * @see _.difference, _.xor
 	     * @example
 	     *
-	     * _.without([1, 2, 1, 3], 1, 2);
+	     * _.without([2, 1, 2, 3], 1, 2);
 	     * // => [3]
 	     */
 	    var without = rest(function(array, values) {
@@ -18172,19 +19387,22 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Creates an array of unique values that is the [symmetric difference](https://en.wikipedia.org/wiki/Symmetric_difference)
+	     * Creates an array of unique values that is the
+	     * [symmetric difference](https://en.wikipedia.org/wiki/Symmetric_difference)
 	     * of the given arrays. The order of result values is determined by the order
 	     * they occur in the arrays.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.4.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
-	     * @returns {Array} Returns the new array of values.
+	     * @returns {Array} Returns the new array of filtered values.
+	     * @see _.difference, _.without
 	     * @example
 	     *
-	     * _.xor([2, 1], [4, 2]);
-	     * // => [1, 4]
+	     * _.xor([2, 1], [2, 3]);
+	     * // => [1, 3]
 	     */
 	    var xor = rest(function(arrays) {
 	      return baseXor(arrayFilter(arrays, isArrayLikeObject));
@@ -18192,19 +19410,22 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.xor` except that it accepts `iteratee` which is
-	     * invoked for each element of each `arrays` to generate the criterion by which
-	     * by which they're compared. The iteratee is invoked with one argument: (value).
+	     * invoked for each element of each `arrays` to generate the criterion by
+	     * which by which they're compared. The iteratee is invoked with one argument:
+	     * (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
-	     * @returns {Array} Returns the new array of values.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
+	     * @returns {Array} Returns the new array of filtered values.
 	     * @example
 	     *
-	     * _.xorBy([2.1, 1.2], [4.3, 2.4], Math.floor);
-	     * // => [1.2, 4.3]
+	     * _.xorBy([2.1, 1.2], [2.3, 3.4], Math.floor);
+	     * // => [1.2, 3.4]
 	     *
 	     * // The `_.property` iteratee shorthand.
 	     * _.xorBy([{ 'x': 1 }], [{ 'x': 2 }, { 'x': 1 }], 'x');
@@ -18225,10 +19446,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @param {Function} [comparator] The comparator invoked per element.
-	     * @returns {Array} Returns the new array of values.
+	     * @returns {Array} Returns the new array of filtered values.
 	     * @example
 	     *
 	     * var objects = [{ 'x': 1, 'y': 2 }, { 'x': 2, 'y': 1 }];
@@ -18246,12 +19468,13 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Creates an array of grouped elements, the first of which contains the first
-	     * elements of the given arrays, the second of which contains the second elements
-	     * of the given arrays, and so on.
+	     * Creates an array of grouped elements, the first of which contains the
+	     * first elements of the given arrays, the second of which contains the
+	     * second elements of the given arrays, and so on.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to process.
 	     * @returns {Array} Returns the new array of grouped elements.
@@ -18264,12 +19487,13 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.fromPairs` except that it accepts two arrays,
-	     * one of property names and one of corresponding values.
+	     * one of property identifiers and one of corresponding values.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.4.0
 	     * @category Array
-	     * @param {Array} [props=[]] The property names.
+	     * @param {Array} [props=[]] The property identifiers.
 	     * @param {Array} [values=[]] The property values.
 	     * @returns {Object} Returns the new object.
 	     * @example
@@ -18286,8 +19510,9 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.1.0
 	     * @category Array
-	     * @param {Array} [props=[]] The property names.
+	     * @param {Array} [props=[]] The property identifiers.
 	     * @param {Array} [values=[]] The property values.
 	     * @returns {Object} Returns the new object.
 	     * @example
@@ -18306,6 +19531,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.8.0
 	     * @category Array
 	     * @param {...Array} [arrays] The arrays to process.
 	     * @param {Function} [iteratee=_.identity] The function to combine grouped values.
@@ -18328,11 +19554,13 @@ webpackJsonp([2,4],[
 	    /*------------------------------------------------------------------------*/
 
 	    /**
-	     * Creates a `lodash` object that wraps `value` with explicit method chaining enabled.
-	     * The result of such method chaining must be unwrapped with `_#value`.
+	     * Creates a `lodash` wrapper instance that wraps `value` with explicit method
+	     * chain sequences enabled. The result of such sequences must be unwrapped
+	     * with `_#value`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.3.0
 	     * @category Seq
 	     * @param {*} value The value to wrap.
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
@@ -18363,10 +19591,11 @@ webpackJsonp([2,4],[
 	    /**
 	     * This method invokes `interceptor` and returns `value`. The interceptor
 	     * is invoked with one argument; (value). The purpose of this method is to
-	     * "tap into" a method chain in order to modify intermediate results.
+	     * "tap into" a method chain sequence in order to modify intermediate results.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Seq
 	     * @param {*} value The value to provide to `interceptor`.
 	     * @param {Function} interceptor The function to invoke.
@@ -18390,10 +19619,11 @@ webpackJsonp([2,4],[
 	    /**
 	     * This method is like `_.tap` except that it returns the result of `interceptor`.
 	     * The purpose of this method is to "pass thru" values replacing intermediate
-	     * results in a method chain.
+	     * results in a method chain sequence.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Seq
 	     * @param {*} value The value to provide to `interceptor`.
 	     * @param {Function} interceptor The function to invoke.
@@ -18418,9 +19648,9 @@ webpackJsonp([2,4],[
 	     *
 	     * @name at
 	     * @memberOf _
+	     * @since 1.0.0
 	     * @category Seq
-	     * @param {...(string|string[])} [paths] The property paths of elements to pick,
-	     *  specified individually or in arrays.
+	     * @param {...(string|string[])} [paths] The property paths of elements to pick.
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
 	     * @example
 	     *
@@ -18428,9 +19658,6 @@ webpackJsonp([2,4],[
 	     *
 	     * _(object).at(['a[0].b.c', 'a[1]']).value();
 	     * // => [3, 4]
-	     *
-	     * _(['a', 'b', 'c']).at(0, 2).value();
-	     * // => ['a', 'c']
 	     */
 	    var wrapperAt = rest(function(paths) {
 	      paths = baseFlatten(paths, 1);
@@ -18458,10 +19685,11 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Enables explicit method chaining on the wrapper object.
+	     * Creates a `lodash` wrapper instance with explicit method chain sequences enabled.
 	     *
 	     * @name chain
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Seq
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
 	     * @example
@@ -18488,10 +19716,11 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Executes the chained sequence and returns the wrapped result.
+	     * Executes the chain sequence and returns the wrapped result.
 	     *
 	     * @name commit
 	     * @memberOf _
+	     * @since 3.2.0
 	     * @category Seq
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
 	     * @example
@@ -18517,32 +19746,12 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * This method is the wrapper version of `_.flatMap`.
-	     *
-	     * @name flatMap
-	     * @memberOf _
-	     * @category Seq
-	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked per iteration.
-	     * @returns {Object} Returns the new `lodash` wrapper instance.
-	     * @example
-	     *
-	     * function duplicate(n) {
-	     *   return [n, n];
-	     * }
-	     *
-	     * _([1, 2]).flatMap(duplicate).value();
-	     * // => [1, 1, 2, 2]
-	     */
-	    function wrapperFlatMap(iteratee) {
-	      return this.map(iteratee).flatten();
-	    }
-
-	    /**
 	     * Gets the next value on a wrapped object following the
 	     * [iterator protocol](https://mdn.io/iteration_protocols#iterator).
 	     *
 	     * @name next
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Seq
 	     * @returns {Object} Returns the next iterator value.
 	     * @example
@@ -18573,6 +19782,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @name Symbol.iterator
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Seq
 	     * @returns {Object} Returns the wrapper object.
 	     * @example
@@ -18590,10 +19800,11 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates a clone of the chained sequence planting `value` as the wrapped value.
+	     * Creates a clone of the chain sequence planting `value` as the wrapped value.
 	     *
 	     * @name plant
 	     * @memberOf _
+	     * @since 3.2.0
 	     * @category Seq
 	     * @param {*} value The value to plant.
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
@@ -18639,6 +19850,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @name reverse
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Seq
 	     * @returns {Object} Returns the new `lodash` wrapper instance.
 	     * @example
@@ -18670,10 +19882,11 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Executes the chained sequence to extract the unwrapped value.
+	     * Executes the chain sequence to resolve the unwrapped value.
 	     *
 	     * @name value
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @alias toJSON, valueOf
 	     * @category Seq
 	     * @returns {*} Returns the resolved unwrapped value.
@@ -18690,21 +19903,24 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates an object composed of keys generated from the results of running
-	     * each element of `collection` through `iteratee`. The corresponding value
-	     * of each key is the number of times the key was returned by `iteratee`.
-	     * The iteratee is invoked with one argument: (value).
+	     * each element of `collection` thru `iteratee`. The corresponding value of
+	     * each key is the number of times the key was returned by `iteratee`. The
+	     * iteratee is invoked with one argument: (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.5.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee to transform keys.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee to transform keys.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
 	     *
 	     * _.countBy([6.1, 4.2, 6.3], Math.floor);
 	     * // => { '4': 1, '6': 2 }
 	     *
+	     * // The `_.property` iteratee shorthand.
 	     * _.countBy(['one', 'two', 'three'], 'length');
 	     * // => { '3': 2, '5': 1 }
 	     */
@@ -18719,19 +19935,22 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
-	     * @returns {boolean} Returns `true` if all elements pass the predicate check, else `false`.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
+	     * @returns {boolean} Returns `true` if all elements pass the predicate check,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.every([true, 1, null, 'yes'], Boolean);
 	     * // => false
 	     *
 	     * var users = [
-	     *   { 'user': 'barney', 'active': false },
-	     *   { 'user': 'fred',   'active': false }
+	     *   { 'user': 'barney', 'age': 36, 'active': false },
+	     *   { 'user': 'fred',   'age': 40, 'active': false }
 	     * ];
 	     *
 	     * // The `_.matches` iteratee shorthand.
@@ -18756,15 +19975,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Iterates over elements of `collection`, returning an array of all elements
-	     * `predicate` returns truthy for. The predicate is invoked with three arguments:
-	     * (value, index|key, collection).
+	     * `predicate` returns truthy for. The predicate is invoked with three
+	     * arguments: (value, index|key, collection).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the new filtered array.
+	     * @see _.reject
 	     * @example
 	     *
 	     * var users = [
@@ -18794,14 +20016,17 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Iterates over elements of `collection`, returning the first element
-	     * `predicate` returns truthy for. The predicate is invoked with three arguments:
-	     * (value, index|key, collection).
+	     * `predicate` returns truthy for. The predicate is invoked with three
+	     * arguments: (value, index|key, collection).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param {number} [fromIndex=0] The index to search from.
 	     * @returns {*} Returns the matched element, else `undefined`.
 	     * @example
 	     *
@@ -18826,14 +20051,7 @@ webpackJsonp([2,4],[
 	     * _.find(users, 'active');
 	     * // => object for 'barney'
 	     */
-	    function find(collection, predicate) {
-	      predicate = getIteratee(predicate, 3);
-	      if (isArray(collection)) {
-	        var index = baseFindIndex(collection, predicate);
-	        return index > -1 ? collection[index] : undefined;
-	      }
-	      return baseFind(collection, predicate, baseEach);
-	    }
+	    var find = createFind(findIndex);
 
 	    /**
 	     * This method is like `_.find` except that it iterates over elements of
@@ -18841,9 +20059,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param {number} [fromIndex=collection.length-1] The index to search from.
 	     * @returns {*} Returns the matched element, else `undefined`.
 	     * @example
 	     *
@@ -18852,25 +20073,20 @@ webpackJsonp([2,4],[
 	     * });
 	     * // => 3
 	     */
-	    function findLast(collection, predicate) {
-	      predicate = getIteratee(predicate, 3);
-	      if (isArray(collection)) {
-	        var index = baseFindIndex(collection, predicate, true);
-	        return index > -1 ? collection[index] : undefined;
-	      }
-	      return baseFind(collection, predicate, baseEachRight);
-	    }
+	    var findLast = createFind(findLastIndex);
 
 	    /**
-	     * Creates an array of flattened values by running each element in `collection`
-	     * through `iteratee` and concating its result to the other mapped values.
-	     * The iteratee is invoked with three arguments: (value, index|key, collection).
+	     * Creates a flattened array of values by running each element in `collection`
+	     * thru `iteratee` and flattening the mapped results. The iteratee is invoked
+	     * with three arguments: (value, index|key, collection).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the new flattened array.
 	     * @example
 	     *
@@ -18886,37 +20102,90 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Iterates over elements of `collection` invoking `iteratee` for each element.
-	     * The iteratee is invoked with three arguments: (value, index|key, collection).
-	     * Iteratee functions may exit iteration early by explicitly returning `false`.
-	     *
-	     * **Note:** As with other "Collections" methods, objects with a "length" property
-	     * are iterated like arrays. To avoid this behavior use `_.forIn` or `_.forOwn`
-	     * for object iteration.
+	     * This method is like `_.flatMap` except that it recursively flattens the
+	     * mapped results.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.7.0
+	     * @category Collection
+	     * @param {Array|Object} collection The collection to iterate over.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
+	     * @returns {Array} Returns the new flattened array.
+	     * @example
+	     *
+	     * function duplicate(n) {
+	     *   return [[[n, n]]];
+	     * }
+	     *
+	     * _.flatMapDeep([1, 2], duplicate);
+	     * // => [1, 1, 2, 2]
+	     */
+	    function flatMapDeep(collection, iteratee) {
+	      return baseFlatten(map(collection, iteratee), INFINITY);
+	    }
+
+	    /**
+	     * This method is like `_.flatMap` except that it recursively flattens the
+	     * mapped results up to `depth` times.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.7.0
+	     * @category Collection
+	     * @param {Array|Object} collection The collection to iterate over.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
+	     * @param {number} [depth=1] The maximum recursion depth.
+	     * @returns {Array} Returns the new flattened array.
+	     * @example
+	     *
+	     * function duplicate(n) {
+	     *   return [[[n, n]]];
+	     * }
+	     *
+	     * _.flatMapDepth([1, 2], duplicate, 2);
+	     * // => [[1, 1], [2, 2]]
+	     */
+	    function flatMapDepth(collection, iteratee, depth) {
+	      depth = depth === undefined ? 1 : toInteger(depth);
+	      return baseFlatten(map(collection, iteratee), depth);
+	    }
+
+	    /**
+	     * Iterates over elements of `collection` and invokes `iteratee` for each element.
+	     * The iteratee is invoked with three arguments: (value, index|key, collection).
+	     * Iteratee functions may exit iteration early by explicitly returning `false`.
+	     *
+	     * **Note:** As with other "Collections" methods, objects with a "length"
+	     * property are iterated like arrays. To avoid this behavior use `_.forIn`
+	     * or `_.forOwn` for object iteration.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 0.1.0
 	     * @alias each
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Array|Object} Returns `collection`.
+	     * @see _.forEachRight
 	     * @example
 	     *
 	     * _([1, 2]).forEach(function(value) {
 	     *   console.log(value);
 	     * });
-	     * // => logs `1` then `2`
+	     * // => Logs `1` then `2`.
 	     *
 	     * _.forEach({ 'a': 1, 'b': 2 }, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'a' then 'b' (iteration order is not guaranteed)
+	     * // => Logs 'a' then 'b' (iteration order is not guaranteed).
 	     */
 	    function forEach(collection, iteratee) {
-	      return (typeof iteratee == 'function' && isArray(collection))
-	        ? arrayEach(collection, iteratee)
-	        : baseEach(collection, baseCastFunction(iteratee));
+	      var func = isArray(collection) ? arrayEach : baseEach;
+	      return func(collection, getIteratee(iteratee, 3));
 	    }
 
 	    /**
@@ -18925,35 +20194,39 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @alias eachRight
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Array|Object} Returns `collection`.
+	     * @see _.forEach
 	     * @example
 	     *
 	     * _.forEachRight([1, 2], function(value) {
 	     *   console.log(value);
 	     * });
-	     * // => logs `2` then `1`
+	     * // => Logs `2` then `1`.
 	     */
 	    function forEachRight(collection, iteratee) {
-	      return (typeof iteratee == 'function' && isArray(collection))
-	        ? arrayEachRight(collection, iteratee)
-	        : baseEachRight(collection, baseCastFunction(iteratee));
+	      var func = isArray(collection) ? arrayEachRight : baseEachRight;
+	      return func(collection, getIteratee(iteratee, 3));
 	    }
 
 	    /**
 	     * Creates an object composed of keys generated from the results of running
-	     * each element of `collection` through `iteratee`. The corresponding value
-	     * of each key is an array of elements responsible for generating the key.
-	     * The iteratee is invoked with one argument: (value).
+	     * each element of `collection` thru `iteratee`. The order of grouped values
+	     * is determined by the order they occur in `collection`. The corresponding
+	     * value of each key is an array of elements responsible for generating the
+	     * key. The iteratee is invoked with one argument: (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee to transform keys.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee to transform keys.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
 	     *
@@ -18973,18 +20246,20 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Checks if `value` is in `collection`. If `collection` is a string it's checked
-	     * for a substring of `value`, otherwise [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+	     * Checks if `value` is in `collection`. If `collection` is a string, it's
+	     * checked for a substring of `value`, otherwise
+	     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
 	     * is used for equality comparisons. If `fromIndex` is negative, it's used as
 	     * the offset from the end of `collection`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to search.
 	     * @param {*} value The value to search for.
 	     * @param {number} [fromIndex=0] The index to search from.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.reduce`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.reduce`.
 	     * @returns {boolean} Returns `true` if `value` is found, else `false`.
 	     * @example
 	     *
@@ -19016,11 +20291,12 @@ webpackJsonp([2,4],[
 	    /**
 	     * Invokes the method at `path` of each element in `collection`, returning
 	     * an array of the results of each invoked method. Any additional arguments
-	     * are provided to each invoked method. If `methodName` is a function it's
-	     * invoked for, and `this` bound to, each element in `collection`.
+	     * are provided to each invoked method. If `methodName` is a function, it's
+	     * invoked for and `this` bound to, each element in `collection`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Array|Function|string} path The path of the method to invoke or
@@ -19050,15 +20326,17 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates an object composed of keys generated from the results of running
-	     * each element of `collection` through `iteratee`. The corresponding value
-	     * of each key is the last element responsible for generating the key. The
+	     * each element of `collection` thru `iteratee`. The corresponding value of
+	     * each key is the last element responsible for generating the key. The
 	     * iteratee is invoked with one argument: (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee to transform keys.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee to transform keys.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
 	     *
@@ -19080,7 +20358,7 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Creates an array of values by running each element in `collection` through
+	     * Creates an array of values by running each element in `collection` thru
 	     * `iteratee`. The iteratee is invoked with three arguments:
 	     * (value, index|key, collection).
 	     *
@@ -19088,16 +20366,18 @@ webpackJsonp([2,4],[
 	     * `_.every`, `_.filter`, `_.map`, `_.mapValues`, `_.reject`, and `_.some`.
 	     *
 	     * The guarded methods are:
-	     * `ary`, `curry`, `curryRight`, `drop`, `dropRight`, `every`, `fill`,
-	     * `invert`, `parseInt`, `random`, `range`, `rangeRight`, `slice`, `some`,
-	     * `sortBy`, `take`, `takeRight`, `template`, `trim`, `trimEnd`, `trimStart`,
-	     * and `words`
+	     * `ary`, `chunk`, `curry`, `curryRight`, `drop`, `dropRight`, `every`,
+	     * `fill`, `invert`, `parseInt`, `random`, `range`, `rangeRight`, `repeat`,
+	     * `sampleSize`, `slice`, `some`, `sortBy`, `split`, `take`, `takeRight`,
+	     * `template`, `trim`, `trimEnd`, `trimStart`, and `words`
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the new mapped array.
 	     * @example
 	     *
@@ -19133,24 +20413,26 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function[]|Object[]|string[]} [iteratees=[_.identity]] The iteratees to sort by.
+	     * @param {Array[]|Function[]|Object[]|string[]} [iteratees=[_.identity]]
+	     *  The iteratees to sort by.
 	     * @param {string[]} [orders] The sort orders of `iteratees`.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.reduce`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.reduce`.
 	     * @returns {Array} Returns the new sorted array.
 	     * @example
 	     *
 	     * var users = [
 	     *   { 'user': 'fred',   'age': 48 },
 	     *   { 'user': 'barney', 'age': 34 },
-	     *   { 'user': 'fred',   'age': 42 },
+	     *   { 'user': 'fred',   'age': 40 },
 	     *   { 'user': 'barney', 'age': 36 }
 	     * ];
 	     *
 	     * // Sort by `user` in ascending order and by `age` in descending order.
 	     * _.orderBy(users, ['user', 'age'], ['asc', 'desc']);
-	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 42]]
+	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 40]]
 	     */
 	    function orderBy(collection, iteratees, orders, guard) {
 	      if (collection == null) {
@@ -19174,9 +20456,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the array of grouped elements.
 	     * @example
 	     *
@@ -19207,9 +20491,9 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Reduces `collection` to a value which is the accumulated result of running
-	     * each element in `collection` through `iteratee`, where each successive
+	     * each element in `collection` thru `iteratee`, where each successive
 	     * invocation is supplied the return value of the previous. If `accumulator`
-	     * is not given the first element of `collection` is used as the initial
+	     * is not given, the first element of `collection` is used as the initial
 	     * value. The iteratee is invoked with four arguments:
 	     * (accumulator, value, index|key, collection).
 	     *
@@ -19222,11 +20506,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @param {*} [accumulator] The initial value.
 	     * @returns {*} Returns the accumulated value.
+	     * @see _.reduceRight
 	     * @example
 	     *
 	     * _.reduce([1, 2], function(sum, n) {
@@ -19253,11 +20539,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @param {*} [accumulator] The initial value.
 	     * @returns {*} Returns the accumulated value.
+	     * @see _.reduce
 	     * @example
 	     *
 	     * var array = [[0, 1], [2, 3], [4, 5]];
@@ -19280,10 +20568,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Array} Returns the new filtered array.
+	     * @see _.filter
 	     * @example
 	     *
 	     * var users = [
@@ -19319,6 +20610,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to sample.
 	     * @returns {*} Returns the random element.
@@ -19340,9 +20632,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to sample.
-	     * @param {number} [n=0] The number of elements to sample.
+	     * @param {number} [n=1] The number of elements to sample.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the random elements.
 	     * @example
 	     *
@@ -19352,13 +20646,17 @@ webpackJsonp([2,4],[
 	     * _.sampleSize([1, 2, 3], 4);
 	     * // => [2, 3, 1]
 	     */
-	    function sampleSize(collection, n) {
+	    function sampleSize(collection, n, guard) {
 	      var index = -1,
 	          result = toArray(collection),
 	          length = result.length,
 	          lastIndex = length - 1;
 
-	      n = baseClamp(toInteger(n), 0, length);
+	      if ((guard ? isIterateeCall(collection, n, guard) : n === undefined)) {
+	        n = 1;
+	      } else {
+	        n = baseClamp(toInteger(n), 0, length);
+	      }
 	      while (++index < n) {
 	        var rand = baseRandom(index, lastIndex),
 	            value = result[rand];
@@ -19376,6 +20674,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to shuffle.
 	     * @returns {Array} Returns the new shuffled array.
@@ -19390,10 +20689,11 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Gets the size of `collection` by returning its length for array-like
-	     * values or the number of own enumerable properties for objects.
+	     * values or the number of own enumerable string keyed properties for objects.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to inspect.
 	     * @returns {number} Returns the collection size.
@@ -19416,6 +20716,12 @@ webpackJsonp([2,4],[
 	        var result = collection.length;
 	        return (result && isString(collection)) ? stringSize(collection) : result;
 	      }
+	      if (isObjectLike(collection)) {
+	        var tag = getTag(collection);
+	        if (tag == mapTag || tag == setTag) {
+	          return collection.size;
+	        }
+	      }
 	      return keys(collection).length;
 	    }
 
@@ -19426,11 +20732,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
-	     * @returns {boolean} Returns `true` if any element passes the predicate check, else `false`.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
+	     * @returns {boolean} Returns `true` if any element passes the predicate check,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.some([null, 0, 'yes', false], Boolean);
@@ -19463,36 +20772,37 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates an array of elements, sorted in ascending order by the results of
-	     * running each element in a collection through each iteratee. This method
+	     * running each element in a collection thru each iteratee. This method
 	     * performs a stable sort, that is, it preserves the original sort order of
 	     * equal elements. The iteratees are invoked with one argument: (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Collection
 	     * @param {Array|Object} collection The collection to iterate over.
-	     * @param {...(Function|Function[]|Object|Object[]|string|string[])} [iteratees=[_.identity]]
-	     *  The iteratees to sort by, specified individually or in arrays.
+	     * @param {...(Array|Array[]|Function|Function[]|Object|Object[]|string|string[])}
+	     *  [iteratees=[_.identity]] The iteratees to sort by.
 	     * @returns {Array} Returns the new sorted array.
 	     * @example
 	     *
 	     * var users = [
 	     *   { 'user': 'fred',   'age': 48 },
 	     *   { 'user': 'barney', 'age': 36 },
-	     *   { 'user': 'fred',   'age': 42 },
+	     *   { 'user': 'fred',   'age': 40 },
 	     *   { 'user': 'barney', 'age': 34 }
 	     * ];
 	     *
 	     * _.sortBy(users, function(o) { return o.user; });
-	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 42]]
+	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 40]]
 	     *
 	     * _.sortBy(users, ['user', 'age']);
-	     * // => objects for [['barney', 34], ['barney', 36], ['fred', 42], ['fred', 48]]
+	     * // => objects for [['barney', 34], ['barney', 36], ['fred', 40], ['fred', 48]]
 	     *
 	     * _.sortBy(users, 'user', function(o) {
 	     *   return Math.floor(o.age / 10);
 	     * });
-	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 42]]
+	     * // => objects for [['barney', 36], ['barney', 34], ['fred', 48], ['fred', 40]]
 	     */
 	    var sortBy = rest(function(collection, iteratees) {
 	      if (collection == null) {
@@ -19502,9 +20812,13 @@ webpackJsonp([2,4],[
 	      if (length > 1 && isIterateeCall(collection, iteratees[0], iteratees[1])) {
 	        iteratees = [];
 	      } else if (length > 2 && isIterateeCall(iteratees[0], iteratees[1], iteratees[2])) {
-	        iteratees.length = 1;
+	        iteratees = [iteratees[0]];
 	      }
-	      return baseOrderBy(collection, baseFlatten(iteratees, 1), []);
+	      iteratees = (iteratees.length == 1 && isArray(iteratees[0]))
+	        ? iteratees[0]
+	        : baseFlatten(iteratees, 1, isFlattenableIteratee);
+
+	      return baseOrderBy(collection, iteratees, []);
 	    });
 
 	    /*------------------------------------------------------------------------*/
@@ -19515,7 +20829,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
-	     * @type {Function}
+	     * @since 2.4.0
 	     * @category Date
 	     * @returns {number} Returns the timestamp.
 	     * @example
@@ -19523,9 +20837,11 @@ webpackJsonp([2,4],[
 	     * _.defer(function(stamp) {
 	     *   console.log(_.now() - stamp);
 	     * }, _.now());
-	     * // => logs the number of milliseconds it took for the deferred function to be invoked
+	     * // => Logs the number of milliseconds it took for the deferred invocation.
 	     */
-	    var now = Date.now;
+	    function now() {
+	      return Date.now();
+	    }
 
 	    /*------------------------------------------------------------------------*/
 
@@ -19535,6 +20851,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {number} n The number of calls before `func` is invoked.
 	     * @param {Function} func The function to restrict.
@@ -19550,7 +20867,7 @@ webpackJsonp([2,4],[
 	     * _.forEach(saves, function(type) {
 	     *   asyncSave({ 'type': type, 'complete': done });
 	     * });
-	     * // => logs 'done saving!' after the two async saves have completed
+	     * // => Logs 'done saving!' after the two async saves have completed.
 	     */
 	    function after(n, func) {
 	      if (typeof func != 'function') {
@@ -19565,16 +20882,17 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates a function that accepts up to `n` arguments, ignoring any
-	     * additional arguments.
+	     * Creates a function that invokes `func`, with up to `n` arguments,
+	     * ignoring any additional arguments.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Function
 	     * @param {Function} func The function to cap arguments for.
 	     * @param {number} [n=func.length] The arity cap.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
-	     * @returns {Function} Returns the new function.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
+	     * @returns {Function} Returns the new capped function.
 	     * @example
 	     *
 	     * _.map(['6', '8', '10'], _.ary(parseInt, 1));
@@ -19593,6 +20911,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Function
 	     * @param {number} n The number of calls at which `func` is no longer invoked.
 	     * @param {Function} func The function to restrict.
@@ -19621,17 +20940,17 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that invokes `func` with the `this` binding of `thisArg`
-	     * and prepends any additional `_.bind` arguments to those provided to the
-	     * bound function.
+	     * and `partials` prepended to the arguments it receives.
 	     *
 	     * The `_.bind.placeholder` value, which defaults to `_` in monolithic builds,
 	     * may be used as a placeholder for partially applied arguments.
 	     *
-	     * **Note:** Unlike native `Function#bind` this method doesn't set the "length"
+	     * **Note:** Unlike native `Function#bind`, this method doesn't set the "length"
 	     * property of bound functions.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to bind.
 	     * @param {*} thisArg The `this` binding of `func`.
@@ -19657,19 +20976,19 @@ webpackJsonp([2,4],[
 	    var bind = rest(function(func, thisArg, partials) {
 	      var bitmask = BIND_FLAG;
 	      if (partials.length) {
-	        var holders = replaceHolders(partials, getPlaceholder(bind));
+	        var holders = replaceHolders(partials, getHolder(bind));
 	        bitmask |= PARTIAL_FLAG;
 	      }
 	      return createWrapper(func, bitmask, thisArg, partials, holders);
 	    });
 
 	    /**
-	     * Creates a function that invokes the method at `object[key]` and prepends
-	     * any additional `_.bindKey` arguments to those provided to the bound function.
+	     * Creates a function that invokes the method at `object[key]` with `partials`
+	     * prepended to the arguments it receives.
 	     *
 	     * This method differs from `_.bind` by allowing bound functions to reference
-	     * methods that may be redefined or don't yet exist.
-	     * See [Peter Michaux's article](http://peter.michaux.ca/articles/lazy-function-definition-pattern)
+	     * methods that may be redefined or don't yet exist. See
+	     * [Peter Michaux's article](http://peter.michaux.ca/articles/lazy-function-definition-pattern)
 	     * for more details.
 	     *
 	     * The `_.bindKey.placeholder` value, which defaults to `_` in monolithic
@@ -19677,6 +20996,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.10.0
 	     * @category Function
 	     * @param {Object} object The object to invoke the method on.
 	     * @param {string} key The key of the method.
@@ -19710,7 +21030,7 @@ webpackJsonp([2,4],[
 	    var bindKey = rest(function(object, key, partials) {
 	      var bitmask = BIND_FLAG | BIND_KEY_FLAG;
 	      if (partials.length) {
-	        var holders = replaceHolders(partials, getPlaceholder(bindKey));
+	        var holders = replaceHolders(partials, getHolder(bindKey));
 	        bitmask |= PARTIAL_FLAG;
 	      }
 	      return createWrapper(key, bitmask, object, partials, holders);
@@ -19730,10 +21050,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Function
 	     * @param {Function} func The function to curry.
 	     * @param {number} [arity=func.length] The arity of `func`.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Function} Returns the new curried function.
 	     * @example
 	     *
@@ -19774,10 +21095,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Function
 	     * @param {Function} func The function to curry.
 	     * @param {number} [arity=func.length] The arity of `func`.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Function} Returns the new curried function.
 	     * @example
 	     *
@@ -19821,21 +21143,22 @@ webpackJsonp([2,4],[
 	     * on the trailing edge of the timeout only if the debounced function is
 	     * invoked more than once during the `wait` timeout.
 	     *
-	     * See [David Corbacho's article](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
+	     * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
 	     * for details over the differences between `_.debounce` and `_.throttle`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to debounce.
 	     * @param {number} [wait=0] The number of milliseconds to delay.
-	     * @param {Object} [options] The options object.
-	     * @param {boolean} [options.leading=false] Specify invoking on the leading
-	     *  edge of the timeout.
-	     * @param {number} [options.maxWait] The maximum time `func` is allowed to be
-	     *  delayed before it's invoked.
-	     * @param {boolean} [options.trailing=true] Specify invoking on the trailing
-	     *  edge of the timeout.
+	     * @param {Object} [options={}] The options object.
+	     * @param {boolean} [options.leading=false]
+	     *  Specify invoking on the leading edge of the timeout.
+	     * @param {number} [options.maxWait]
+	     *  The maximum time `func` is allowed to be delayed before it's invoked.
+	     * @param {boolean} [options.trailing=true]
+	     *  Specify invoking on the trailing edge of the timeout.
 	     * @returns {Function} Returns the new debounced function.
 	     * @example
 	     *
@@ -19857,16 +21180,15 @@ webpackJsonp([2,4],[
 	     * jQuery(window).on('popstate', debounced.cancel);
 	     */
 	    function debounce(func, wait, options) {
-	      var args,
-	          maxTimeoutId,
+	      var lastArgs,
+	          lastThis,
+	          maxWait,
 	          result,
-	          stamp,
-	          thisArg,
-	          timeoutId,
-	          trailingCall,
-	          lastCalled = 0,
+	          timerId,
+	          lastCallTime,
+	          lastInvokeTime = 0,
 	          leading = false,
-	          maxWait = false,
+	          maxing = false,
 	          trailing = true;
 
 	      if (typeof func != 'function') {
@@ -19875,96 +21197,99 @@ webpackJsonp([2,4],[
 	      wait = toNumber(wait) || 0;
 	      if (isObject(options)) {
 	        leading = !!options.leading;
-	        maxWait = 'maxWait' in options && nativeMax(toNumber(options.maxWait) || 0, wait);
+	        maxing = 'maxWait' in options;
+	        maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
 	        trailing = 'trailing' in options ? !!options.trailing : trailing;
 	      }
 
-	      function cancel() {
-	        if (timeoutId) {
-	          clearTimeout(timeoutId);
-	        }
-	        if (maxTimeoutId) {
-	          clearTimeout(maxTimeoutId);
-	        }
-	        lastCalled = 0;
-	        args = maxTimeoutId = thisArg = timeoutId = trailingCall = undefined;
-	      }
+	      function invokeFunc(time) {
+	        var args = lastArgs,
+	            thisArg = lastThis;
 
-	      function complete(isCalled, id) {
-	        if (id) {
-	          clearTimeout(id);
-	        }
-	        maxTimeoutId = timeoutId = trailingCall = undefined;
-	        if (isCalled) {
-	          lastCalled = now();
-	          result = func.apply(thisArg, args);
-	          if (!timeoutId && !maxTimeoutId) {
-	            args = thisArg = undefined;
-	          }
-	        }
-	      }
-
-	      function delayed() {
-	        var remaining = wait - (now() - stamp);
-	        if (remaining <= 0 || remaining > wait) {
-	          complete(trailingCall, maxTimeoutId);
-	        } else {
-	          timeoutId = setTimeout(delayed, remaining);
-	        }
-	      }
-
-	      function flush() {
-	        if ((timeoutId && trailingCall) || (maxTimeoutId && trailing)) {
-	          result = func.apply(thisArg, args);
-	        }
-	        cancel();
+	        lastArgs = lastThis = undefined;
+	        lastInvokeTime = time;
+	        result = func.apply(thisArg, args);
 	        return result;
 	      }
 
-	      function maxDelayed() {
-	        complete(trailing, timeoutId);
+	      function leadingEdge(time) {
+	        // Reset any `maxWait` timer.
+	        lastInvokeTime = time;
+	        // Start the timer for the trailing edge.
+	        timerId = setTimeout(timerExpired, wait);
+	        // Invoke the leading edge.
+	        return leading ? invokeFunc(time) : result;
+	      }
+
+	      function remainingWait(time) {
+	        var timeSinceLastCall = time - lastCallTime,
+	            timeSinceLastInvoke = time - lastInvokeTime,
+	            result = wait - timeSinceLastCall;
+
+	        return maxing ? nativeMin(result, maxWait - timeSinceLastInvoke) : result;
+	      }
+
+	      function shouldInvoke(time) {
+	        var timeSinceLastCall = time - lastCallTime,
+	            timeSinceLastInvoke = time - lastInvokeTime;
+
+	        // Either this is the first call, activity has stopped and we're at the
+	        // trailing edge, the system time has gone backwards and we're treating
+	        // it as the trailing edge, or we've hit the `maxWait` limit.
+	        return (lastCallTime === undefined || (timeSinceLastCall >= wait) ||
+	          (timeSinceLastCall < 0) || (maxing && timeSinceLastInvoke >= maxWait));
+	      }
+
+	      function timerExpired() {
+	        var time = now();
+	        if (shouldInvoke(time)) {
+	          return trailingEdge(time);
+	        }
+	        // Restart the timer.
+	        timerId = setTimeout(timerExpired, remainingWait(time));
+	      }
+
+	      function trailingEdge(time) {
+	        timerId = undefined;
+
+	        // Only invoke if we have `lastArgs` which means `func` has been
+	        // debounced at least once.
+	        if (trailing && lastArgs) {
+	          return invokeFunc(time);
+	        }
+	        lastArgs = lastThis = undefined;
+	        return result;
+	      }
+
+	      function cancel() {
+	        lastInvokeTime = 0;
+	        lastArgs = lastCallTime = lastThis = timerId = undefined;
+	      }
+
+	      function flush() {
+	        return timerId === undefined ? result : trailingEdge(now());
 	      }
 
 	      function debounced() {
-	        args = arguments;
-	        stamp = now();
-	        thisArg = this;
-	        trailingCall = trailing && (timeoutId || !leading);
+	        var time = now(),
+	            isInvoking = shouldInvoke(time);
 
-	        if (maxWait === false) {
-	          var leadingCall = leading && !timeoutId;
-	        } else {
-	          if (!lastCalled && !maxTimeoutId && !leading) {
-	            lastCalled = stamp;
+	        lastArgs = arguments;
+	        lastThis = this;
+	        lastCallTime = time;
+
+	        if (isInvoking) {
+	          if (timerId === undefined) {
+	            return leadingEdge(lastCallTime);
 	          }
-	          var remaining = maxWait - (stamp - lastCalled);
-
-	          var isCalled = (remaining <= 0 || remaining > maxWait) &&
-	            (leading || maxTimeoutId);
-
-	          if (isCalled) {
-	            if (maxTimeoutId) {
-	              maxTimeoutId = clearTimeout(maxTimeoutId);
-	            }
-	            lastCalled = stamp;
-	            result = func.apply(thisArg, args);
-	          }
-	          else if (!maxTimeoutId) {
-	            maxTimeoutId = setTimeout(maxDelayed, remaining);
+	          if (maxing) {
+	            // Handle invocations in a tight loop.
+	            timerId = setTimeout(timerExpired, wait);
+	            return invokeFunc(lastCallTime);
 	          }
 	        }
-	        if (isCalled && timeoutId) {
-	          timeoutId = clearTimeout(timeoutId);
-	        }
-	        else if (!timeoutId && wait !== maxWait) {
-	          timeoutId = setTimeout(delayed, wait);
-	        }
-	        if (leadingCall) {
-	          isCalled = true;
-	          result = func.apply(thisArg, args);
-	        }
-	        if (isCalled && !timeoutId && !maxTimeoutId) {
-	          args = thisArg = undefined;
+	        if (timerId === undefined) {
+	          timerId = setTimeout(timerExpired, wait);
 	        }
 	        return result;
 	      }
@@ -19979,6 +21304,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to defer.
 	     * @param {...*} [args] The arguments to invoke `func` with.
@@ -19988,7 +21314,7 @@ webpackJsonp([2,4],[
 	     * _.defer(function(text) {
 	     *   console.log(text);
 	     * }, 'deferred');
-	     * // => logs 'deferred' after one or more milliseconds
+	     * // => Logs 'deferred' after one or more milliseconds.
 	     */
 	    var defer = rest(function(func, args) {
 	      return baseDelay(func, 1, args);
@@ -20000,6 +21326,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to delay.
 	     * @param {number} wait The number of milliseconds to delay invocation.
@@ -20010,7 +21337,7 @@ webpackJsonp([2,4],[
 	     * _.delay(function(text) {
 	     *   console.log(text);
 	     * }, 1000, 'later');
-	     * // => logs 'later' after one second
+	     * // => Logs 'later' after one second.
 	     */
 	    var delay = rest(function(func, wait, args) {
 	      return baseDelay(func, toNumber(wait) || 0, args);
@@ -20021,9 +21348,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Function
 	     * @param {Function} func The function to flip arguments for.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new flipped function.
 	     * @example
 	     *
 	     * var flipped = _.flip(function() {
@@ -20039,22 +21367,24 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that memoizes the result of `func`. If `resolver` is
-	     * provided it determines the cache key for storing the result based on the
+	     * provided, it determines the cache key for storing the result based on the
 	     * arguments provided to the memoized function. By default, the first argument
 	     * provided to the memoized function is used as the map cache key. The `func`
 	     * is invoked with the `this` binding of the memoized function.
 	     *
 	     * **Note:** The cache is exposed as the `cache` property on the memoized
 	     * function. Its creation may be customized by replacing the `_.memoize.Cache`
-	     * constructor with one whose instances implement the [`Map`](http://ecma-international.org/ecma-262/6.0/#sec-properties-of-the-map-prototype-object)
+	     * constructor with one whose instances implement the
+	     * [`Map`](http://ecma-international.org/ecma-262/6.0/#sec-properties-of-the-map-prototype-object)
 	     * method interface of `delete`, `get`, `has`, and `set`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to have its output memoized.
 	     * @param {Function} [resolver] The function to resolve the cache key.
-	     * @returns {Function} Returns the new memoizing function.
+	     * @returns {Function} Returns the new memoized function.
 	     * @example
 	     *
 	     * var object = { 'a': 1, 'b': 2 };
@@ -20095,9 +21425,12 @@ webpackJsonp([2,4],[
 	        memoized.cache = cache.set(key, result);
 	        return result;
 	      };
-	      memoized.cache = new memoize.Cache;
+	      memoized.cache = new (memoize.Cache || MapCache);
 	      return memoized;
 	    }
+
+	    // Assign cache to `_.memoize`.
+	    memoize.Cache = MapCache;
 
 	    /**
 	     * Creates a function that negates the result of the predicate `func`. The
@@ -20106,9 +21439,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Function
 	     * @param {Function} predicate The predicate to negate.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new negated function.
 	     * @example
 	     *
 	     * function isEven(n) {
@@ -20134,6 +21468,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to restrict.
 	     * @returns {Function} Returns the new restricted function.
@@ -20153,11 +21488,12 @@ webpackJsonp([2,4],[
 	     * corresponding `transforms`.
 	     *
 	     * @static
+	     * @since 4.0.0
 	     * @memberOf _
 	     * @category Function
 	     * @param {Function} func The function to wrap.
-	     * @param {...(Function|Function[])} [transforms] The functions to transform
-	     * arguments, specified individually or in arrays.
+	     * @param {...(Array|Array[]|Function|Function[]|Object|Object[]|string|string[])}
+	     *  [transforms[_.identity]] The functions to transform.
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
@@ -20171,7 +21507,7 @@ webpackJsonp([2,4],[
 	     *
 	     * var func = _.overArgs(function(x, y) {
 	     *   return [x, y];
-	     * }, square, doubled);
+	     * }, [square, doubled]);
 	     *
 	     * func(9, 3);
 	     * // => [81, 6]
@@ -20180,7 +21516,9 @@ webpackJsonp([2,4],[
 	     * // => [100, 10]
 	     */
 	    var overArgs = rest(function(func, transforms) {
-	      transforms = arrayMap(baseFlatten(transforms, 1), getIteratee());
+	      transforms = (transforms.length == 1 && isArray(transforms[0]))
+	        ? arrayMap(transforms[0], baseUnary(getIteratee()))
+	        : arrayMap(baseFlatten(transforms, 1, isFlattenableIteratee), baseUnary(getIteratee()));
 
 	      var funcsLength = transforms.length;
 	      return rest(function(args) {
@@ -20195,9 +21533,9 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Creates a function that invokes `func` with `partial` arguments prepended
-	     * to those provided to the new function. This method is like `_.bind` except
-	     * it does **not** alter the `this` binding.
+	     * Creates a function that invokes `func` with `partials` prepended to the
+	     * arguments it receives. This method is like `_.bind` except it does **not**
+	     * alter the `this` binding.
 	     *
 	     * The `_.partial.placeholder` value, which defaults to `_` in monolithic
 	     * builds, may be used as a placeholder for partially applied arguments.
@@ -20207,6 +21545,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.2.0
 	     * @category Function
 	     * @param {Function} func The function to partially apply arguments to.
 	     * @param {...*} [partials] The arguments to be partially applied.
@@ -20227,13 +21566,13 @@ webpackJsonp([2,4],[
 	     * // => 'hi fred'
 	     */
 	    var partial = rest(function(func, partials) {
-	      var holders = replaceHolders(partials, getPlaceholder(partial));
+	      var holders = replaceHolders(partials, getHolder(partial));
 	      return createWrapper(func, PARTIAL_FLAG, undefined, partials, holders);
 	    });
 
 	    /**
 	     * This method is like `_.partial` except that partially applied arguments
-	     * are appended to those provided to the new function.
+	     * are appended to the arguments it receives.
 	     *
 	     * The `_.partialRight.placeholder` value, which defaults to `_` in monolithic
 	     * builds, may be used as a placeholder for partially applied arguments.
@@ -20243,6 +21582,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.0.0
 	     * @category Function
 	     * @param {Function} func The function to partially apply arguments to.
 	     * @param {...*} [partials] The arguments to be partially applied.
@@ -20263,28 +21603,28 @@ webpackJsonp([2,4],[
 	     * // => 'hello fred'
 	     */
 	    var partialRight = rest(function(func, partials) {
-	      var holders = replaceHolders(partials, getPlaceholder(partialRight));
+	      var holders = replaceHolders(partials, getHolder(partialRight));
 	      return createWrapper(func, PARTIAL_RIGHT_FLAG, undefined, partials, holders);
 	    });
 
 	    /**
 	     * Creates a function that invokes `func` with arguments arranged according
-	     * to the specified indexes where the argument value at the first index is
+	     * to the specified `indexes` where the argument value at the first index is
 	     * provided as the first argument, the argument value at the second index is
 	     * provided as the second argument, and so on.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Function
 	     * @param {Function} func The function to rearrange arguments for.
-	     * @param {...(number|number[])} indexes The arranged argument indexes,
-	     *  specified individually or in arrays.
+	     * @param {...(number|number[])} indexes The arranged argument indexes.
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
 	     * var rearged = _.rearg(function(a, b, c) {
 	     *   return [a, b, c];
-	     * }, 2, 0, 1);
+	     * }, [2, 0, 1]);
 	     *
 	     * rearged('b', 'c', 'a')
 	     * // => ['a', 'b', 'c']
@@ -20295,12 +21635,15 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that invokes `func` with the `this` binding of the
-	     * created function and arguments from `start` and beyond provided as an array.
+	     * created function and arguments from `start` and beyond provided as
+	     * an array.
 	     *
-	     * **Note:** This method is based on the [rest parameter](https://mdn.io/rest_parameters).
+	     * **Note:** This method is based on the
+	     * [rest parameter](https://mdn.io/rest_parameters).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Function
 	     * @param {Function} func The function to apply a rest parameter to.
 	     * @param {number} [start=func.length-1] The start position of the rest parameter.
@@ -20345,13 +21688,16 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates a function that invokes `func` with the `this` binding of the created
-	     * function and an array of arguments much like [`Function#apply`](https://es5.github.io/#x15.3.4.3).
+	     * Creates a function that invokes `func` with the `this` binding of the
+	     * create function and an array of arguments much like
+	     * [`Function#apply`](http://www.ecma-international.org/ecma-262/6.0/#sec-function.prototype.apply).
 	     *
-	     * **Note:** This method is based on the [spread operator](https://mdn.io/spread_operator).
+	     * **Note:** This method is based on the
+	     * [spread operator](https://mdn.io/spread_operator).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.2.0
 	     * @category Function
 	     * @param {Function} func The function to spread arguments over.
 	     * @param {number} [start=0] The start position of the spread.
@@ -20382,7 +21728,7 @@ webpackJsonp([2,4],[
 	      start = start === undefined ? 0 : nativeMax(toInteger(start), 0);
 	      return rest(function(args) {
 	        var array = args[start],
-	            otherArgs = args.slice(0, start);
+	            otherArgs = castSlice(args, 0, start);
 
 	        if (array) {
 	          arrayPush(otherArgs, array);
@@ -20401,23 +21747,24 @@ webpackJsonp([2,4],[
 	     * throttled function. Subsequent calls to the throttled function return the
 	     * result of the last `func` invocation.
 	     *
-	     * **Note:** If `leading` and `trailing` options are `true`, `func` is invoked
-	     * on the trailing edge of the timeout only if the throttled function is
-	     * invoked more than once during the `wait` timeout.
+	     * **Note:** If `leading` and `trailing` options are `true`, `func` is
+	     * invoked on the trailing edge of the timeout only if the throttled function
+	     * is invoked more than once during the `wait` timeout.
 	     *
-	     * See [David Corbacho's article](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
+	     * See [David Corbacho's article](https://css-tricks.com/debouncing-throttling-explained-examples/)
 	     * for details over the differences between `_.throttle` and `_.debounce`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {Function} func The function to throttle.
 	     * @param {number} [wait=0] The number of milliseconds to throttle invocations to.
-	     * @param {Object} [options] The options object.
-	     * @param {boolean} [options.leading=true] Specify invoking on the leading
-	     *  edge of the timeout.
-	     * @param {boolean} [options.trailing=true] Specify invoking on the trailing
-	     *  edge of the timeout.
+	     * @param {Object} [options={}] The options object.
+	     * @param {boolean} [options.leading=true]
+	     *  Specify invoking on the leading edge of the timeout.
+	     * @param {boolean} [options.trailing=true]
+	     *  Specify invoking on the trailing edge of the timeout.
 	     * @returns {Function} Returns the new throttled function.
 	     * @example
 	     *
@@ -20455,9 +21802,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Function
 	     * @param {Function} func The function to cap arguments for.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new capped function.
 	     * @example
 	     *
 	     * _.map(['6', '8', '10'], _.unary(parseInt));
@@ -20475,6 +21823,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Function
 	     * @param {*} value The value to wrap.
 	     * @param {Function} [wrapper=identity] The wrapper function.
@@ -20500,6 +21849,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.4.0
 	     * @category Lang
 	     * @param {*} value The value to inspect.
 	     * @returns {Array} Returns the cast array.
@@ -20548,9 +21898,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to clone.
 	     * @returns {*} Returns the cloned value.
+	     * @see _.cloneDeep
 	     * @example
 	     *
 	     * var objects = [{ 'a': 1 }, { 'b': 2 }];
@@ -20565,16 +21917,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.clone` except that it accepts `customizer` which
-	     * is invoked to produce the cloned value. If `customizer` returns `undefined`
+	     * is invoked to produce the cloned value. If `customizer` returns `undefined`,
 	     * cloning is handled by the method instead. The `customizer` is invoked with
 	     * up to four arguments; (value [, index|key, object, stack]).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to clone.
 	     * @param {Function} [customizer] The function to customize cloning.
 	     * @returns {*} Returns the cloned value.
+	     * @see _.cloneDeepWith
 	     * @example
 	     *
 	     * function customizer(value) {
@@ -20601,9 +21955,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.0.0
 	     * @category Lang
 	     * @param {*} value The value to recursively clone.
 	     * @returns {*} Returns the deep cloned value.
+	     * @see _.clone
 	     * @example
 	     *
 	     * var objects = [{ 'a': 1 }, { 'b': 2 }];
@@ -20621,10 +21977,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to recursively clone.
 	     * @param {Function} [customizer] The function to customize cloning.
 	     * @returns {*} Returns the deep cloned value.
+	     * @see _.cloneWith
 	     * @example
 	     *
 	     * function customizer(value) {
@@ -20647,11 +22005,13 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Performs a [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+	     * Performs a
+	     * [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
 	     * comparison between two values to determine if they are equivalent.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
@@ -20685,10 +22045,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.9.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
-	     * @returns {boolean} Returns `true` if `value` is greater than `other`, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is greater than `other`,
+	     *  else `false`.
+	     * @see _.lt
 	     * @example
 	     *
 	     * _.gt(3, 1);
@@ -20700,19 +22063,20 @@ webpackJsonp([2,4],[
 	     * _.gt(1, 3);
 	     * // => false
 	     */
-	    function gt(value, other) {
-	      return value > other;
-	    }
+	    var gt = createRelationalOperation(baseGt);
 
 	    /**
 	     * Checks if `value` is greater than or equal to `other`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.9.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
-	     * @returns {boolean} Returns `true` if `value` is greater than or equal to `other`, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is greater than or equal to
+	     *  `other`, else `false`.
+	     * @see _.lte
 	     * @example
 	     *
 	     * _.gte(3, 1);
@@ -20724,18 +22088,20 @@ webpackJsonp([2,4],[
 	     * _.gte(1, 3);
 	     * // => false
 	     */
-	    function gte(value, other) {
+	    var gte = createRelationalOperation(function(value, other) {
 	      return value >= other;
-	    }
+	    });
 
 	    /**
 	     * Checks if `value` is likely an `arguments` object.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isArguments(function() { return arguments; }());
@@ -20755,10 +22121,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @type {Function}
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isArray([1, 2, 3]);
@@ -20780,9 +22148,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isArrayBuffer(new ArrayBuffer(2));
@@ -20802,6 +22172,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
@@ -20829,9 +22200,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is an array-like object, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is an array-like object,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isArrayLikeObject([1, 2, 3]);
@@ -20855,9 +22228,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isBoolean(false);
@@ -20876,6 +22251,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is a buffer, else `false`.
@@ -20887,7 +22263,7 @@ webpackJsonp([2,4],[
 	     * _.isBuffer(new Uint8Array(2));
 	     * // => false
 	     */
-	    var isBuffer = !Buffer ? constant(false) : function(value) {
+	    var isBuffer = !Buffer ? stubFalse : function(value) {
 	      return value instanceof Buffer;
 	    };
 
@@ -20896,9 +22272,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isDate(new Date);
@@ -20916,9 +22294,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a DOM element, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a DOM element,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isElement(document.body);
@@ -20932,12 +22312,18 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Checks if `value` is an empty collection or object. A value is considered
-	     * empty if it's an `arguments` object, array, string, or jQuery-like collection
-	     * with a length of `0` or has no own enumerable properties.
+	     * Checks if `value` is an empty object, collection, map, or set.
+	     *
+	     * Objects are considered empty if they have no own enumerable string keyed
+	     * properties.
+	     *
+	     * Array-like values such as `arguments` objects, arrays, buffers, strings, or
+	     * jQuery-like collections are considered empty if they have a `length` of `0`.
+	     * Similarly, maps and sets are considered empty if they have a `size` of `0`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is empty, else `false`.
@@ -20960,16 +22346,22 @@ webpackJsonp([2,4],[
 	     */
 	    function isEmpty(value) {
 	      if (isArrayLike(value) &&
-	          (isArray(value) || isString(value) ||
-	            isFunction(value.splice) || isArguments(value))) {
+	          (isArray(value) || isString(value) || isFunction(value.splice) ||
+	            isArguments(value) || isBuffer(value))) {
 	        return !value.length;
+	      }
+	      if (isObjectLike(value)) {
+	        var tag = getTag(value);
+	        if (tag == mapTag || tag == setTag) {
+	          return !value.size;
+	        }
 	      }
 	      for (var key in value) {
 	        if (hasOwnProperty.call(value, key)) {
 	          return false;
 	        }
 	      }
-	      return true;
+	      return !(nonEnumShadows && keys(value).length);
 	    }
 
 	    /**
@@ -20984,10 +22376,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
-	     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+	     * @returns {boolean} Returns `true` if the values are equivalent,
+	     *  else `false`.
 	     * @example
 	     *
 	     * var object = { 'user': 'fred' };
@@ -21005,17 +22399,19 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.isEqual` except that it accepts `customizer` which
-	     * is invoked to compare values. If `customizer` returns `undefined` comparisons
+	     * is invoked to compare values. If `customizer` returns `undefined`, comparisons
 	     * are handled by the method instead. The `customizer` is invoked with up to
 	     * six arguments: (objValue, othValue [, index|key, object, other, stack]).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
 	     * @param {Function} [customizer] The function to customize comparisons.
-	     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+	     * @returns {boolean} Returns `true` if the values are equivalent,
+	     *  else `false`.
 	     * @example
 	     *
 	     * function isGreeting(value) {
@@ -21046,9 +22442,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is an error object, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is an error object,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isError(new Error);
@@ -21068,25 +22466,28 @@ webpackJsonp([2,4],[
 	    /**
 	     * Checks if `value` is a finite primitive number.
 	     *
-	     * **Note:** This method is based on [`Number.isFinite`](https://mdn.io/Number/isFinite).
+	     * **Note:** This method is based on
+	     * [`Number.isFinite`](https://mdn.io/Number/isFinite).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a finite number, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a finite number,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isFinite(3);
 	     * // => true
 	     *
-	     * _.isFinite(Number.MAX_VALUE);
-	     * // => true
-	     *
-	     * _.isFinite(3.14);
+	     * _.isFinite(Number.MIN_VALUE);
 	     * // => true
 	     *
 	     * _.isFinite(Infinity);
+	     * // => false
+	     *
+	     * _.isFinite('3');
 	     * // => false
 	     */
 	    function isFinite(value) {
@@ -21098,9 +22499,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isFunction(_);
@@ -21120,10 +22523,12 @@ webpackJsonp([2,4],[
 	    /**
 	     * Checks if `value` is an integer.
 	     *
-	     * **Note:** This method is based on [`Number.isInteger`](https://mdn.io/Number/isInteger).
+	     * **Note:** This method is based on
+	     * [`Number.isInteger`](https://mdn.io/Number/isInteger).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is an integer, else `false`.
@@ -21148,13 +22553,16 @@ webpackJsonp([2,4],[
 	    /**
 	     * Checks if `value` is a valid array-like length.
 	     *
-	     * **Note:** This function is loosely based on [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
+	     * **Note:** This function is loosely based on
+	     * [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a valid length,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isLength(3);
@@ -21175,11 +22583,13 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Checks if `value` is the [language type](https://es5.github.io/#x8) of `Object`.
-	     * (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
+	     * Checks if `value` is the
+	     * [language type](http://www.ecma-international.org/ecma-262/6.0/#sec-ecmascript-language-types)
+	     * of `Object`. (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is an object, else `false`.
@@ -21208,6 +22618,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
@@ -21234,9 +22645,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isMap(new Map);
@@ -21258,6 +22671,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Lang
 	     * @param {Object} object The object to inspect.
 	     * @param {Object} source The object of property values to match.
@@ -21278,12 +22692,13 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.isMatch` except that it accepts `customizer` which
-	     * is invoked to compare values. If `customizer` returns `undefined` comparisons
+	     * is invoked to compare values. If `customizer` returns `undefined`, comparisons
 	     * are handled by the method instead. The `customizer` is invoked with five
 	     * arguments: (objValue, srcValue, index|key, object, source).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {Object} object The object to inspect.
 	     * @param {Object} source The object of property values to match.
@@ -21315,11 +22730,14 @@ webpackJsonp([2,4],[
 	    /**
 	     * Checks if `value` is `NaN`.
 	     *
-	     * **Note:** This method is not the same as [`isNaN`](https://es5.github.io/#x15.1.2.4)
-	     * which returns `true` for `undefined` and other non-numeric values.
+	     * **Note:** This method is based on
+	     * [`Number.isNaN`](https://mdn.io/Number/isNaN) and is not the same as
+	     * global [`isNaN`](https://mdn.io/isNaN) which returns `true` for
+	     * `undefined` and other non-number values.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is `NaN`, else `false`.
@@ -21339,18 +22757,29 @@ webpackJsonp([2,4],[
 	     */
 	    function isNaN(value) {
 	      // An `NaN` primitive is the only value that is not equal to itself.
-	      // Perform the `toStringTag` check first to avoid errors with some ActiveX objects in IE.
+	      // Perform the `toStringTag` check first to avoid errors with some
+	      // ActiveX objects in IE.
 	      return isNumber(value) && value != +value;
 	    }
 
 	    /**
-	     * Checks if `value` is a native function.
+	     * Checks if `value` is a pristine native function.
+	     *
+	     * **Note:** This method can't reliably detect native functions in the
+	     * presence of the `core-js` package because `core-js` circumvents this kind
+	     * of detection. Despite multiple requests, the `core-js` maintainer has made
+	     * it clear: any attempt to fix the detection will be obstructed. As a result,
+	     * we're left with little choice but to throw an error. Unfortunately, this
+	     * also affects packages, like [babel-polyfill](https://www.npmjs.com/package/babel-polyfill),
+	     * which rely on `core-js`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a native function, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a native function,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isNative(Array.prototype.push);
@@ -21360,14 +22789,10 @@ webpackJsonp([2,4],[
 	     * // => false
 	     */
 	    function isNative(value) {
-	      if (value == null) {
-	        return false;
+	      if (isMaskable(value)) {
+	        throw new Error('This method is not supported with `core-js`. Try https://github.com/es-shims.');
 	      }
-	      if (isFunction(value)) {
-	        return reIsNative.test(funcToString.call(value));
-	      }
-	      return isObjectLike(value) &&
-	        (isHostObject(value) ? reIsNative : reIsHostCtor).test(value);
+	      return baseIsNative(value);
 	    }
 
 	    /**
@@ -21375,6 +22800,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is `null`, else `false`.
@@ -21395,6 +22821,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
 	     * @returns {boolean} Returns `true` if `value` is nullish, else `false`.
@@ -21416,14 +22843,16 @@ webpackJsonp([2,4],[
 	    /**
 	     * Checks if `value` is classified as a `Number` primitive or object.
 	     *
-	     * **Note:** To exclude `Infinity`, `-Infinity`, and `NaN`, which are classified
-	     * as numbers, use the `_.isFinite` method.
+	     * **Note:** To exclude `Infinity`, `-Infinity`, and `NaN`, which are
+	     * classified as numbers, use the `_.isFinite` method.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isNumber(3);
@@ -21449,9 +22878,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.8.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a plain object, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a plain object,
+	     *  else `false`.
 	     * @example
 	     *
 	     * function Foo() {
@@ -21475,11 +22906,11 @@ webpackJsonp([2,4],[
 	          objectToString.call(value) != objectTag || isHostObject(value)) {
 	        return false;
 	      }
-	      var proto = getPrototypeOf(value);
+	      var proto = getPrototype(value);
 	      if (proto === null) {
 	        return true;
 	      }
-	      var Ctor = proto.constructor;
+	      var Ctor = hasOwnProperty.call(proto, 'constructor') && proto.constructor;
 	      return (typeof Ctor == 'function' &&
 	        Ctor instanceof Ctor && funcToString.call(Ctor) == objectCtorString);
 	    }
@@ -21489,9 +22920,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.1.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isRegExp(/abc/);
@@ -21508,13 +22941,16 @@ webpackJsonp([2,4],[
 	     * Checks if `value` is a safe integer. An integer is safe if it's an IEEE-754
 	     * double precision number which isn't the result of a rounded unsafe integer.
 	     *
-	     * **Note:** This method is based on [`Number.isSafeInteger`](https://mdn.io/Number/isSafeInteger).
+	     * **Note:** This method is based on
+	     * [`Number.isSafeInteger`](https://mdn.io/Number/isSafeInteger).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is a safe integer, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is a safe integer,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isSafeInteger(3);
@@ -21538,9 +22974,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isSet(new Set);
@@ -21557,10 +22995,12 @@ webpackJsonp([2,4],[
 	     * Checks if `value` is classified as a `String` primitive or object.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isString('abc');
@@ -21579,9 +23019,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isSymbol(Symbol.iterator);
@@ -21600,9 +23042,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isTypedArray(new Uint8Array);
@@ -21620,6 +23064,7 @@ webpackJsonp([2,4],[
 	     * Checks if `value` is `undefined`.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Lang
 	     * @param {*} value The value to check.
@@ -21641,9 +23086,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isWeakMap(new WeakMap);
@@ -21661,9 +23108,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.3.0
 	     * @category Lang
 	     * @param {*} value The value to check.
-	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is correctly classified,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.isWeakSet(new WeakSet);
@@ -21681,10 +23130,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.9.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
-	     * @returns {boolean} Returns `true` if `value` is less than `other`, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is less than `other`,
+	     *  else `false`.
+	     * @see _.gt
 	     * @example
 	     *
 	     * _.lt(1, 3);
@@ -21696,19 +23148,20 @@ webpackJsonp([2,4],[
 	     * _.lt(3, 1);
 	     * // => false
 	     */
-	    function lt(value, other) {
-	      return value < other;
-	    }
+	    var lt = createRelationalOperation(baseLt);
 
 	    /**
 	     * Checks if `value` is less than or equal to `other`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.9.0
 	     * @category Lang
 	     * @param {*} value The value to compare.
 	     * @param {*} other The other value to compare.
-	     * @returns {boolean} Returns `true` if `value` is less than or equal to `other`, else `false`.
+	     * @returns {boolean} Returns `true` if `value` is less than or equal to
+	     *  `other`, else `false`.
+	     * @see _.gte
 	     * @example
 	     *
 	     * _.lte(1, 3);
@@ -21720,14 +23173,15 @@ webpackJsonp([2,4],[
 	     * _.lte(3, 1);
 	     * // => false
 	     */
-	    function lte(value, other) {
+	    var lte = createRelationalOperation(function(value, other) {
 	      return value <= other;
-	    }
+	    });
 
 	    /**
 	     * Converts `value` to an array.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Lang
 	     * @param {*} value The value to convert.
@@ -21763,30 +23217,29 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Converts `value` to an integer.
-	     *
-	     * **Note:** This function is loosely based on [`ToInteger`](http://www.ecma-international.org/ecma-262/6.0/#sec-tointeger).
+	     * Converts `value` to a finite number.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.12.0
 	     * @category Lang
 	     * @param {*} value The value to convert.
-	     * @returns {number} Returns the converted integer.
+	     * @returns {number} Returns the converted number.
 	     * @example
 	     *
-	     * _.toInteger(3);
-	     * // => 3
+	     * _.toFinite(3.2);
+	     * // => 3.2
 	     *
-	     * _.toInteger(Number.MIN_VALUE);
-	     * // => 0
+	     * _.toFinite(Number.MIN_VALUE);
+	     * // => 5e-324
 	     *
-	     * _.toInteger(Infinity);
+	     * _.toFinite(Infinity);
 	     * // => 1.7976931348623157e+308
 	     *
-	     * _.toInteger('3');
-	     * // => 3
+	     * _.toFinite('3.2');
+	     * // => 3.2
 	     */
-	    function toInteger(value) {
+	    function toFinite(value) {
 	      if (!value) {
 	        return value === 0 ? value : 0;
 	      }
@@ -21795,24 +23248,58 @@ webpackJsonp([2,4],[
 	        var sign = (value < 0 ? -1 : 1);
 	        return sign * MAX_INTEGER;
 	      }
-	      var remainder = value % 1;
-	      return value === value ? (remainder ? value - remainder : value) : 0;
+	      return value === value ? value : 0;
+	    }
+
+	    /**
+	     * Converts `value` to an integer.
+	     *
+	     * **Note:** This method is loosely based on
+	     * [`ToInteger`](http://www.ecma-international.org/ecma-262/6.0/#sec-tointeger).
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.0.0
+	     * @category Lang
+	     * @param {*} value The value to convert.
+	     * @returns {number} Returns the converted integer.
+	     * @example
+	     *
+	     * _.toInteger(3.2);
+	     * // => 3
+	     *
+	     * _.toInteger(Number.MIN_VALUE);
+	     * // => 0
+	     *
+	     * _.toInteger(Infinity);
+	     * // => 1.7976931348623157e+308
+	     *
+	     * _.toInteger('3.2');
+	     * // => 3
+	     */
+	    function toInteger(value) {
+	      var result = toFinite(value),
+	          remainder = result % 1;
+
+	      return result === result ? (remainder ? result - remainder : result) : 0;
 	    }
 
 	    /**
 	     * Converts `value` to an integer suitable for use as the length of an
 	     * array-like object.
 	     *
-	     * **Note:** This method is based on [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
+	     * **Note:** This method is based on
+	     * [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to convert.
 	     * @returns {number} Returns the converted integer.
 	     * @example
 	     *
-	     * _.toLength(3);
+	     * _.toLength(3.2);
 	     * // => 3
 	     *
 	     * _.toLength(Number.MIN_VALUE);
@@ -21821,7 +23308,7 @@ webpackJsonp([2,4],[
 	     * _.toLength(Infinity);
 	     * // => 4294967295
 	     *
-	     * _.toLength('3');
+	     * _.toLength('3.2');
 	     * // => 3
 	     */
 	    function toLength(value) {
@@ -21833,13 +23320,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to process.
 	     * @returns {number} Returns the number.
 	     * @example
 	     *
-	     * _.toNumber(3);
-	     * // => 3
+	     * _.toNumber(3.2);
+	     * // => 3.2
 	     *
 	     * _.toNumber(Number.MIN_VALUE);
 	     * // => 5e-324
@@ -21847,10 +23335,16 @@ webpackJsonp([2,4],[
 	     * _.toNumber(Infinity);
 	     * // => Infinity
 	     *
-	     * _.toNumber('3');
-	     * // => 3
+	     * _.toNumber('3.2');
+	     * // => 3.2
 	     */
 	    function toNumber(value) {
+	      if (typeof value == 'number') {
+	        return value;
+	      }
+	      if (isSymbol(value)) {
+	        return NAN;
+	      }
 	      if (isObject(value)) {
 	        var other = isFunction(value.valueOf) ? value.valueOf() : value;
 	        value = isObject(other) ? (other + '') : other;
@@ -21866,11 +23360,12 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Converts `value` to a plain object flattening inherited enumerable
-	     * properties of `value` to own properties of the plain object.
+	     * Converts `value` to a plain object flattening inherited enumerable string
+	     * keyed properties of `value` to own properties of the plain object.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Lang
 	     * @param {*} value The value to convert.
 	     * @returns {Object} Returns the converted plain object.
@@ -21898,12 +23393,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to convert.
 	     * @returns {number} Returns the converted integer.
 	     * @example
 	     *
-	     * _.toSafeInteger(3);
+	     * _.toSafeInteger(3.2);
 	     * // => 3
 	     *
 	     * _.toSafeInteger(Number.MIN_VALUE);
@@ -21912,7 +23408,7 @@ webpackJsonp([2,4],[
 	     * _.toSafeInteger(Infinity);
 	     * // => 9007199254740991
 	     *
-	     * _.toSafeInteger('3');
+	     * _.toSafeInteger('3.2');
 	     * // => 3
 	     */
 	    function toSafeInteger(value) {
@@ -21920,11 +23416,12 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Converts `value` to a string if it's not one. An empty string is returned
-	     * for `null` and `undefined` values. The sign of `-0` is preserved.
+	     * Converts `value` to a string. An empty string is returned for `null`
+	     * and `undefined` values. The sign of `-0` is preserved.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Lang
 	     * @param {*} value The value to process.
 	     * @returns {string} Returns the string.
@@ -21940,36 +23437,27 @@ webpackJsonp([2,4],[
 	     * // => '1,2,3'
 	     */
 	    function toString(value) {
-	      // Exit early for strings to avoid a performance hit in some environments.
-	      if (typeof value == 'string') {
-	        return value;
-	      }
-	      if (value == null) {
-	        return '';
-	      }
-	      if (isSymbol(value)) {
-	        return symbolToString ? symbolToString.call(value) : '';
-	      }
-	      var result = (value + '');
-	      return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
+	      return value == null ? '' : baseToString(value);
 	    }
 
 	    /*------------------------------------------------------------------------*/
 
 	    /**
-	     * Assigns own enumerable properties of source objects to the destination
-	     * object. Source objects are applied from left to right. Subsequent sources
-	     * overwrite property assignments of previous sources.
+	     * Assigns own enumerable string keyed properties of source objects to the
+	     * destination object. Source objects are applied from left to right.
+	     * Subsequent sources overwrite property assignments of previous sources.
 	     *
 	     * **Note:** This method mutates `object` and is loosely based on
 	     * [`Object.assign`](https://mdn.io/Object/assign).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.10.0
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} [sources] The source objects.
 	     * @returns {Object} Returns `object`.
+	     * @see _.assignIn
 	     * @example
 	     *
 	     * function Foo() {
@@ -22006,11 +23494,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @alias extend
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} [sources] The source objects.
 	     * @returns {Object} Returns `object`.
+	     * @see _.assign
 	     * @example
 	     *
 	     * function Foo() {
@@ -22038,21 +23528,23 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * This method is like `_.assignIn` except that it accepts `customizer` which
-	     * is invoked to produce the assigned values. If `customizer` returns `undefined`
-	     * assignment is handled by the method instead. The `customizer` is invoked
-	     * with five arguments: (objValue, srcValue, key, object, source).
+	     * This method is like `_.assignIn` except that it accepts `customizer`
+	     * which is invoked to produce the assigned values. If `customizer` returns
+	     * `undefined`, assignment is handled by the method instead. The `customizer`
+	     * is invoked with five arguments: (objValue, srcValue, key, object, source).
 	     *
 	     * **Note:** This method mutates `object`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @alias extendWith
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} sources The source objects.
 	     * @param {Function} [customizer] The function to customize assigned values.
 	     * @returns {Object} Returns `object`.
+	     * @see _.assignWith
 	     * @example
 	     *
 	     * function customizer(objValue, srcValue) {
@@ -22065,24 +23557,26 @@ webpackJsonp([2,4],[
 	     * // => { 'a': 1, 'b': 2 }
 	     */
 	    var assignInWith = createAssigner(function(object, source, srcIndex, customizer) {
-	      copyObjectWith(source, keysIn(source), object, customizer);
+	      copyObject(source, keysIn(source), object, customizer);
 	    });
 
 	    /**
-	     * This method is like `_.assign` except that it accepts `customizer` which
-	     * is invoked to produce the assigned values. If `customizer` returns `undefined`
-	     * assignment is handled by the method instead. The `customizer` is invoked
-	     * with five arguments: (objValue, srcValue, key, object, source).
+	     * This method is like `_.assign` except that it accepts `customizer`
+	     * which is invoked to produce the assigned values. If `customizer` returns
+	     * `undefined`, assignment is handled by the method instead. The `customizer`
+	     * is invoked with five arguments: (objValue, srcValue, key, object, source).
 	     *
 	     * **Note:** This method mutates `object`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} sources The source objects.
 	     * @param {Function} [customizer] The function to customize assigned values.
 	     * @returns {Object} Returns `object`.
+	     * @see _.assignInWith
 	     * @example
 	     *
 	     * function customizer(objValue, srcValue) {
@@ -22095,7 +23589,7 @@ webpackJsonp([2,4],[
 	     * // => { 'a': 1, 'b': 2 }
 	     */
 	    var assignWith = createAssigner(function(object, source, srcIndex, customizer) {
-	      copyObjectWith(source, keys(source), object, customizer);
+	      copyObject(source, keys(source), object, customizer);
 	    });
 
 	    /**
@@ -22103,31 +23597,30 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.0.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
-	     * @param {...(string|string[])} [paths] The property paths of elements to pick,
-	     *  specified individually or in arrays.
-	     * @returns {Array} Returns the new array of picked elements.
+	     * @param {...(string|string[])} [paths] The property paths of elements to pick.
+	     * @returns {Array} Returns the picked values.
 	     * @example
 	     *
 	     * var object = { 'a': [{ 'b': { 'c': 3 } }, 4] };
 	     *
 	     * _.at(object, ['a[0].b.c', 'a[1]']);
 	     * // => [3, 4]
-	     *
-	     * _.at(['a', 'b', 'c'], 0, 2);
-	     * // => ['a', 'c']
 	     */
 	    var at = rest(function(object, paths) {
 	      return baseAt(object, baseFlatten(paths, 1));
 	    });
 
 	    /**
-	     * Creates an object that inherits from the `prototype` object. If a `properties`
-	     * object is given its own enumerable properties are assigned to the created object.
+	     * Creates an object that inherits from the `prototype` object. If a
+	     * `properties` object is given, its own enumerable string keyed properties
+	     * are assigned to the created object.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.3.0
 	     * @category Object
 	     * @param {Object} prototype The object to inherit from.
 	     * @param {Object} [properties] The properties to assign to the object.
@@ -22160,19 +23653,21 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Assigns own and inherited enumerable properties of source objects to the
-	     * destination object for all destination properties that resolve to `undefined`.
-	     * Source objects are applied from left to right. Once a property is set,
-	     * additional values of the same property are ignored.
+	     * Assigns own and inherited enumerable string keyed properties of source
+	     * objects to the destination object for all destination properties that
+	     * resolve to `undefined`. Source objects are applied from left to right.
+	     * Once a property is set, additional values of the same property are ignored.
 	     *
 	     * **Note:** This method mutates `object`.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} [sources] The source objects.
 	     * @returns {Object} Returns `object`.
+	     * @see _.defaultsDeep
 	     * @example
 	     *
 	     * _.defaults({ 'user': 'barney' }, { 'age': 36 }, { 'user': 'fred' });
@@ -22191,10 +23686,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.10.0
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} [sources] The source objects.
 	     * @returns {Object} Returns `object`.
+	     * @see _.defaults
 	     * @example
 	     *
 	     * _.defaultsDeep({ 'user': { 'name': 'barney' } }, { 'user': { 'name': 'fred', 'age': 36 } });
@@ -22212,10 +23709,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.1.0
 	     * @category Object
 	     * @param {Object} object The object to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
-	     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @returns {string|undefined} Returns the key of the matched element,
+	     *  else `undefined`.
 	     * @example
 	     *
 	     * var users = {
@@ -22240,7 +23740,7 @@ webpackJsonp([2,4],[
 	     * // => 'barney'
 	     */
 	    function findKey(object, predicate) {
-	      return baseFind(object, getIteratee(predicate, 3), baseForOwn, true);
+	      return baseFindKey(object, getIteratee(predicate, 3), baseForOwn);
 	    }
 
 	    /**
@@ -22249,10 +23749,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Object
 	     * @param {Object} object The object to search.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per iteration.
-	     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per iteration.
+	     * @returns {string|undefined} Returns the key of the matched element,
+	     *  else `undefined`.
 	     * @example
 	     *
 	     * var users = {
@@ -22277,21 +23780,23 @@ webpackJsonp([2,4],[
 	     * // => 'pebbles'
 	     */
 	    function findLastKey(object, predicate) {
-	      return baseFind(object, getIteratee(predicate, 3), baseForOwnRight, true);
+	      return baseFindKey(object, getIteratee(predicate, 3), baseForOwnRight);
 	    }
 
 	    /**
-	     * Iterates over own and inherited enumerable properties of an object invoking
-	     * `iteratee` for each property. The iteratee is invoked with three arguments:
-	     * (value, key, object). Iteratee functions may exit iteration early by explicitly
-	     * returning `false`.
+	     * Iterates over own and inherited enumerable string keyed properties of an
+	     * object and invokes `iteratee` for each property. The iteratee is invoked
+	     * with three arguments: (value, key, object). Iteratee functions may exit
+	     * iteration early by explicitly returning `false`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.3.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Object} Returns `object`.
+	     * @see _.forInRight
 	     * @example
 	     *
 	     * function Foo() {
@@ -22304,12 +23809,12 @@ webpackJsonp([2,4],[
 	     * _.forIn(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'a', 'b', then 'c' (iteration order is not guaranteed)
+	     * // => Logs 'a', 'b', then 'c' (iteration order is not guaranteed).
 	     */
 	    function forIn(object, iteratee) {
 	      return object == null
 	        ? object
-	        : baseFor(object, baseCastFunction(iteratee), keysIn);
+	        : baseFor(object, getIteratee(iteratee, 3), keysIn);
 	    }
 
 	    /**
@@ -22318,10 +23823,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Object} Returns `object`.
+	     * @see _.forIn
 	     * @example
 	     *
 	     * function Foo() {
@@ -22334,26 +23841,28 @@ webpackJsonp([2,4],[
 	     * _.forInRight(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'c', 'b', then 'a' assuming `_.forIn` logs 'a', 'b', then 'c'
+	     * // => Logs 'c', 'b', then 'a' assuming `_.forIn` logs 'a', 'b', then 'c'.
 	     */
 	    function forInRight(object, iteratee) {
 	      return object == null
 	        ? object
-	        : baseForRight(object, baseCastFunction(iteratee), keysIn);
+	        : baseForRight(object, getIteratee(iteratee, 3), keysIn);
 	    }
 
 	    /**
-	     * Iterates over own enumerable properties of an object invoking `iteratee`
-	     * for each property. The iteratee is invoked with three arguments:
-	     * (value, key, object). Iteratee functions may exit iteration early by
-	     * explicitly returning `false`.
+	     * Iterates over own enumerable string keyed properties of an object and
+	     * invokes `iteratee` for each property. The iteratee is invoked with three
+	     * arguments: (value, key, object). Iteratee functions may exit iteration
+	     * early by explicitly returning `false`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.3.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Object} Returns `object`.
+	     * @see _.forOwnRight
 	     * @example
 	     *
 	     * function Foo() {
@@ -22366,10 +23875,10 @@ webpackJsonp([2,4],[
 	     * _.forOwn(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'a' then 'b' (iteration order is not guaranteed)
+	     * // => Logs 'a' then 'b' (iteration order is not guaranteed).
 	     */
 	    function forOwn(object, iteratee) {
-	      return object && baseForOwn(object, baseCastFunction(iteratee));
+	      return object && baseForOwn(object, getIteratee(iteratee, 3));
 	    }
 
 	    /**
@@ -22378,10 +23887,12 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.0.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @returns {Object} Returns `object`.
+	     * @see _.forOwn
 	     * @example
 	     *
 	     * function Foo() {
@@ -22394,10 +23905,10 @@ webpackJsonp([2,4],[
 	     * _.forOwnRight(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'b' then 'a' assuming `_.forOwn` logs 'a' then 'b'
+	     * // => Logs 'b' then 'a' assuming `_.forOwn` logs 'a' then 'b'.
 	     */
 	    function forOwnRight(object, iteratee) {
-	      return object && baseForOwnRight(object, baseCastFunction(iteratee));
+	      return object && baseForOwnRight(object, getIteratee(iteratee, 3));
 	    }
 
 	    /**
@@ -22405,10 +23916,12 @@ webpackJsonp([2,4],[
 	     * of `object`.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The object to inspect.
-	     * @returns {Array} Returns the new array of property names.
+	     * @returns {Array} Returns the function names.
+	     * @see _.functionsIn
 	     * @example
 	     *
 	     * function Foo() {
@@ -22431,9 +23944,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The object to inspect.
-	     * @returns {Array} Returns the new array of property names.
+	     * @returns {Array} Returns the function names.
+	     * @see _.functions
 	     * @example
 	     *
 	     * function Foo() {
@@ -22452,14 +23967,15 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Gets the value at `path` of `object`. If the resolved value is
-	     * `undefined` the `defaultValue` is used in its place.
+	     * `undefined`, the `defaultValue` is used in its place.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.7.0
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @param {Array|string} path The path of the property to get.
-	     * @param {*} [defaultValue] The value returned if the resolved value is `undefined`.
+	     * @param {*} [defaultValue] The value returned for `undefined` resolved values.
 	     * @returns {*} Returns the resolved value.
 	     * @example
 	     *
@@ -22483,6 +23999,7 @@ webpackJsonp([2,4],[
 	     * Checks if `path` is a direct property of `object`.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The object to query.
@@ -22490,23 +24007,23 @@ webpackJsonp([2,4],[
 	     * @returns {boolean} Returns `true` if `path` exists, else `false`.
 	     * @example
 	     *
-	     * var object = { 'a': { 'b': { 'c': 3 } } };
-	     * var other = _.create({ 'a': _.create({ 'b': _.create({ 'c': 3 }) }) });
+	     * var object = { 'a': { 'b': 2 } };
+	     * var other = _.create({ 'a': _.create({ 'b': 2 }) });
 	     *
 	     * _.has(object, 'a');
 	     * // => true
 	     *
-	     * _.has(object, 'a.b.c');
+	     * _.has(object, 'a.b');
 	     * // => true
 	     *
-	     * _.has(object, ['a', 'b', 'c']);
+	     * _.has(object, ['a', 'b']);
 	     * // => true
 	     *
 	     * _.has(other, 'a');
 	     * // => false
 	     */
 	    function has(object, path) {
-	      return hasPath(object, path, baseHas);
+	      return object != null && hasPath(object, path, baseHas);
 	    }
 
 	    /**
@@ -22514,37 +24031,39 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @param {Array|string} path The path to check.
 	     * @returns {boolean} Returns `true` if `path` exists, else `false`.
 	     * @example
 	     *
-	     * var object = _.create({ 'a': _.create({ 'b': _.create({ 'c': 3 }) }) });
+	     * var object = _.create({ 'a': _.create({ 'b': 2 }) });
 	     *
 	     * _.hasIn(object, 'a');
 	     * // => true
 	     *
-	     * _.hasIn(object, 'a.b.c');
+	     * _.hasIn(object, 'a.b');
 	     * // => true
 	     *
-	     * _.hasIn(object, ['a', 'b', 'c']);
+	     * _.hasIn(object, ['a', 'b']);
 	     * // => true
 	     *
 	     * _.hasIn(object, 'b');
 	     * // => false
 	     */
 	    function hasIn(object, path) {
-	      return hasPath(object, path, baseHasIn);
+	      return object != null && hasPath(object, path, baseHasIn);
 	    }
 
 	    /**
 	     * Creates an object composed of the inverted keys and values of `object`.
-	     * If `object` contains duplicate values, subsequent values overwrite property
-	     * assignments of previous values.
+	     * If `object` contains duplicate values, subsequent values overwrite
+	     * property assignments of previous values.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.7.0
 	     * @category Object
 	     * @param {Object} object The object to invert.
 	     * @returns {Object} Returns the new inverted object.
@@ -22561,16 +24080,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.invert` except that the inverted object is generated
-	     * from the results of running each element of `object` through `iteratee`.
-	     * The corresponding inverted value of each inverted key is an array of keys
+	     * from the results of running each element of `object` thru `iteratee`. The
+	     * corresponding inverted value of each inverted key is an array of keys
 	     * responsible for generating the inverted value. The iteratee is invoked
 	     * with one argument: (value).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.1.0
 	     * @category Object
 	     * @param {Object} object The object to invert.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {Object} Returns the new inverted object.
 	     * @example
 	     *
@@ -22597,6 +24118,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @param {Array|string} path The path of the method to invoke.
@@ -22619,6 +24141,7 @@ webpackJsonp([2,4],[
 	     * for more details.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The object to query.
@@ -22665,6 +24188,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @returns {Array} Returns the array of property names.
@@ -22703,15 +24227,18 @@ webpackJsonp([2,4],[
 	    /**
 	     * The opposite of `_.mapValues`; this method creates an object with the
 	     * same values as `object` and keys generated by running each own enumerable
-	     * property of `object` through `iteratee`. The iteratee is invoked with
-	     * three arguments: (value, key, object).
+	     * string keyed property of `object` thru `iteratee`. The iteratee is invoked
+	     * with three arguments: (value, key, object).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.8.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Object} Returns the new mapped object.
+	     * @see _.mapValues
 	     * @example
 	     *
 	     * _.mapKeys({ 'a': 1, 'b': 2 }, function(value, key) {
@@ -22730,16 +24257,20 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates an object with the same keys as `object` and values generated by
-	     * running each own enumerable property of `object` through `iteratee`. The
-	     * iteratee is invoked with three arguments: (value, key, object).
+	     * Creates an object with the same keys as `object` and values generated
+	     * by running each own enumerable string keyed property of `object` thru
+	     * `iteratee`. The iteratee is invoked with three arguments:
+	     * (value, key, object).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.4.0
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked per iteration.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The function invoked per iteration.
 	     * @returns {Object} Returns the new mapped object.
+	     * @see _.mapKeys
 	     * @example
 	     *
 	     * var users = {
@@ -22766,17 +24297,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * This method is like `_.assign` except that it recursively merges own and
-	     * inherited enumerable properties of source objects into the destination
-	     * object. Source properties that resolve to `undefined` are skipped if a
-	     * destination value exists. Array and plain object properties are merged
-	     * recursively.Other objects and value types are overridden by assignment.
-	     * Source objects are applied from left to right. Subsequent sources
-	     * overwrite property assignments of previous sources.
+	     * inherited enumerable string keyed properties of source objects into the
+	     * destination object. Source properties that resolve to `undefined` are
+	     * skipped if a destination value exists. Array and plain object properties
+	     * are merged recursively. Other objects and value types are overridden by
+	     * assignment. Source objects are applied from left to right. Subsequent
+	     * sources overwrite property assignments of previous sources.
 	     *
 	     * **Note:** This method mutates `object`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.5.0
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} [sources] The source objects.
@@ -22801,7 +24333,7 @@ webpackJsonp([2,4],[
 	    /**
 	     * This method is like `_.merge` except that it accepts `customizer` which
 	     * is invoked to produce the merged values of the destination and source
-	     * properties. If `customizer` returns `undefined` merging is handled by the
+	     * properties. If `customizer` returns `undefined`, merging is handled by the
 	     * method instead. The `customizer` is invoked with seven arguments:
 	     * (objValue, srcValue, key, object, source, stack).
 	     *
@@ -22809,6 +24341,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The destination object.
 	     * @param {...Object} sources The source objects.
@@ -22841,14 +24374,15 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * The opposite of `_.pick`; this method creates an object composed of the
-	     * own and inherited enumerable properties of `object` that are not omitted.
+	     * own and inherited enumerable string keyed properties of `object` that are
+	     * not omitted.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The source object.
-	     * @param {...(string|string[])} [props] The property names to omit, specified
-	     *  individually or in arrays.
+	     * @param {...(string|string[])} [props] The property identifiers to omit.
 	     * @returns {Object} Returns the new object.
 	     * @example
 	     *
@@ -22861,21 +24395,23 @@ webpackJsonp([2,4],[
 	      if (object == null) {
 	        return {};
 	      }
-	      props = arrayMap(baseFlatten(props, 1), String);
-	      return basePick(object, baseDifference(keysIn(object), props));
+	      props = arrayMap(baseFlatten(props, 1), toKey);
+	      return basePick(object, baseDifference(getAllKeysIn(object), props));
 	    });
 
 	    /**
 	     * The opposite of `_.pickBy`; this method creates an object composed of
-	     * the own and inherited enumerable properties of `object` that `predicate`
-	     * doesn't return truthy for. The predicate is invoked with two arguments:
-	     * (value, key).
+	     * the own and inherited enumerable string keyed properties of `object` that
+	     * `predicate` doesn't return truthy for. The predicate is invoked with two
+	     * arguments: (value, key).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The source object.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per property.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per property.
 	     * @returns {Object} Returns the new object.
 	     * @example
 	     *
@@ -22895,11 +24431,11 @@ webpackJsonp([2,4],[
 	     * Creates an object composed of the picked `object` properties.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The source object.
-	     * @param {...(string|string[])} [props] The property names to pick, specified
-	     *  individually or in arrays.
+	     * @param {...(string|string[])} [props] The property identifiers to pick.
 	     * @returns {Object} Returns the new object.
 	     * @example
 	     *
@@ -22909,7 +24445,7 @@ webpackJsonp([2,4],[
 	     * // => { 'a': 1, 'c': 3 }
 	     */
 	    var pick = rest(function(object, props) {
-	      return object == null ? {} : basePick(object, baseFlatten(props, 1));
+	      return object == null ? {} : basePick(object, arrayMap(baseFlatten(props, 1), toKey));
 	    });
 
 	    /**
@@ -22918,9 +24454,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The source object.
-	     * @param {Function|Object|string} [predicate=_.identity] The function invoked per property.
+	     * @param {Array|Function|Object|string} [predicate=_.identity]
+	     *  The function invoked per property.
 	     * @returns {Object} Returns the new object.
 	     * @example
 	     *
@@ -22934,16 +24472,17 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * This method is like `_.get` except that if the resolved value is a function
-	     * it's invoked with the `this` binding of its parent object and its result
-	     * is returned.
+	     * This method is like `_.get` except that if the resolved value is a
+	     * function it's invoked with the `this` binding of its parent object and
+	     * its result is returned.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @param {Array|string} path The path of the property to resolve.
-	     * @param {*} [defaultValue] The value returned if the resolved value is `undefined`.
+	     * @param {*} [defaultValue] The value returned for `undefined` resolved values.
 	     * @returns {*} Returns the resolved value.
 	     * @example
 	     *
@@ -22962,21 +24501,29 @@ webpackJsonp([2,4],[
 	     * // => 'default'
 	     */
 	    function result(object, path, defaultValue) {
-	      if (!isKey(path, object)) {
-	        path = baseCastPath(path);
-	        var result = get(object, path);
-	        object = parent(object, path);
-	      } else {
-	        result = object == null ? undefined : object[path];
+	      path = isKey(path, object) ? [path] : castPath(path);
+
+	      var index = -1,
+	          length = path.length;
+
+	      // Ensure the loop is entered when path is empty.
+	      if (!length) {
+	        object = undefined;
+	        length = 1;
 	      }
-	      if (result === undefined) {
-	        result = defaultValue;
+	      while (++index < length) {
+	        var value = object == null ? undefined : object[toKey(path[index])];
+	        if (value === undefined) {
+	          index = length;
+	          value = defaultValue;
+	        }
+	        object = isFunction(value) ? value.call(object) : value;
 	      }
-	      return isFunction(result) ? result.call(object) : result;
+	      return object;
 	    }
 
 	    /**
-	     * Sets the value at `path` of `object`. If a portion of `path` doesn't exist
+	     * Sets the value at `path` of `object`. If a portion of `path` doesn't exist,
 	     * it's created. Arrays are created for missing index properties while objects
 	     * are created for all other missing properties. Use `_.setWith` to customize
 	     * `path` creation.
@@ -22985,6 +24532,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.7.0
 	     * @category Object
 	     * @param {Object} object The object to modify.
 	     * @param {Array|string} path The path of the property to set.
@@ -22998,7 +24546,7 @@ webpackJsonp([2,4],[
 	     * console.log(object.a[0].b.c);
 	     * // => 4
 	     *
-	     * _.set(object, 'x[0].y.z', 5);
+	     * _.set(object, ['x', '0', 'y', 'z'], 5);
 	     * console.log(object.x[0].y.z);
 	     * // => 5
 	     */
@@ -23016,6 +24564,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The object to modify.
 	     * @param {Array|string} path The path of the property to set.
@@ -23035,14 +24584,17 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates an array of own enumerable key-value pairs for `object` which
-	     * can be consumed by `_.fromPairs`.
+	     * Creates an array of own enumerable string keyed-value pairs for `object`
+	     * which can be consumed by `_.fromPairs`. If `object` is a map or set, its
+	     * entries are returned.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
+	     * @alias entries
 	     * @category Object
 	     * @param {Object} object The object to query.
-	     * @returns {Array} Returns the new array of key-value pairs.
+	     * @returns {Array} Returns the key-value pairs.
 	     * @example
 	     *
 	     * function Foo() {
@@ -23055,19 +24607,20 @@ webpackJsonp([2,4],[
 	     * _.toPairs(new Foo);
 	     * // => [['a', 1], ['b', 2]] (iteration order is not guaranteed)
 	     */
-	    function toPairs(object) {
-	      return baseToPairs(object, keys(object));
-	    }
+	    var toPairs = createToPairs(keys);
 
 	    /**
-	     * Creates an array of own and inherited enumerable key-value pairs for
-	     * `object` which can be consumed by `_.fromPairs`.
+	     * Creates an array of own and inherited enumerable string keyed-value pairs
+	     * for `object` which can be consumed by `_.fromPairs`. If `object` is a map
+	     * or set, its entries are returned.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
+	     * @alias entriesIn
 	     * @category Object
 	     * @param {Object} object The object to query.
-	     * @returns {Array} Returns the new array of key-value pairs.
+	     * @returns {Array} Returns the key-value pairs.
 	     * @example
 	     *
 	     * function Foo() {
@@ -23078,24 +24631,24 @@ webpackJsonp([2,4],[
 	     * Foo.prototype.c = 3;
 	     *
 	     * _.toPairsIn(new Foo);
-	     * // => [['a', 1], ['b', 2], ['c', 1]] (iteration order is not guaranteed)
+	     * // => [['a', 1], ['b', 2], ['c', 3]] (iteration order is not guaranteed)
 	     */
-	    function toPairsIn(object) {
-	      return baseToPairs(object, keysIn(object));
-	    }
+	    var toPairsIn = createToPairs(keysIn);
 
 	    /**
 	     * An alternative to `_.reduce`; this method transforms `object` to a new
-	     * `accumulator` object which is the result of running each of its own enumerable
-	     * properties through `iteratee`, with each invocation potentially mutating
-	     * the `accumulator` object. The iteratee is invoked with four arguments:
-	     * (accumulator, value, key, object). Iteratee functions may exit iteration
-	     * early by explicitly returning `false`.
+	     * `accumulator` object which is the result of running each of its own
+	     * enumerable string keyed properties thru `iteratee`, with each invocation
+	     * potentially mutating the `accumulator` object. If `accumulator` is not
+	     * provided, a new object with the same `[[Prototype]]` will be used. The
+	     * iteratee is invoked with four arguments: (accumulator, value, key, object).
+	     * Iteratee functions may exit iteration early by explicitly returning `false`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.3.0
 	     * @category Object
-	     * @param {Array|Object} object The object to iterate over.
+	     * @param {Object} object The object to iterate over.
 	     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
 	     * @param {*} [accumulator] The custom accumulator value.
 	     * @returns {*} Returns the accumulated value.
@@ -23122,7 +24675,7 @@ webpackJsonp([2,4],[
 	          if (isArr) {
 	            accumulator = isArray(object) ? new Ctor : [];
 	          } else {
-	            accumulator = isFunction(Ctor) ? baseCreate(getPrototypeOf(object)) : {};
+	            accumulator = isFunction(Ctor) ? baseCreate(getPrototype(object)) : {};
 	          }
 	        } else {
 	          accumulator = {};
@@ -23141,6 +24694,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Object
 	     * @param {Object} object The object to modify.
 	     * @param {Array|string} path The path of the property to unset.
@@ -23154,7 +24708,7 @@ webpackJsonp([2,4],[
 	     * console.log(object);
 	     * // => { 'a': [{ 'b': {} }] };
 	     *
-	     * _.unset(object, 'a[0].b.c');
+	     * _.unset(object, ['a', '0', 'b', 'c']);
 	     * // => true
 	     *
 	     * console.log(object);
@@ -23173,6 +24727,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.6.0
 	     * @category Object
 	     * @param {Object} object The object to modify.
 	     * @param {Array|string} path The path of the property to set.
@@ -23191,7 +24746,7 @@ webpackJsonp([2,4],[
 	     * // => 0
 	     */
 	    function update(object, path, updater) {
-	      return object == null ? object : baseUpdate(object, path, baseCastFunction(updater));
+	      return object == null ? object : baseUpdate(object, path, castFunction(updater));
 	    }
 
 	    /**
@@ -23204,6 +24759,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.6.0
 	     * @category Object
 	     * @param {Object} object The object to modify.
 	     * @param {Array|string} path The path of the property to set.
@@ -23219,15 +24775,16 @@ webpackJsonp([2,4],[
 	     */
 	    function updateWith(object, path, updater, customizer) {
 	      customizer = typeof customizer == 'function' ? customizer : undefined;
-	      return object == null ? object : baseUpdate(object, path, baseCastFunction(updater), customizer);
+	      return object == null ? object : baseUpdate(object, path, castFunction(updater), customizer);
 	    }
 
 	    /**
-	     * Creates an array of the own enumerable property values of `object`.
+	     * Creates an array of the own enumerable string keyed property values of `object`.
 	     *
 	     * **Note:** Non-object values are coerced to objects.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Object
 	     * @param {Object} object The object to query.
@@ -23252,12 +24809,14 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Creates an array of the own and inherited enumerable property values of `object`.
+	     * Creates an array of the own and inherited enumerable string keyed property
+	     * values of `object`.
 	     *
 	     * **Note:** Non-object values are coerced to objects.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Object
 	     * @param {Object} object The object to query.
 	     * @returns {Array} Returns the array of property values.
@@ -23284,6 +24843,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Number
 	     * @param {number} number The number to clamp.
 	     * @param {number} [lower] The lower bound.
@@ -23314,18 +24874,20 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Checks if `n` is between `start` and up to but not including, `end`. If
-	     * `end` is not specified it's set to `start` with `start` then set to `0`.
+	     * Checks if `n` is between `start` and up to, but not including, `end`. If
+	     * `end` is not specified, it's set to `start` with `start` then set to `0`.
 	     * If `start` is greater than `end` the params are swapped to support
 	     * negative ranges.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.3.0
 	     * @category Number
 	     * @param {number} number The number to check.
 	     * @param {number} [start=0] The start of the range.
 	     * @param {number} end The end of the range.
 	     * @returns {boolean} Returns `true` if `number` is in the range, else `false`.
+	     * @see _.range, _.rangeRight
 	     * @example
 	     *
 	     * _.inRange(3, 2, 4);
@@ -23364,14 +24926,15 @@ webpackJsonp([2,4],[
 	    /**
 	     * Produces a random number between the inclusive `lower` and `upper` bounds.
 	     * If only one argument is provided a number between `0` and the given number
-	     * is returned. If `floating` is `true`, or either `lower` or `upper` are floats,
-	     * a floating-point number is returned instead of an integer.
+	     * is returned. If `floating` is `true`, or either `lower` or `upper` are
+	     * floats, a floating-point number is returned instead of an integer.
 	     *
 	     * **Note:** JavaScript follows the IEEE-754 standard for resolving
 	     * floating-point values which can produce unexpected results.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.7.0
 	     * @category Number
 	     * @param {number} [lower=0] The lower bound.
 	     * @param {number} [upper=1] The upper bound.
@@ -23437,6 +25000,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the camel cased string.
@@ -23445,10 +25009,10 @@ webpackJsonp([2,4],[
 	     * _.camelCase('Foo Bar');
 	     * // => 'fooBar'
 	     *
-	     * _.camelCase('--foo-bar');
+	     * _.camelCase('--foo-bar--');
 	     * // => 'fooBar'
 	     *
-	     * _.camelCase('__foo_bar__');
+	     * _.camelCase('__FOO_BAR__');
 	     * // => 'fooBar'
 	     */
 	    var camelCase = createCompounder(function(result, word, index) {
@@ -23462,6 +25026,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to capitalize.
 	     * @returns {string} Returns the capitalized string.
@@ -23475,11 +25040,14 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Deburrs `string` by converting [latin-1 supplementary letters](https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)#Character_table)
-	     * to basic latin letters and removing [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks).
+	     * Deburrs `string` by converting
+	     * [latin-1 supplementary letters](https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)#Character_table)
+	     * to basic latin letters and removing
+	     * [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to deburr.
 	     * @returns {string} Returns the deburred string.
@@ -23498,11 +25066,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to search.
 	     * @param {string} [target] The string to search for.
-	     * @param {number} [position=string.length] The position to search from.
-	     * @returns {boolean} Returns `true` if `string` ends with `target`, else `false`.
+	     * @param {number} [position=string.length] The position to search up to.
+	     * @returns {boolean} Returns `true` if `string` ends with `target`,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.endsWith('abc', 'c');
@@ -23516,7 +25086,7 @@ webpackJsonp([2,4],[
 	     */
 	    function endsWith(string, target, position) {
 	      string = toString(string);
-	      target = typeof target == 'string' ? target : (target + '');
+	      target = baseToString(target);
 
 	      var length = string.length;
 	      position = position === undefined
@@ -23536,20 +25106,22 @@ webpackJsonp([2,4],[
 	     *
 	     * Though the ">" character is escaped for symmetry, characters like
 	     * ">" and "/" don't need escaping in HTML and have no special meaning
-	     * unless they're part of a tag or unquoted attribute value.
-	     * See [Mathias Bynens's article](https://mathiasbynens.be/notes/ambiguous-ampersands)
+	     * unless they're part of a tag or unquoted attribute value. See
+	     * [Mathias Bynens's article](https://mathiasbynens.be/notes/ambiguous-ampersands)
 	     * (under "semi-related fun fact") for more details.
 	     *
 	     * Backticks are escaped because in IE < 9, they can break out of
 	     * attribute values or HTML comments. See [#59](https://html5sec.org/#59),
 	     * [#102](https://html5sec.org/#102), [#108](https://html5sec.org/#108), and
-	     * [#133](https://html5sec.org/#133) of the [HTML5 Security Cheatsheet](https://html5sec.org/)
-	     * for more details.
+	     * [#133](https://html5sec.org/#133) of the
+	     * [HTML5 Security Cheatsheet](https://html5sec.org/) for more details.
 	     *
-	     * When working with HTML you should always [quote attribute values](http://wonko.com/post/html-escaping)
-	     * to reduce XSS vectors.
+	     * When working with HTML you should always
+	     * [quote attribute values](http://wonko.com/post/html-escaping) to reduce
+	     * XSS vectors.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category String
 	     * @param {string} [string=''] The string to escape.
@@ -23572,6 +25144,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to escape.
 	     * @returns {string} Returns the escaped string.
@@ -23588,10 +25161,12 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * Converts `string` to [kebab case](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
+	     * Converts `string` to
+	     * [kebab case](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the kebab cased string.
@@ -23603,7 +25178,7 @@ webpackJsonp([2,4],[
 	     * _.kebabCase('fooBar');
 	     * // => 'foo-bar'
 	     *
-	     * _.kebabCase('__foo_bar__');
+	     * _.kebabCase('__FOO_BAR__');
 	     * // => 'foo-bar'
 	     */
 	    var kebabCase = createCompounder(function(result, word, index) {
@@ -23615,12 +25190,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the lower cased string.
 	     * @example
 	     *
-	     * _.lowerCase('--Foo-Bar');
+	     * _.lowerCase('--Foo-Bar--');
 	     * // => 'foo bar'
 	     *
 	     * _.lowerCase('fooBar');
@@ -23638,6 +25214,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the converted string.
@@ -23652,29 +25229,12 @@ webpackJsonp([2,4],[
 	    var lowerFirst = createCaseFirst('toLowerCase');
 
 	    /**
-	     * Converts the first character of `string` to upper case.
-	     *
-	     * @static
-	     * @memberOf _
-	     * @category String
-	     * @param {string} [string=''] The string to convert.
-	     * @returns {string} Returns the converted string.
-	     * @example
-	     *
-	     * _.upperFirst('fred');
-	     * // => 'Fred'
-	     *
-	     * _.upperFirst('FRED');
-	     * // => 'FRED'
-	     */
-	    var upperFirst = createCaseFirst('toUpperCase');
-
-	    /**
 	     * Pads `string` on the left and right sides if it's shorter than `length`.
 	     * Padding characters are truncated if they can't be evenly divided by `length`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to pad.
 	     * @param {number} [length=0] The padding length.
@@ -23695,15 +25255,16 @@ webpackJsonp([2,4],[
 	      string = toString(string);
 	      length = toInteger(length);
 
-	      var strLength = stringSize(string);
+	      var strLength = length ? stringSize(string) : 0;
 	      if (!length || strLength >= length) {
 	        return string;
 	      }
-	      var mid = (length - strLength) / 2,
-	          leftLength = nativeFloor(mid),
-	          rightLength = nativeCeil(mid);
-
-	      return createPadding('', leftLength, chars) + string + createPadding('', rightLength, chars);
+	      var mid = (length - strLength) / 2;
+	      return (
+	        createPadding(nativeFloor(mid), chars) +
+	        string +
+	        createPadding(nativeCeil(mid), chars)
+	      );
 	    }
 
 	    /**
@@ -23712,6 +25273,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to pad.
 	     * @param {number} [length=0] The padding length.
@@ -23730,7 +25292,12 @@ webpackJsonp([2,4],[
 	     */
 	    function padEnd(string, length, chars) {
 	      string = toString(string);
-	      return string + createPadding(string, length, chars);
+	      length = toInteger(length);
+
+	      var strLength = length ? stringSize(string) : 0;
+	      return (length && strLength < length)
+	        ? (string + createPadding(length - strLength, chars))
+	        : string;
 	    }
 
 	    /**
@@ -23739,6 +25306,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to pad.
 	     * @param {number} [length=0] The padding length.
@@ -23757,23 +25325,29 @@ webpackJsonp([2,4],[
 	     */
 	    function padStart(string, length, chars) {
 	      string = toString(string);
-	      return createPadding(string, length, chars) + string;
+	      length = toInteger(length);
+
+	      var strLength = length ? stringSize(string) : 0;
+	      return (length && strLength < length)
+	        ? (createPadding(length - strLength, chars) + string)
+	        : string;
 	    }
 
 	    /**
 	     * Converts `string` to an integer of the specified radix. If `radix` is
-	     * `undefined` or `0`, a `radix` of `10` is used unless `value` is a hexadecimal,
-	     * in which case a `radix` of `16` is used.
+	     * `undefined` or `0`, a `radix` of `10` is used unless `value` is a
+	     * hexadecimal, in which case a `radix` of `16` is used.
 	     *
-	     * **Note:** This method aligns with the [ES5 implementation](https://es5.github.io/#x15.1.2.2)
-	     * of `parseInt`.
+	     * **Note:** This method aligns with the
+	     * [ES5 implementation](https://es5.github.io/#x15.1.2.2) of `parseInt`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 1.1.0
 	     * @category String
 	     * @param {string} string The string to convert.
 	     * @param {number} [radix=10] The radix to interpret `value` by.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {number} Returns the converted integer.
 	     * @example
 	     *
@@ -23785,7 +25359,7 @@ webpackJsonp([2,4],[
 	     */
 	    function parseInt(string, radix, guard) {
 	      // Chrome fails to trim leading <BOM> whitespace characters.
-	      // See https://code.google.com/p/v8/issues/detail?id=3109 for more details.
+	      // See https://bugs.chromium.org/p/v8/issues/detail?id=3109 for more details.
 	      if (guard || radix == null) {
 	        radix = 0;
 	      } else if (radix) {
@@ -23800,9 +25374,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to repeat.
-	     * @param {number} [n=0] The number of times to repeat the string.
+	     * @param {number} [n=1] The number of times to repeat the string.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {string} Returns the repeated string.
 	     * @example
 	     *
@@ -23815,34 +25391,24 @@ webpackJsonp([2,4],[
 	     * _.repeat('abc', 0);
 	     * // => ''
 	     */
-	    function repeat(string, n) {
-	      string = toString(string);
-	      n = toInteger(n);
-
-	      var result = '';
-	      if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
-	        return result;
+	    function repeat(string, n, guard) {
+	      if ((guard ? isIterateeCall(string, n, guard) : n === undefined)) {
+	        n = 1;
+	      } else {
+	        n = toInteger(n);
 	      }
-	      // Leverage the exponentiation by squaring algorithm for a faster repeat.
-	      // See https://en.wikipedia.org/wiki/Exponentiation_by_squaring for more details.
-	      do {
-	        if (n % 2) {
-	          result += string;
-	        }
-	        n = nativeFloor(n / 2);
-	        string += string;
-	      } while (n);
-
-	      return result;
+	      return baseRepeat(toString(string), n);
 	    }
 
 	    /**
 	     * Replaces matches for `pattern` in `string` with `replacement`.
 	     *
-	     * **Note:** This method is based on [`String#replace`](https://mdn.io/String/replace).
+	     * **Note:** This method is based on
+	     * [`String#replace`](https://mdn.io/String/replace).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to modify.
 	     * @param {RegExp|string} pattern The pattern to replace.
@@ -23857,14 +25423,16 @@ webpackJsonp([2,4],[
 	      var args = arguments,
 	          string = toString(args[0]);
 
-	      return args.length < 3 ? string : string.replace(args[1], args[2]);
+	      return args.length < 3 ? string : nativeReplace.call(string, args[1], args[2]);
 	    }
 
 	    /**
-	     * Converts `string` to [snake case](https://en.wikipedia.org/wiki/Snake_case).
+	     * Converts `string` to
+	     * [snake case](https://en.wikipedia.org/wiki/Snake_case).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the snake cased string.
@@ -23876,7 +25444,7 @@ webpackJsonp([2,4],[
 	     * _.snakeCase('fooBar');
 	     * // => 'foo_bar'
 	     *
-	     * _.snakeCase('--foo-bar');
+	     * _.snakeCase('--FOO-BAR--');
 	     * // => 'foo_bar'
 	     */
 	    var snakeCase = createCompounder(function(result, word, index) {
@@ -23886,45 +25454,66 @@ webpackJsonp([2,4],[
 	    /**
 	     * Splits `string` by `separator`.
 	     *
-	     * **Note:** This method is based on [`String#split`](https://mdn.io/String/split).
+	     * **Note:** This method is based on
+	     * [`String#split`](https://mdn.io/String/split).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to split.
 	     * @param {RegExp|string} separator The separator pattern to split by.
 	     * @param {number} [limit] The length to truncate results to.
-	     * @returns {Array} Returns the new array of string segments.
+	     * @returns {Array} Returns the string segments.
 	     * @example
 	     *
 	     * _.split('a-b-c', '-', 2);
 	     * // => ['a', 'b']
 	     */
 	    function split(string, separator, limit) {
-	      return toString(string).split(separator, limit);
+	      if (limit && typeof limit != 'number' && isIterateeCall(string, separator, limit)) {
+	        separator = limit = undefined;
+	      }
+	      limit = limit === undefined ? MAX_ARRAY_LENGTH : limit >>> 0;
+	      if (!limit) {
+	        return [];
+	      }
+	      string = toString(string);
+	      if (string && (
+	            typeof separator == 'string' ||
+	            (separator != null && !isRegExp(separator))
+	          )) {
+	        separator = baseToString(separator);
+	        if (separator == '' && reHasComplexSymbol.test(string)) {
+	          return castSlice(stringToArray(string), 0, limit);
+	        }
+	      }
+	      return nativeSplit.call(string, separator, limit);
 	    }
 
 	    /**
-	     * Converts `string` to [start case](https://en.wikipedia.org/wiki/Letter_case#Stylistic_or_specialised_usage).
+	     * Converts `string` to
+	     * [start case](https://en.wikipedia.org/wiki/Letter_case#Stylistic_or_specialised_usage).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.1.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the start cased string.
 	     * @example
 	     *
-	     * _.startCase('--foo-bar');
+	     * _.startCase('--foo-bar--');
 	     * // => 'Foo Bar'
 	     *
 	     * _.startCase('fooBar');
 	     * // => 'Foo Bar'
 	     *
-	     * _.startCase('__foo_bar__');
-	     * // => 'Foo Bar'
+	     * _.startCase('__FOO_BAR__');
+	     * // => 'FOO BAR'
 	     */
 	    var startCase = createCompounder(function(result, word, index) {
-	      return result + (index ? ' ' : '') + capitalize(word);
+	      return result + (index ? ' ' : '') + upperFirst(word);
 	    });
 
 	    /**
@@ -23932,11 +25521,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to search.
 	     * @param {string} [target] The string to search for.
 	     * @param {number} [position=0] The position to search from.
-	     * @returns {boolean} Returns `true` if `string` starts with `target`, else `false`.
+	     * @returns {boolean} Returns `true` if `string` starts with `target`,
+	     *  else `false`.
 	     * @example
 	     *
 	     * _.startsWith('abc', 'a');
@@ -23951,7 +25542,7 @@ webpackJsonp([2,4],[
 	    function startsWith(string, target, position) {
 	      string = toString(string);
 	      position = baseClamp(toInteger(position), 0, string.length);
-	      return string.lastIndexOf(target, position) == position;
+	      return string.lastIndexOf(baseToString(target), position) == position;
 	    }
 
 	    /**
@@ -23959,7 +25550,7 @@ webpackJsonp([2,4],[
 	     * in "interpolate" delimiters, HTML-escape interpolated data properties in
 	     * "escape" delimiters, and execute JavaScript in "evaluate" delimiters. Data
 	     * properties may be accessed as free variables in the template. If a setting
-	     * object is given it takes precedence over `_.templateSettings` values.
+	     * object is given, it takes precedence over `_.templateSettings` values.
 	     *
 	     * **Note:** In the development build `_.template` utilizes
 	     * [sourceURLs](http://www.html5rocks.com/en/tutorials/developertools/sourcemaps/#toc-sourceurl)
@@ -23972,17 +25563,24 @@ webpackJsonp([2,4],[
 	     * [Chrome's extensions documentation](https://developer.chrome.com/extensions/sandboxingEval).
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category String
 	     * @param {string} [string=''] The template string.
-	     * @param {Object} [options] The options object.
-	     * @param {RegExp} [options.escape] The HTML "escape" delimiter.
-	     * @param {RegExp} [options.evaluate] The "evaluate" delimiter.
-	     * @param {Object} [options.imports] An object to import into the template as free variables.
-	     * @param {RegExp} [options.interpolate] The "interpolate" delimiter.
-	     * @param {string} [options.sourceURL] The sourceURL of the template's compiled source.
-	     * @param {string} [options.variable] The data object variable name.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param {Object} [options={}] The options object.
+	     * @param {RegExp} [options.escape=_.templateSettings.escape]
+	     *  The HTML "escape" delimiter.
+	     * @param {RegExp} [options.evaluate=_.templateSettings.evaluate]
+	     *  The "evaluate" delimiter.
+	     * @param {Object} [options.imports=_.templateSettings.imports]
+	     *  An object to import into the template as free variables.
+	     * @param {RegExp} [options.interpolate=_.templateSettings.interpolate]
+	     *  The "interpolate" delimiter.
+	     * @param {string} [options.sourceURL='lodash.templateSources[n]']
+	     *  The sourceURL of the compiled template.
+	     * @param {string} [options.variable='obj']
+	     *  The data object variable name.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Function} Returns the compiled template function.
 	     * @example
 	     *
@@ -24011,12 +25609,6 @@ webpackJsonp([2,4],[
 	     * compiled({ 'user': 'pebbles' });
 	     * // => 'hello pebbles!'
 	     *
-	     * // Use custom template delimiters.
-	     * _.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
-	     * var compiled = _.template('hello {{ user }}!');
-	     * compiled({ 'user': 'mustache' });
-	     * // => 'hello mustache!'
-	     *
 	     * // Use backslashes to treat delimiters as plain text.
 	     * var compiled = _.template('<%= "\\<%- value %\\>" %>');
 	     * compiled({ 'value': 'ignored' });
@@ -24031,7 +25623,7 @@ webpackJsonp([2,4],[
 	     * // Use the `sourceURL` option to specify a custom sourceURL for the template.
 	     * var compiled = _.template('hello <%= user %>!', { 'sourceURL': '/basic/greeting.jst' });
 	     * compiled(data);
-	     * // => find the source of "greeting.jst" under the Sources tab or Resources panel of the web inspector
+	     * // => Find the source of "greeting.jst" under the Sources tab or Resources panel of the web inspector.
 	     *
 	     * // Use the `variable` option to ensure a with-statement isn't used in the compiled template.
 	     * var compiled = _.template('hi <%= data.user %>!', { 'variable': 'data' });
@@ -24042,16 +25634,23 @@ webpackJsonp([2,4],[
 	     * //   return __p;
 	     * // }
 	     *
+	     * // Use custom template delimiters.
+	     * _.templateSettings.interpolate = /{{([\s\S]+?)}}/g;
+	     * var compiled = _.template('hello {{ user }}!');
+	     * compiled({ 'user': 'mustache' });
+	     * // => 'hello mustache!'
+	     *
 	     * // Use the `source` property to inline compiled templates for meaningful
 	     * // line numbers in error messages and stack traces.
-	     * fs.writeFileSync(path.join(cwd, 'jst.js'), '\
+	     * fs.writeFileSync(path.join(process.cwd(), 'jst.js'), '\
 	     *   var JST = {\
 	     *     "main": ' + _.template(mainText).source + '\
 	     *   };\
 	     * ');
 	     */
 	    function template(string, options, guard) {
-	      // Based on John Resig's `tmpl` implementation (http://ejohn.org/blog/javascript-micro-templating/)
+	      // Based on John Resig's `tmpl` implementation
+	      // (http://ejohn.org/blog/javascript-micro-templating/)
 	      // and Laura Doktorova's doT.js (https://github.com/olado/doT).
 	      var settings = lodash.templateSettings;
 
@@ -24163,13 +25762,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the lower cased string.
 	     * @example
 	     *
-	     * _.toLower('--Foo-Bar');
-	     * // => '--foo-bar'
+	     * _.toLower('--Foo-Bar--');
+	     * // => '--foo-bar--'
 	     *
 	     * _.toLower('fooBar');
 	     * // => 'foobar'
@@ -24187,13 +25787,14 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the upper cased string.
 	     * @example
 	     *
-	     * _.toUpper('--foo-bar');
-	     * // => '--FOO-BAR'
+	     * _.toUpper('--foo-bar--');
+	     * // => '--FOO-BAR--'
 	     *
 	     * _.toUpper('fooBar');
 	     * // => 'FOOBAR'
@@ -24210,10 +25811,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to trim.
 	     * @param {string} [chars=whitespace] The characters to trim.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {string} Returns the trimmed string.
 	     * @example
 	     *
@@ -24228,22 +25830,18 @@ webpackJsonp([2,4],[
 	     */
 	    function trim(string, chars, guard) {
 	      string = toString(string);
-	      if (!string) {
-	        return string;
-	      }
-	      if (guard || chars === undefined) {
+	      if (string && (guard || chars === undefined)) {
 	        return string.replace(reTrim, '');
 	      }
-	      chars = (chars + '');
-	      if (!chars) {
+	      if (!string || !(chars = baseToString(chars))) {
 	        return string;
 	      }
 	      var strSymbols = stringToArray(string),
-	          chrSymbols = stringToArray(chars);
+	          chrSymbols = stringToArray(chars),
+	          start = charsStartIndex(strSymbols, chrSymbols),
+	          end = charsEndIndex(strSymbols, chrSymbols) + 1;
 
-	      return strSymbols
-	        .slice(charsStartIndex(strSymbols, chrSymbols), charsEndIndex(strSymbols, chrSymbols) + 1)
-	        .join('');
+	      return castSlice(strSymbols, start, end).join('');
 	    }
 
 	    /**
@@ -24251,10 +25849,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to trim.
 	     * @param {string} [chars=whitespace] The characters to trim.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {string} Returns the trimmed string.
 	     * @example
 	     *
@@ -24266,20 +25865,16 @@ webpackJsonp([2,4],[
 	     */
 	    function trimEnd(string, chars, guard) {
 	      string = toString(string);
-	      if (!string) {
-	        return string;
-	      }
-	      if (guard || chars === undefined) {
+	      if (string && (guard || chars === undefined)) {
 	        return string.replace(reTrimEnd, '');
 	      }
-	      chars = (chars + '');
-	      if (!chars) {
+	      if (!string || !(chars = baseToString(chars))) {
 	        return string;
 	      }
-	      var strSymbols = stringToArray(string);
-	      return strSymbols
-	        .slice(0, charsEndIndex(strSymbols, stringToArray(chars)) + 1)
-	        .join('');
+	      var strSymbols = stringToArray(string),
+	          end = charsEndIndex(strSymbols, stringToArray(chars)) + 1;
+
+	      return castSlice(strSymbols, 0, end).join('');
 	    }
 
 	    /**
@@ -24287,10 +25882,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to trim.
 	     * @param {string} [chars=whitespace] The characters to trim.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {string} Returns the trimmed string.
 	     * @example
 	     *
@@ -24302,20 +25898,16 @@ webpackJsonp([2,4],[
 	     */
 	    function trimStart(string, chars, guard) {
 	      string = toString(string);
-	      if (!string) {
-	        return string;
-	      }
-	      if (guard || chars === undefined) {
+	      if (string && (guard || chars === undefined)) {
 	        return string.replace(reTrimStart, '');
 	      }
-	      chars = (chars + '');
-	      if (!chars) {
+	      if (!string || !(chars = baseToString(chars))) {
 	        return string;
 	      }
-	      var strSymbols = stringToArray(string);
-	      return strSymbols
-	        .slice(charsStartIndex(strSymbols, stringToArray(chars)))
-	        .join('');
+	      var strSymbols = stringToArray(string),
+	          start = charsStartIndex(strSymbols, stringToArray(chars));
+
+	      return castSlice(strSymbols, start).join('');
 	    }
 
 	    /**
@@ -24325,9 +25917,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to truncate.
-	     * @param {Object} [options=({})] The options object.
+	     * @param {Object} [options={}] The options object.
 	     * @param {number} [options.length=30] The maximum string length.
 	     * @param {string} [options.omission='...'] The string to indicate text is omitted.
 	     * @param {RegExp|string} [options.separator] The separator pattern to truncate to.
@@ -24361,7 +25954,7 @@ webpackJsonp([2,4],[
 	      if (isObject(options)) {
 	        var separator = 'separator' in options ? options.separator : separator;
 	        length = 'length' in options ? toInteger(options.length) : length;
-	        omission = 'omission' in options ? toString(options.omission) : omission;
+	        omission = 'omission' in options ? baseToString(options.omission) : omission;
 	      }
 	      string = toString(string);
 
@@ -24378,7 +25971,7 @@ webpackJsonp([2,4],[
 	        return omission;
 	      }
 	      var result = strSymbols
-	        ? strSymbols.slice(0, end).join('')
+	        ? castSlice(strSymbols, 0, end).join('')
 	        : string.slice(0, end);
 
 	      if (separator === undefined) {
@@ -24401,7 +25994,7 @@ webpackJsonp([2,4],[
 	          }
 	          result = result.slice(0, newEnd === undefined ? end : newEnd);
 	        }
-	      } else if (string.indexOf(separator, end) != end) {
+	      } else if (string.indexOf(baseToString(separator), end) != end) {
 	        var index = result.lastIndexOf(separator);
 	        if (index > -1) {
 	          result = result.slice(0, index);
@@ -24412,14 +26005,15 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * The inverse of `_.escape`; this method converts the HTML entities
-	     * `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, and `&#96;` in `string` to their
-	     * corresponding characters.
+	     * `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`, and `&#96;` in `string` to
+	     * their corresponding characters.
 	     *
-	     * **Note:** No other HTML entities are unescaped. To unescape additional HTML
-	     * entities use a third-party library like [_he_](https://mths.be/he).
+	     * **Note:** No other HTML entities are unescaped. To unescape additional
+	     * HTML entities use a third-party library like [_he_](https://mths.be/he).
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 0.6.0
 	     * @category String
 	     * @param {string} [string=''] The string to unescape.
 	     * @returns {string} Returns the unescaped string.
@@ -24440,6 +26034,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to convert.
 	     * @returns {string} Returns the upper cased string.
@@ -24459,14 +26054,34 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
+	     * Converts the first character of `string` to upper case.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.0.0
+	     * @category String
+	     * @param {string} [string=''] The string to convert.
+	     * @returns {string} Returns the converted string.
+	     * @example
+	     *
+	     * _.upperFirst('fred');
+	     * // => 'Fred'
+	     *
+	     * _.upperFirst('FRED');
+	     * // => 'FRED'
+	     */
+	    var upperFirst = createCaseFirst('toUpperCase');
+
+	    /**
 	     * Splits `string` into an array of its words.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category String
 	     * @param {string} [string=''] The string to inspect.
 	     * @param {RegExp|string} [pattern] The pattern to match words.
-	     * @param- {Object} [guard] Enables use as an iteratee for functions like `_.map`.
+	     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
 	     * @returns {Array} Returns the words of `string`.
 	     * @example
 	     *
@@ -24494,8 +26109,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Util
 	     * @param {Function} func The function to attempt.
+	     * @param {...*} [args] The arguments to invoke `func` with.
 	     * @returns {*} Returns the `func` result or error object.
 	     * @example
 	     *
@@ -24523,11 +26140,11 @@ webpackJsonp([2,4],[
 	     * **Note:** This method doesn't set the "length" property of bound functions.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {Object} object The object to bind and assign the bound methods to.
-	     * @param {...(string|string[])} methodNames The object method names to bind,
-	     *  specified individually or in arrays.
+	     * @param {...(string|string[])} methodNames The object method names to bind.
 	     * @returns {Object} Returns `object`.
 	     * @example
 	     *
@@ -24538,28 +26155,30 @@ webpackJsonp([2,4],[
 	     *   }
 	     * };
 	     *
-	     * _.bindAll(view, 'onClick');
+	     * _.bindAll(view, ['onClick']);
 	     * jQuery(element).on('click', view.onClick);
-	     * // => logs 'clicked docs' when clicked
+	     * // => Logs 'clicked docs' when clicked.
 	     */
 	    var bindAll = rest(function(object, methodNames) {
 	      arrayEach(baseFlatten(methodNames, 1), function(key) {
+	        key = toKey(key);
 	        object[key] = bind(object[key], object);
 	      });
 	      return object;
 	    });
 
 	    /**
-	     * Creates a function that iterates over `pairs` invoking the corresponding
+	     * Creates a function that iterates over `pairs` and invokes the corresponding
 	     * function of the first predicate to return truthy. The predicate-function
 	     * pairs are invoked with the `this` binding and arguments of the created
 	     * function.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
 	     * @param {Array} pairs The predicate-function pairs.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new composite function.
 	     * @example
 	     *
 	     * var func = _.cond([
@@ -24606,9 +26225,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
 	     * @param {Object} source The object of property predicates to conform to.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     * @example
 	     *
 	     * var users = [
@@ -24616,7 +26236,7 @@ webpackJsonp([2,4],[
 	     *   { 'user': 'fred',   'age': 40 }
 	     * ];
 	     *
-	     * _.filter(users, _.conforms({ 'age': _.partial(_.gt, _, 38) }));
+	     * _.filter(users, _.conforms({ 'age': function(n) { return n > 38; } }));
 	     * // => [{ 'user': 'fred', 'age': 40 }]
 	     */
 	    function conforms(source) {
@@ -24628,15 +26248,18 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.4.0
 	     * @category Util
 	     * @param {*} value The value to return from the new function.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new constant function.
 	     * @example
 	     *
-	     * var object = { 'user': 'fred' };
-	     * var getter = _.constant(object);
+	     * var objects = _.times(2, _.constant({ 'a': 1 }));
 	     *
-	     * getter() === object;
+	     * console.log(objects);
+	     * // => [{ 'a': 1 }, { 'a': 1 }]
+	     *
+	     * console.log(objects[0] === objects[1]);
 	     * // => true
 	     */
 	    function constant(value) {
@@ -24652,16 +26275,18 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Util
 	     * @param {...(Function|Function[])} [funcs] Functions to invoke.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new composite function.
+	     * @see _.flowRight
 	     * @example
 	     *
 	     * function square(n) {
 	     *   return n * n;
 	     * }
 	     *
-	     * var addSquare = _.flow(_.add, square);
+	     * var addSquare = _.flow([_.add, square]);
 	     * addSquare(1, 2);
 	     * // => 9
 	     */
@@ -24672,17 +26297,19 @@ webpackJsonp([2,4],[
 	     * invokes the given functions from right to left.
 	     *
 	     * @static
+	     * @since 3.0.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {...(Function|Function[])} [funcs] Functions to invoke.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new composite function.
+	     * @see _.flow
 	     * @example
 	     *
 	     * function square(n) {
 	     *   return n * n;
 	     * }
 	     *
-	     * var addSquare = _.flowRight(square, _.add);
+	     * var addSquare = _.flowRight([square, _.add]);
 	     * addSquare(1, 2);
 	     * // => 9
 	     */
@@ -24692,6 +26319,7 @@ webpackJsonp([2,4],[
 	     * This method returns the first argument given to it.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {*} value Any value.
@@ -24700,7 +26328,7 @@ webpackJsonp([2,4],[
 	     *
 	     * var object = { 'user': 'fred' };
 	     *
-	     * _.identity(object) === object;
+	     * console.log(_.identity(object) === object);
 	     * // => true
 	     */
 	    function identity(value) {
@@ -24709,12 +26337,13 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that invokes `func` with the arguments of the created
-	     * function. If `func` is a property name the created callback returns the
-	     * property value for a given element. If `func` is an object the created
-	     * callback returns `true` for elements that contain the equivalent object
-	     * properties, otherwise it returns `false`.
+	     * function. If `func` is a property name, the created function returns the
+	     * property value for a given element. If `func` is an array or object, the
+	     * created function returns `true` for elements that contain the equivalent
+	     * source properties, otherwise it returns `false`.
 	     *
 	     * @static
+	     * @since 4.0.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {*} [func=_.identity] The value to convert to a callback.
@@ -24722,20 +26351,31 @@ webpackJsonp([2,4],[
 	     * @example
 	     *
 	     * var users = [
-	     *   { 'user': 'barney', 'age': 36 },
-	     *   { 'user': 'fred',   'age': 40 }
+	     *   { 'user': 'barney', 'age': 36, 'active': true },
+	     *   { 'user': 'fred',   'age': 40, 'active': false }
 	     * ];
 	     *
+	     * // The `_.matches` iteratee shorthand.
+	     * _.filter(users, _.iteratee({ 'user': 'barney', 'active': true }));
+	     * // => [{ 'user': 'barney', 'age': 36, 'active': true }]
+	     *
+	     * // The `_.matchesProperty` iteratee shorthand.
+	     * _.filter(users, _.iteratee(['user', 'fred']));
+	     * // => [{ 'user': 'fred', 'age': 40 }]
+	     *
+	     * // The `_.property` iteratee shorthand.
+	     * _.map(users, _.iteratee('user'));
+	     * // => ['barney', 'fred']
+	     *
 	     * // Create custom iteratee shorthands.
-	     * _.iteratee = _.wrap(_.iteratee, function(callback, func) {
-	     *   var p = /^(\S+)\s*([<>])\s*(\S+)$/.exec(func);
-	     *   return !p ? callback(func) : function(object) {
-	     *     return (p[2] == '>' ? object[p[1]] > p[3] : object[p[1]] < p[3]);
+	     * _.iteratee = _.wrap(_.iteratee, function(iteratee, func) {
+	     *   return !_.isRegExp(func) ? iteratee(func) : function(string) {
+	     *     return func.test(string);
 	     *   };
 	     * });
 	     *
-	     * _.filter(users, 'age > 36');
-	     * // => [{ 'user': 'fred', 'age': 40 }]
+	     * _.filter(['abc', 'def'], /ef/);
+	     * // => ['def']
 	     */
 	    function iteratee(func) {
 	      return baseIteratee(typeof func == 'function' ? func : baseClone(func, true));
@@ -24751,9 +26391,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Util
 	     * @param {Object} source The object of property values to match.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     * @example
 	     *
 	     * var users = [
@@ -24777,10 +26418,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.2.0
 	     * @category Util
 	     * @param {Array|string} path The path of the property to get.
 	     * @param {*} srcValue The value to match.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new spec function.
 	     * @example
 	     *
 	     * var users = [
@@ -24801,22 +26443,23 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.7.0
 	     * @category Util
 	     * @param {Array|string} path The path of the method to invoke.
 	     * @param {...*} [args] The arguments to invoke the method with.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new invoker function.
 	     * @example
 	     *
 	     * var objects = [
-	     *   { 'a': { 'b': { 'c': _.constant(2) } } },
-	     *   { 'a': { 'b': { 'c': _.constant(1) } } }
+	     *   { 'a': { 'b': _.constant(2) } },
+	     *   { 'a': { 'b': _.constant(1) } }
 	     * ];
 	     *
-	     * _.map(objects, _.method('a.b.c'));
+	     * _.map(objects, _.method('a.b'));
 	     * // => [2, 1]
 	     *
-	     * _.invokeMap(_.sortBy(objects, _.method(['a', 'b', 'c'])), 'a.b.c');
-	     * // => [1, 2]
+	     * _.map(objects, _.method(['a', 'b']));
+	     * // => [2, 1]
 	     */
 	    var method = rest(function(path, args) {
 	      return function(object) {
@@ -24831,10 +26474,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.7.0
 	     * @category Util
 	     * @param {Object} object The object to query.
 	     * @param {...*} [args] The arguments to invoke the method with.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new invoker function.
 	     * @example
 	     *
 	     * var array = _.times(3, _.constant),
@@ -24853,21 +26497,21 @@ webpackJsonp([2,4],[
 	    });
 
 	    /**
-	     * Adds all own enumerable function properties of a source object to the
-	     * destination object. If `object` is a function then methods are added to
-	     * its prototype as well.
+	     * Adds all own enumerable string keyed function properties of a source
+	     * object to the destination object. If `object` is a function, then methods
+	     * are added to its prototype as well.
 	     *
 	     * **Note:** Use `_.runInContext` to create a pristine `lodash` function to
 	     * avoid conflicts caused by modifying the original.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {Function|Object} [object=lodash] The destination object.
 	     * @param {Object} source The object of functions to add.
-	     * @param {Object} [options] The options object.
-	     * @param {boolean} [options.chain=true] Specify whether the functions added
-	     *  are chainable.
+	     * @param {Object} [options={}] The options object.
+	     * @param {boolean} [options.chain=true] Specify whether mixins are chainable.
 	     * @returns {Function|Object} Returns `object`.
 	     * @example
 	     *
@@ -24899,7 +26543,7 @@ webpackJsonp([2,4],[
 	        object = this;
 	        methodNames = baseFunctions(source, keys(source));
 	      }
-	      var chain = (isObject(options) && 'chain' in options) ? options.chain : true,
+	      var chain = !(isObject(options) && 'chain' in options) || !!options.chain,
 	          isFunc = isFunction(object);
 
 	      arrayEach(methodNames, function(methodName) {
@@ -24929,6 +26573,7 @@ webpackJsonp([2,4],[
 	     * the `lodash` function.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @returns {Function} Returns the `lodash` function.
@@ -24944,57 +26589,62 @@ webpackJsonp([2,4],[
 	    }
 
 	    /**
-	     * A no-operation function that returns `undefined` regardless of the
-	     * arguments it receives.
+	     * A method that returns `undefined`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.3.0
 	     * @category Util
 	     * @example
 	     *
-	     * var object = { 'user': 'fred' };
-	     *
-	     * _.noop(object) === undefined;
-	     * // => true
+	     * _.times(2, _.noop);
+	     * // => [undefined, undefined]
 	     */
 	    function noop() {
 	      // No operation performed.
 	    }
 
 	    /**
-	     * Creates a function that returns its nth argument.
+	     * Creates a function that gets the argument at index `n`. If `n` is negative,
+	     * the nth argument from the end is returned.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
 	     * @param {number} [n=0] The index of the argument to return.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new pass-thru function.
 	     * @example
 	     *
 	     * var func = _.nthArg(1);
-	     *
-	     * func('a', 'b', 'c');
+	     * func('a', 'b', 'c', 'd');
 	     * // => 'b'
+	     *
+	     * var func = _.nthArg(-2);
+	     * func('a', 'b', 'c', 'd');
+	     * // => 'c'
 	     */
 	    function nthArg(n) {
 	      n = toInteger(n);
-	      return function() {
-	        return arguments[n];
-	      };
+	      return rest(function(args) {
+	        return baseNth(args, n);
+	      });
 	    }
 
 	    /**
-	     * Creates a function that invokes `iteratees` with the arguments provided
-	     * to the created function and returns their results.
+	     * Creates a function that invokes `iteratees` with the arguments it receives
+	     * and returns their results.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
-	     * @param {...(Function|Function[])} iteratees The iteratees to invoke.
+	     * @param {...(Array|Array[]|Function|Function[]|Object|Object[]|string|string[])}
+	     *  [iteratees=[_.identity]] The iteratees to invoke.
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
-	     * var func = _.over(Math.max, Math.min);
+	     * var func = _.over([Math.max, Math.min]);
 	     *
 	     * func(1, 2, 3, 4);
 	     * // => [4, 1]
@@ -25003,16 +26653,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that checks if **all** of the `predicates` return
-	     * truthy when invoked with the arguments provided to the created function.
+	     * truthy when invoked with the arguments it receives.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
-	     * @param {...(Function|Function[])} predicates The predicates to check.
+	     * @param {...(Array|Array[]|Function|Function[]|Object|Object[]|string|string[])}
+	     *  [predicates=[_.identity]] The predicates to check.
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
-	     * var func = _.overEvery(Boolean, isFinite);
+	     * var func = _.overEvery([Boolean, isFinite]);
 	     *
 	     * func('1');
 	     * // => true
@@ -25027,16 +26679,18 @@ webpackJsonp([2,4],[
 
 	    /**
 	     * Creates a function that checks if **any** of the `predicates` return
-	     * truthy when invoked with the arguments provided to the created function.
+	     * truthy when invoked with the arguments it receives.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
-	     * @param {...(Function|Function[])} predicates The predicates to check.
+	     * @param {...(Array|Array[]|Function|Function[]|Object|Object[]|string|string[])}
+	     *  [predicates=[_.identity]] The predicates to check.
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
-	     * var func = _.overSome(Boolean, isFinite);
+	     * var func = _.overSome([Boolean, isFinite]);
 	     *
 	     * func('1');
 	     * // => true
@@ -25054,24 +26708,25 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 2.4.0
 	     * @category Util
 	     * @param {Array|string} path The path of the property to get.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new accessor function.
 	     * @example
 	     *
 	     * var objects = [
-	     *   { 'a': { 'b': { 'c': 2 } } },
-	     *   { 'a': { 'b': { 'c': 1 } } }
+	     *   { 'a': { 'b': 2 } },
+	     *   { 'a': { 'b': 1 } }
 	     * ];
 	     *
-	     * _.map(objects, _.property('a.b.c'));
+	     * _.map(objects, _.property('a.b'));
 	     * // => [2, 1]
 	     *
-	     * _.map(_.sortBy(objects, _.property(['a', 'b', 'c'])), 'a.b.c');
+	     * _.map(_.sortBy(objects, _.property(['a', 'b'])), 'a.b');
 	     * // => [1, 2]
 	     */
 	    function property(path) {
-	      return isKey(path) ? baseProperty(path) : basePropertyDeep(path);
+	      return isKey(path) ? baseProperty(toKey(path)) : basePropertyDeep(path);
 	    }
 
 	    /**
@@ -25080,9 +26735,10 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.0.0
 	     * @category Util
 	     * @param {Object} object The object to query.
-	     * @returns {Function} Returns the new function.
+	     * @returns {Function} Returns the new accessor function.
 	     * @example
 	     *
 	     * var array = [0, 1, 2],
@@ -25103,19 +26759,21 @@ webpackJsonp([2,4],[
 	    /**
 	     * Creates an array of numbers (positive and/or negative) progressing from
 	     * `start` up to, but not including, `end`. A step of `-1` is used if a negative
-	     * `start` is specified without an `end` or `step`. If `end` is not specified
+	     * `start` is specified without an `end` or `step`. If `end` is not specified,
 	     * it's set to `start` with `start` then set to `0`.
 	     *
 	     * **Note:** JavaScript follows the IEEE-754 standard for resolving
 	     * floating-point values which can produce unexpected results.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {number} [start=0] The start of the range.
 	     * @param {number} end The end of the range.
 	     * @param {number} [step=1] The value to increment or decrement by.
-	     * @returns {Array} Returns the new array of numbers.
+	     * @returns {Array} Returns the range of numbers.
+	     * @see _.inRange, _.rangeRight
 	     * @example
 	     *
 	     * _.range(4);
@@ -25147,11 +26805,13 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
 	     * @param {number} [start=0] The start of the range.
 	     * @param {number} end The end of the range.
 	     * @param {number} [step=1] The value to increment or decrement by.
-	     * @returns {Array} Returns the new array of numbers.
+	     * @returns {Array} Returns the range of numbers.
+	     * @see _.inRange, _.range
 	     * @example
 	     *
 	     * _.rangeRight(4);
@@ -25178,10 +26838,106 @@ webpackJsonp([2,4],[
 	    var rangeRight = createRange(true);
 
 	    /**
+	     * A method that returns a new empty array.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.13.0
+	     * @category Util
+	     * @returns {Array} Returns the new empty array.
+	     * @example
+	     *
+	     * var arrays = _.times(2, _.stubArray);
+	     *
+	     * console.log(arrays);
+	     * // => [[], []]
+	     *
+	     * console.log(arrays[0] === arrays[1]);
+	     * // => false
+	     */
+	    function stubArray() {
+	      return [];
+	    }
+
+	    /**
+	     * A method that returns `false`.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.13.0
+	     * @category Util
+	     * @returns {boolean} Returns `false`.
+	     * @example
+	     *
+	     * _.times(2, _.stubFalse);
+	     * // => [false, false]
+	     */
+	    function stubFalse() {
+	      return false;
+	    }
+
+	    /**
+	     * A method that returns a new empty object.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.13.0
+	     * @category Util
+	     * @returns {Object} Returns the new empty object.
+	     * @example
+	     *
+	     * var objects = _.times(2, _.stubObject);
+	     *
+	     * console.log(objects);
+	     * // => [{}, {}]
+	     *
+	     * console.log(objects[0] === objects[1]);
+	     * // => false
+	     */
+	    function stubObject() {
+	      return {};
+	    }
+
+	    /**
+	     * A method that returns an empty string.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.13.0
+	     * @category Util
+	     * @returns {string} Returns the empty string.
+	     * @example
+	     *
+	     * _.times(2, _.stubString);
+	     * // => ['', '']
+	     */
+	    function stubString() {
+	      return '';
+	    }
+
+	    /**
+	     * A method that returns `true`.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.13.0
+	     * @category Util
+	     * @returns {boolean} Returns `true`.
+	     * @example
+	     *
+	     * _.times(2, _.stubTrue);
+	     * // => [true, true]
+	     */
+	    function stubTrue() {
+	      return true;
+	    }
+
+	    /**
 	     * Invokes the iteratee `n` times, returning an array of the results of
 	     * each invocation. The iteratee is invoked with one argument; (index).
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {number} n The number of times to invoke `iteratee`.
@@ -25192,8 +26948,8 @@ webpackJsonp([2,4],[
 	     * _.times(3, String);
 	     * // => ['0', '1', '2']
 	     *
-	     *  _.times(4, _.constant(true));
-	     * // => [true, true, true, true]
+	     *  _.times(4, _.constant(0));
+	     * // => [0, 0, 0, 0]
 	     */
 	    function times(n, iteratee) {
 	      n = toInteger(n);
@@ -25203,7 +26959,7 @@ webpackJsonp([2,4],[
 	      var index = MAX_ARRAY_LENGTH,
 	          length = nativeMin(n, MAX_ARRAY_LENGTH);
 
-	      iteratee = baseCastFunction(iteratee);
+	      iteratee = getIteratee(iteratee);
 	      n -= MAX_ARRAY_LENGTH;
 
 	      var result = baseTimes(length, iteratee);
@@ -25218,6 +26974,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Util
 	     * @param {*} value The value to convert.
 	     * @returns {Array} Returns the new property path array.
@@ -25228,24 +26985,19 @@ webpackJsonp([2,4],[
 	     *
 	     * _.toPath('a[0].b.c');
 	     * // => ['a', '0', 'b', 'c']
-	     *
-	     * var path = ['a', 'b', 'c'],
-	     *     newPath = _.toPath(path);
-	     *
-	     * console.log(newPath);
-	     * // => ['a', 'b', 'c']
-	     *
-	     * console.log(path === newPath);
-	     * // => false
 	     */
 	    function toPath(value) {
-	      return isArray(value) ? arrayMap(value, String) : stringToPath(value);
+	      if (isArray(value)) {
+	        return arrayMap(value, toKey);
+	      }
+	      return isSymbol(value) ? [value] : copyArray(stringToPath(value));
 	    }
 
 	    /**
-	     * Generates a unique ID. If `prefix` is given the ID is appended to it.
+	     * Generates a unique ID. If `prefix` is given, the ID is appended to it.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Util
 	     * @param {string} [prefix=''] The value to prefix the ID with.
@@ -25270,6 +27022,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.4.0
 	     * @category Math
 	     * @param {number} augend The first number in an addition.
 	     * @param {number} addend The second number in an addition.
@@ -25279,25 +27032,16 @@ webpackJsonp([2,4],[
 	     * _.add(6, 4);
 	     * // => 10
 	     */
-	    function add(augend, addend) {
-	      var result;
-	      if (augend === undefined && addend === undefined) {
-	        return 0;
-	      }
-	      if (augend !== undefined) {
-	        result = augend;
-	      }
-	      if (addend !== undefined) {
-	        result = result === undefined ? addend : (result + addend);
-	      }
-	      return result;
-	    }
+	    var add = createMathOperation(function(augend, addend) {
+	      return augend + addend;
+	    });
 
 	    /**
 	     * Computes `number` rounded up to `precision`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.10.0
 	     * @category Math
 	     * @param {number} number The number to round up.
 	     * @param {number} [precision=0] The precision to round up to.
@@ -25316,10 +27060,30 @@ webpackJsonp([2,4],[
 	    var ceil = createRound('ceil');
 
 	    /**
+	     * Divide two numbers.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.7.0
+	     * @category Math
+	     * @param {number} dividend The first number in a division.
+	     * @param {number} divisor The second number in a division.
+	     * @returns {number} Returns the quotient.
+	     * @example
+	     *
+	     * _.divide(6, 4);
+	     * // => 1.5
+	     */
+	    var divide = createMathOperation(function(dividend, divisor) {
+	      return dividend / divisor;
+	    });
+
+	    /**
 	     * Computes `number` rounded down to `precision`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.10.0
 	     * @category Math
 	     * @param {number} number The number to round down.
 	     * @param {number} [precision=0] The precision to round down to.
@@ -25338,10 +27102,11 @@ webpackJsonp([2,4],[
 	    var floor = createRound('floor');
 
 	    /**
-	     * Computes the maximum value of `array`. If `array` is empty or falsey
+	     * Computes the maximum value of `array`. If `array` is empty or falsey,
 	     * `undefined` is returned.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
@@ -25356,7 +27121,7 @@ webpackJsonp([2,4],[
 	     */
 	    function max(array) {
 	      return (array && array.length)
-	        ? baseExtremum(array, identity, gt)
+	        ? baseExtremum(array, identity, baseGt)
 	        : undefined;
 	    }
 
@@ -25367,9 +27132,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {*} Returns the maximum value.
 	     * @example
 	     *
@@ -25384,7 +27151,7 @@ webpackJsonp([2,4],[
 	     */
 	    function maxBy(array, iteratee) {
 	      return (array && array.length)
-	        ? baseExtremum(array, getIteratee(iteratee), gt)
+	        ? baseExtremum(array, getIteratee(iteratee), baseGt)
 	        : undefined;
 	    }
 
@@ -25393,6 +27160,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
 	     * @returns {number} Returns the mean.
@@ -25402,14 +27170,43 @@ webpackJsonp([2,4],[
 	     * // => 5
 	     */
 	    function mean(array) {
-	      return sum(array) / (array ? array.length : 0);
+	      return baseMean(array, identity);
 	    }
 
 	    /**
-	     * Computes the minimum value of `array`. If `array` is empty or falsey
+	     * This method is like `_.mean` except that it accepts `iteratee` which is
+	     * invoked for each element in `array` to generate the value to be averaged.
+	     * The iteratee is invoked with one argument: (value).
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.7.0
+	     * @category Math
+	     * @param {Array} array The array to iterate over.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
+	     * @returns {number} Returns the mean.
+	     * @example
+	     *
+	     * var objects = [{ 'n': 4 }, { 'n': 2 }, { 'n': 8 }, { 'n': 6 }];
+	     *
+	     * _.meanBy(objects, function(o) { return o.n; });
+	     * // => 5
+	     *
+	     * // The `_.property` iteratee shorthand.
+	     * _.meanBy(objects, 'n');
+	     * // => 5
+	     */
+	    function meanBy(array, iteratee) {
+	      return baseMean(array, getIteratee(iteratee));
+	    }
+
+	    /**
+	     * Computes the minimum value of `array`. If `array` is empty or falsey,
 	     * `undefined` is returned.
 	     *
 	     * @static
+	     * @since 0.1.0
 	     * @memberOf _
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
@@ -25424,7 +27221,7 @@ webpackJsonp([2,4],[
 	     */
 	    function min(array) {
 	      return (array && array.length)
-	        ? baseExtremum(array, identity, lt)
+	        ? baseExtremum(array, identity, baseLt)
 	        : undefined;
 	    }
 
@@ -25435,9 +27232,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {*} Returns the minimum value.
 	     * @example
 	     *
@@ -25452,15 +27251,35 @@ webpackJsonp([2,4],[
 	     */
 	    function minBy(array, iteratee) {
 	      return (array && array.length)
-	        ? baseExtremum(array, getIteratee(iteratee), lt)
+	        ? baseExtremum(array, getIteratee(iteratee), baseLt)
 	        : undefined;
 	    }
+
+	    /**
+	     * Multiply two numbers.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @since 4.7.0
+	     * @category Math
+	     * @param {number} multiplier The first number in a multiplication.
+	     * @param {number} multiplicand The second number in a multiplication.
+	     * @returns {number} Returns the product.
+	     * @example
+	     *
+	     * _.multiply(6, 4);
+	     * // => 24
+	     */
+	    var multiply = createMathOperation(function(multiplier, multiplicand) {
+	      return multiplier * multiplicand;
+	    });
 
 	    /**
 	     * Computes `number` rounded to `precision`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.10.0
 	     * @category Math
 	     * @param {number} number The number to round.
 	     * @param {number} [precision=0] The precision to round to.
@@ -25483,6 +27302,7 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Math
 	     * @param {number} minuend The first number in a subtraction.
 	     * @param {number} subtrahend The second number in a subtraction.
@@ -25492,25 +27312,16 @@ webpackJsonp([2,4],[
 	     * _.subtract(6, 4);
 	     * // => 2
 	     */
-	    function subtract(minuend, subtrahend) {
-	      var result;
-	      if (minuend === undefined && subtrahend === undefined) {
-	        return 0;
-	      }
-	      if (minuend !== undefined) {
-	        result = minuend;
-	      }
-	      if (subtrahend !== undefined) {
-	        result = result === undefined ? subtrahend : (result - subtrahend);
-	      }
-	      return result;
-	    }
+	    var subtract = createMathOperation(function(minuend, subtrahend) {
+	      return minuend - subtrahend;
+	    });
 
 	    /**
 	     * Computes the sum of the values in `array`.
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 3.4.0
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
 	     * @returns {number} Returns the sum.
@@ -25532,9 +27343,11 @@ webpackJsonp([2,4],[
 	     *
 	     * @static
 	     * @memberOf _
+	     * @since 4.0.0
 	     * @category Math
 	     * @param {Array} array The array to iterate over.
-	     * @param {Function|Object|string} [iteratee=_.identity] The iteratee invoked per element.
+	     * @param {Array|Function|Object|string} [iteratee=_.identity]
+	     *  The iteratee invoked per element.
 	     * @returns {number} Returns the sum.
 	     * @example
 	     *
@@ -25555,40 +27368,7 @@ webpackJsonp([2,4],[
 
 	    /*------------------------------------------------------------------------*/
 
-	    // Ensure wrappers are instances of `baseLodash`.
-	    lodash.prototype = baseLodash.prototype;
-	    lodash.prototype.constructor = lodash;
-
-	    LodashWrapper.prototype = baseCreate(baseLodash.prototype);
-	    LodashWrapper.prototype.constructor = LodashWrapper;
-
-	    LazyWrapper.prototype = baseCreate(baseLodash.prototype);
-	    LazyWrapper.prototype.constructor = LazyWrapper;
-
-	    // Avoid inheriting from `Object.prototype` when possible.
-	    Hash.prototype = nativeCreate ? nativeCreate(null) : objectProto;
-
-	    // Add functions to the `MapCache`.
-	    MapCache.prototype.clear = mapClear;
-	    MapCache.prototype['delete'] = mapDelete;
-	    MapCache.prototype.get = mapGet;
-	    MapCache.prototype.has = mapHas;
-	    MapCache.prototype.set = mapSet;
-
-	    // Add functions to the `SetCache`.
-	    SetCache.prototype.push = cachePush;
-
-	    // Add functions to the `Stack` cache.
-	    Stack.prototype.clear = stackClear;
-	    Stack.prototype['delete'] = stackDelete;
-	    Stack.prototype.get = stackGet;
-	    Stack.prototype.has = stackHas;
-	    Stack.prototype.set = stackSet;
-
-	    // Assign cache to `_.memoize`.
-	    memoize.Cache = MapCache;
-
-	    // Add functions that return wrapped values when chaining.
+	    // Add methods that return wrapped values in chain sequences.
 	    lodash.after = after;
 	    lodash.ary = ary;
 	    lodash.assign = assign;
@@ -25627,6 +27407,8 @@ webpackJsonp([2,4],[
 	    lodash.fill = fill;
 	    lodash.filter = filter;
 	    lodash.flatMap = flatMap;
+	    lodash.flatMapDeep = flatMapDeep;
+	    lodash.flatMapDepth = flatMapDepth;
 	    lodash.flatten = flatten;
 	    lodash.flattenDeep = flattenDeep;
 	    lodash.flattenDepth = flattenDepth;
@@ -25738,15 +27520,17 @@ webpackJsonp([2,4],[
 	    lodash.zipWith = zipWith;
 
 	    // Add aliases.
+	    lodash.entries = toPairs;
+	    lodash.entriesIn = toPairsIn;
 	    lodash.extend = assignIn;
 	    lodash.extendWith = assignInWith;
 
-	    // Add functions to `lodash.prototype`.
+	    // Add methods to `lodash.prototype`.
 	    mixin(lodash, lodash);
 
 	    /*------------------------------------------------------------------------*/
 
-	    // Add functions that return unwrapped values when chaining.
+	    // Add methods that return unwrapped values in chain sequences.
 	    lodash.add = add;
 	    lodash.attempt = attempt;
 	    lodash.camelCase = camelCase;
@@ -25758,6 +27542,7 @@ webpackJsonp([2,4],[
 	    lodash.cloneDeepWith = cloneDeepWith;
 	    lodash.cloneWith = cloneWith;
 	    lodash.deburr = deburr;
+	    lodash.divide = divide;
 	    lodash.endsWith = endsWith;
 	    lodash.eq = eq;
 	    lodash.escape = escape;
@@ -25835,8 +27620,16 @@ webpackJsonp([2,4],[
 	    lodash.max = max;
 	    lodash.maxBy = maxBy;
 	    lodash.mean = mean;
+	    lodash.meanBy = meanBy;
 	    lodash.min = min;
 	    lodash.minBy = minBy;
+	    lodash.stubArray = stubArray;
+	    lodash.stubFalse = stubFalse;
+	    lodash.stubObject = stubObject;
+	    lodash.stubString = stubString;
+	    lodash.stubTrue = stubTrue;
+	    lodash.multiply = multiply;
+	    lodash.nth = nth;
 	    lodash.noConflict = noConflict;
 	    lodash.noop = noop;
 	    lodash.now = now;
@@ -25869,6 +27662,7 @@ webpackJsonp([2,4],[
 	    lodash.sumBy = sumBy;
 	    lodash.template = template;
 	    lodash.times = times;
+	    lodash.toFinite = toFinite;
 	    lodash.toInteger = toInteger;
 	    lodash.toLength = toLength;
 	    lodash.toLower = toLower;
@@ -26076,7 +27870,7 @@ webpackJsonp([2,4],[
 	      };
 	    });
 
-	    // Add `Array` and `String` methods to `lodash.prototype`.
+	    // Add `Array` methods to `lodash.prototype`.
 	    arrayEach(['pop', 'push', 'shift', 'sort', 'splice', 'unshift'], function(methodName) {
 	      var func = arrayProto[methodName],
 	          chainName = /^(?:push|sort|unshift)$/.test(methodName) ? 'tap' : 'thru',
@@ -26085,15 +27879,16 @@ webpackJsonp([2,4],[
 	      lodash.prototype[methodName] = function() {
 	        var args = arguments;
 	        if (retUnwrapped && !this.__chain__) {
-	          return func.apply(this.value(), args);
+	          var value = this.value();
+	          return func.apply(isArray(value) ? value : [], args);
 	        }
 	        return this[chainName](function(value) {
-	          return func.apply(value, args);
+	          return func.apply(isArray(value) ? value : [], args);
 	        });
 	      };
 	    });
 
-	    // Map minified function names to their real names.
+	    // Map minified method names to their real names.
 	    baseForOwn(LazyWrapper.prototype, function(func, methodName) {
 	      var lodashFunc = lodash[methodName];
 	      if (lodashFunc) {
@@ -26109,16 +27904,15 @@ webpackJsonp([2,4],[
 	      'func': undefined
 	    }];
 
-	    // Add functions to the lazy wrapper.
+	    // Add methods to `LazyWrapper`.
 	    LazyWrapper.prototype.clone = lazyClone;
 	    LazyWrapper.prototype.reverse = lazyReverse;
 	    LazyWrapper.prototype.value = lazyValue;
 
-	    // Add chaining functions to the `lodash` wrapper.
+	    // Add chain sequence methods to the `lodash` wrapper.
 	    lodash.prototype.at = wrapperAt;
 	    lodash.prototype.chain = wrapperChain;
 	    lodash.prototype.commit = wrapperCommit;
-	    lodash.prototype.flatMap = wrapperFlatMap;
 	    lodash.prototype.next = wrapperNext;
 	    lodash.prototype.plant = wrapperPlant;
 	    lodash.prototype.reverse = wrapperReverse;
@@ -26135,10 +27929,12 @@ webpackJsonp([2,4],[
 	  // Export lodash.
 	  var _ = runInContext();
 
-	  // Expose lodash on the free variable `window` or `self` when available. This
-	  // prevents errors in cases where lodash is loaded by a script tag in the presence
-	  // of an AMD loader. See http://requirejs.org/docs/errors.html#mismatch for more details.
-	  (freeWindow || freeSelf || {})._ = _;
+	  // Expose Lodash on the free variable `window` or `self` when available so it's
+	  // globally accessible, even when bundled with Browserify, Webpack, etc. This
+	  // also prevents errors in cases where Lodash is loaded by a script tag in the
+	  // presence of an AMD loader. See http://requirejs.org/docs/errors.html#mismatch
+	  // for more details. Use `_.noConflict` to remove Lodash from the global object.
+	  (freeSelf || {})._ = _;
 
 	  // Some AMD build optimizers like r.js check for condition patterns like the following:
 	  if (true) {
@@ -26149,11 +27945,9 @@ webpackJsonp([2,4],[
 	    }.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  }
 	  // Check for `exports` after `define` in case a build optimizer adds an `exports` object.
-	  else if (freeExports && freeModule) {
+	  else if (freeModule) {
 	    // Export for Node.js.
-	    if (moduleExports) {
-	      (freeModule.exports = _)._ = _;
-	    }
+	    (freeModule.exports = _)._ = _;
 	    // Export for CommonJS support.
 	    freeExports._ = _;
 	  }
@@ -26204,9 +27998,9 @@ webpackJsonp([2,4],[
 	}
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
-	  hotAPI.install(require("vue"), true)
+	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "D:\\cancelStation\\liveApp\\vendor\\components\\login.vue"
+	  var id = "./login.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -26391,7 +28185,7 @@ webpackJsonp([2,4],[
 /* 135 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\t<div id=\"_login_window_form\" :style=\"has_show\" _v-c1aa93d4=\"\">\n    <div id=\"delayLayer\" class=\"delayLayer\" :style=\"has_show\" _v-c1aa93d4=\"\"></div>\n    <div id=\"js-glb-login\" class=\"login-module\" :style=\"has_show\" _v-c1aa93d4=\"\">\n      <i class=\"tps\" _v-c1aa93d4=\"\"></i>\n      <div _v-c1aa93d4=\"\"><a href=\"javascript:void(0)\" class=\"close js-closed\" @click=\"closePane\" _v-c1aa93d4=\"\">X</a> </div>\n      <div class=\"tab\" _v-c1aa93d4=\"\">\n        <ul class=\"f-cb\" _v-c1aa93d4=\"\"><li class=\"js-tab-login\" :class=\"{curr: display=='login'}\" @click=\"changeROL('login')\" _v-c1aa93d4=\"\">登录</li><li class=\"js-tab-register\" :class=\"{curr: display=='registe'}\" @click=\"changeROL('registe')\" _v-c1aa93d4=\"\">注册</li></ul>\n      </div>\n      <div class=\"loginError\" _v-c1aa93d4=\"\">{{errMsg}}</div>\n      <div class=\"bd f-cb\" _v-c1aa93d4=\"\">\n        <form autocomplete=\"off\" _v-c1aa93d4=\"\">\n          <div class=\"reg-left\" _v-c1aa93d4=\"\">\n            <ol _v-c1aa93d4=\"\">\n              <li _v-c1aa93d4=\"\">\n                <input id=\"lab-name\" type=\"text\" placeholder=\"用户名\" @blur=\"blur\" v-model=\"username\" name=\"userName\" class=\"ipt-txt\" :class=\"{'err-txt': !!erruser}\" maxlength=\"16\" _v-c1aa93d4=\"\">\n                <!-- <label class=\"lab\" for=\"lab-name\">用户名</label> -->\n                <span class=\"reg-tips\" _v-c1aa93d4=\"\">{{erruser}}</span>\n              </li>\n              <li style=\"display: none\" _v-c1aa93d4=\"\"><input type=\"text\" _v-c1aa93d4=\"\"><input type=\"password\" _v-c1aa93d4=\"\"></li>\n              <li style=\"margin-top: 20px;\" _v-c1aa93d4=\"\">\n                <input type=\"password\" id=\"lab-pwd\" placeholder=\"密码\" v-model=\"password\" name=\"userPwd\" class=\"ipt-txt active\" autocomplete=\"off\" :class=\"{'err-txt': !!errpwd}\" _v-c1aa93d4=\"\">\n                <!-- <label class=\"lab\" for=\"lab-pwd\">输入密码</label> -->\n                <span class=\"reg-tips\" _v-c1aa93d4=\"\">{{errpwd}}</span>\n              </li>\n              <li style=\"height: 20px;\" _v-c1aa93d4=\"\"></li>\n              <!-- <li class=\"code\">\n                <input type=\"text\" id=\"lab-code\" maxlength=\"3\" name=\"vCode\" class=\"ipt-txt\" size=\"6\"><span class=\"js-vCode\"></span>\n                <label class=\"lab\" for=\"lab-code\">验证码</label>\n                <span class=\"reg-tips\"></span>\n              </li> -->\n            </ol>\n            <p class=\"js-check\" v-if=\"display=='login'\" _v-c1aa93d4=\"\"><a class=\"back fr xiusta\" href=\"/user/forgot_password\" target=\"_blank\" _v-c1aa93d4=\"\">找回密码</a><input type=\"checkbox\" name=\"remember\" id=\"ipt-pwd\" _v-c1aa93d4=\"\"><label for=\"ipt-pwd\" _v-c1aa93d4=\"\">记住密码</label></p>\n            <p class=\"js-check\" v-if=\"display=='registe'\" _v-c1aa93d4=\"\"><input type=\"checkbox\" checked=\"true\" name=\"protocol\" id=\"ipt-protocol\" _v-c1aa93d4=\"\"><label for=\"ipt-protocol\" _v-c1aa93d4=\"\">我已阅读并同意<a href=\"/account\" class=\"u-line xiusta\" target=\"_blank\" _v-c1aa93d4=\"\">&lt;&lt;来播吧服务用户条款&gt;&gt;</a></label></p>\n            <p class=\"btn-wrap\" _v-c1aa93d4=\"\"><a href=\"javascript:void(0)\" class=\"btn btn-reg js-submit\" @click=\"login\" _v-c1aa93d4=\"\">{{display == \"login\" ? \"登录\" : \"注册\"}}</a></p>\n            <p class=\"js-bd-tip\" v-if=\"display=='login'\" _v-c1aa93d4=\"\"><span _v-c1aa93d4=\"\">没有账号？<a class=\"js-lj-reg\" href=\"javascript:void(0)\" @click=\"changeROL('registe')\" _v-c1aa93d4=\"\">马上注册</a></span></p>\n          </div>\n        </form>\n        <!-- <div class=\"Q-login\">\n          <p>快速登录</p>\n          <p><a class=\"bai-btn js-login-baidu\" href=\"javascript:void(0)\">百度登录</a></p>\n          <p><a class=\"QQ-btn js-login-qq\" href=\"javascript:void(0)\">qq登录</a></p>\n        </div> -->\n      </div>\n    </div>\n  </div>\n";
+	module.exports = "\n\n\n\n\n\n\n\t<div id=\"_login_window_form\" :style=\"has_show\" _v-c1aa93d4=\"\">\n    <div id=\"delayLayer\" class=\"delayLayer\" :style=\"has_show\" _v-c1aa93d4=\"\"></div>\n    <div id=\"js-glb-login\" class=\"login-module\" :style=\"has_show\" _v-c1aa93d4=\"\">\n      <i class=\"tps\" _v-c1aa93d4=\"\"></i>\n      <div _v-c1aa93d4=\"\"><a href=\"javascript:void(0)\" class=\"close js-closed\" @click=\"closePane\" _v-c1aa93d4=\"\">X</a> </div>\n      <div class=\"tab\" _v-c1aa93d4=\"\">\n        <ul class=\"f-cb\" _v-c1aa93d4=\"\"><li class=\"js-tab-login\" :class=\"{curr: display=='login'}\" @click=\"changeROL('login')\" _v-c1aa93d4=\"\">登录</li><li class=\"js-tab-register\" :class=\"{curr: display=='registe'}\" @click=\"changeROL('registe')\" _v-c1aa93d4=\"\">注册</li></ul>\n      </div>\n      <div class=\"loginError\" _v-c1aa93d4=\"\">{{errMsg}}</div>\n      <div class=\"bd f-cb\" _v-c1aa93d4=\"\">\n        <form autocomplete=\"off\" _v-c1aa93d4=\"\">\n          <div class=\"reg-left\" _v-c1aa93d4=\"\">\n            <ol _v-c1aa93d4=\"\">\n              <li _v-c1aa93d4=\"\">\n                <input id=\"lab-name\" type=\"text\" placeholder=\"用户名\" @blur=\"blur\" v-model=\"username\" name=\"userName\" class=\"ipt-txt\" :class=\"{'err-txt': !!erruser}\" maxlength=\"16\" _v-c1aa93d4=\"\">\n                <!-- <label class=\"lab\" for=\"lab-name\">用户名</label> -->\n                <span class=\"reg-tips\" _v-c1aa93d4=\"\">{{erruser}}</span>\n              </li>\n              <li style=\"display: none\" _v-c1aa93d4=\"\"><input type=\"text\" _v-c1aa93d4=\"\"><input type=\"password\" _v-c1aa93d4=\"\"></li>\n              <li style=\"margin-top: 20px;\" _v-c1aa93d4=\"\">\n                <input type=\"password\" id=\"lab-pwd\" placeholder=\"密码\" v-model=\"password\" name=\"userPwd\" class=\"ipt-txt active\" autocomplete=\"off\" :class=\"{'err-txt': !!errpwd}\" _v-c1aa93d4=\"\">\n                <!-- <label class=\"lab\" for=\"lab-pwd\">输入密码</label> -->\n                <span class=\"reg-tips\" _v-c1aa93d4=\"\">{{errpwd}}</span>\n              </li>\n              <li style=\"height: 20px;\" _v-c1aa93d4=\"\"></li>\n              <!-- <li class=\"code\">\n                <input type=\"text\" id=\"lab-code\" maxlength=\"3\" name=\"vCode\" class=\"ipt-txt\" size=\"6\"><span class=\"js-vCode\"></span>\n                <label class=\"lab\" for=\"lab-code\">验证码</label>\n                <span class=\"reg-tips\"></span>\n              </li> -->\n            </ol>\n            <p class=\"js-check\" v-if=\"display=='login'\" _v-c1aa93d4=\"\"><a class=\"back fr xiusta\" href=\"/user/forgot_password\" target=\"_blank\" _v-c1aa93d4=\"\">找回密码</a><input type=\"checkbox\" name=\"remember\" id=\"ipt-pwd\" _v-c1aa93d4=\"\"><label for=\"ipt-pwd\" _v-c1aa93d4=\"\">记住密码</label></p>\n            <p class=\"js-check\" v-if=\"display=='registe'\" _v-c1aa93d4=\"\"><input type=\"checkbox\" checked=\"true\" name=\"protocol\" id=\"ipt-protocol\" _v-c1aa93d4=\"\"><label for=\"ipt-protocol\" _v-c1aa93d4=\"\">我已阅读并同意<a href=\"/account\" class=\"u-line xiusta\" target=\"_blank\" _v-c1aa93d4=\"\">&lt;&lt;来播吧服务用户条款&gt;&gt;</a></label></p>\n            <p class=\"btn-wrap\" _v-c1aa93d4=\"\"><a href=\"javascript:void(0)\" class=\"btn btn-reg js-submit\" @click=\"login\" _v-c1aa93d4=\"\">{{display == \"login\" ? \"登录\" : \"注册\"}}</a></p>\n            <p class=\"js-bd-tip\" v-if=\"display=='login'\" _v-c1aa93d4=\"\"><span _v-c1aa93d4=\"\">没有账号？<a class=\"js-lj-reg\" href=\"javascript:void(0)\" @click=\"changeROL('registe')\" _v-c1aa93d4=\"\">马上注册</a></span></p>\n          </div>\n        </form>\n        <!-- <div class=\"Q-login\">\n          <p>快速登录</p>\n          <p><a class=\"bai-btn js-login-baidu\" href=\"javascript:void(0)\">百度登录</a></p>\n          <p><a class=\"QQ-btn js-login-qq\" href=\"javascript:void(0)\">qq登录</a></p>\n        </div> -->\n      </div>\n    </div>\n  </div>\n";
 
 /***/ },
 /* 136 */,
@@ -26402,123 +28196,89 @@ webpackJsonp([2,4],[
 /* 141 */,
 /* 142 */,
 /* 143 */
-/***/ function(module, exports, __webpack_require__) {
+/***/ function(module, exports) {
 
-	/**
-	 * Install plugin.
+	/*!
+	 * vue-resource v0.7.4
+	 * https://github.com/vuejs/vue-resource
+	 * Released under the MIT License.
 	 */
 
-	function install(Vue) {
+	'use strict';
 
-	    var _ = __webpack_require__(144);
-
-	    _.config = Vue.config;
-	    _.warning = Vue.util.warn;
-	    _.nextTick = Vue.util.nextTick;
-
-	    Vue.url = __webpack_require__(145);
-	    Vue.http = __webpack_require__(151);
-	    Vue.resource = __webpack_require__(166);
-	    Vue.Promise = __webpack_require__(153);
-
-	    Object.defineProperties(Vue.prototype, {
-
-	        $url: {
-	            get: function () {
-	                return _.options(Vue.url, this, this.$options.url);
-	            }
-	        },
-
-	        $http: {
-	            get: function () {
-	                return _.options(Vue.http, this, this.$options.http);
-	            }
-	        },
-
-	        $resource: {
-	            get: function () {
-	                return Vue.resource.bind(this);
-	            }
-	        },
-
-	        $promise: {
-	            get: function () {
-	                return function (executor) {
-	                    return new Vue.Promise(executor, this);
-	                }.bind(this);
-	            }
-	        }
-
-	    });
-	}
-
-	if (window.Vue) {
-	    Vue.use(install);
-	}
-
-	module.exports = install;
-
-
-/***/ },
-/* 144 */
-/***/ function(module, exports) {
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+	  return typeof obj;
+	} : function (obj) {
+	  return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+	};
 
 	/**
 	 * Utility functions.
 	 */
 
-	var _ = exports, array = [], console = window.console;
+	var util = {};
+	var config = {};
+	var array = [];
+	var console = window.console;
+	function Util (Vue) {
+	    util = Vue.util;
+	    config = Vue.config;
+	}
 
-	_.warn = function (msg) {
-	    if (console && _.warning && (!_.config.silent || _.config.debug)) {
+	var isArray = Array.isArray;
+
+	function warn(msg) {
+	    if (console && util.warn && (!config.silent || config.debug)) {
 	        console.warn('[VueResource warn]: ' + msg);
 	    }
-	};
+	}
 
-	_.error = function (msg) {
+	function error(msg) {
 	    if (console) {
 	        console.error(msg);
 	    }
-	};
+	}
 
-	_.trim = function (str) {
+	function nextTick(cb, ctx) {
+	    return util.nextTick(cb, ctx);
+	}
+
+	function trim(str) {
 	    return str.replace(/^\s*|\s*$/g, '');
-	};
+	}
 
-	_.toLower = function (str) {
+	function toLower(str) {
 	    return str ? str.toLowerCase() : '';
-	};
+	}
 
-	_.isArray = Array.isArray;
-
-	_.isString = function (val) {
+	function isString(val) {
 	    return typeof val === 'string';
-	};
+	}
 
-	_.isFunction = function (val) {
+	function isFunction(val) {
 	    return typeof val === 'function';
-	};
+	}
 
-	_.isObject = function (obj) {
-	    return obj !== null && typeof obj === 'object';
-	};
+	function isObject(obj) {
+	    return obj !== null && (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object';
+	}
 
-	_.isPlainObject = function (obj) {
-	    return _.isObject(obj) && Object.getPrototypeOf(obj) == Object.prototype;
-	};
+	function isPlainObject(obj) {
+	    return isObject(obj) && Object.getPrototypeOf(obj) == Object.prototype;
+	}
 
-	_.options = function (fn, obj, options) {
+	function options(fn, obj, opts) {
 
-	    options = options || {};
+	    opts = opts || {};
 
-	    if (_.isFunction(options)) {
-	        options = options.call(obj);
+	    if (isFunction(opts)) {
+	        opts = opts.call(obj);
 	    }
 
-	    return _.merge(fn.bind({$vm: obj, $options: options}), fn, {$options: options});
-	};
+	    return merge(fn.bind({ $vm: obj, $options: opts }), fn, { $options: opts });
+	}
 
-	_.each = function (obj, iterator) {
+	function each(obj, iterator) {
 
 	    var i, key;
 
@@ -26526,7 +28286,7 @@ webpackJsonp([2,4],[
 	        for (i = 0; i < obj.length; i++) {
 	            iterator.call(obj[i], obj[i], i);
 	        }
-	    } else if (_.isObject(obj)) {
+	    } else if (isObject(obj)) {
 	        for (key in obj) {
 	            if (obj.hasOwnProperty(key)) {
 	                iterator.call(obj[key], obj[key], key);
@@ -26535,86 +28295,303 @@ webpackJsonp([2,4],[
 	    }
 
 	    return obj;
-	};
+	}
 
-	_.defaults = function (target, source) {
-
-	    for (var key in source) {
-	        if (target[key] === undefined) {
-	            target[key] = source[key];
-	        }
-	    }
-
-	    return target;
-	};
-
-	_.extend = function (target) {
+	function extend(target) {
 
 	    var args = array.slice.call(arguments, 1);
 
 	    args.forEach(function (arg) {
-	        merge(target, arg);
+	        _merge(target, arg);
 	    });
 
 	    return target;
-	};
+	}
 
-	_.merge = function (target) {
+	function merge(target) {
 
 	    var args = array.slice.call(arguments, 1);
 
 	    args.forEach(function (arg) {
-	        merge(target, arg, true);
+	        _merge(target, arg, true);
 	    });
 
 	    return target;
-	};
+	}
 
-	function merge(target, source, deep) {
+	function _merge(target, source, deep) {
 	    for (var key in source) {
-	        if (deep && (_.isPlainObject(source[key]) || _.isArray(source[key]))) {
-	            if (_.isPlainObject(source[key]) && !_.isPlainObject(target[key])) {
+	        if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
+	            if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
 	                target[key] = {};
 	            }
-	            if (_.isArray(source[key]) && !_.isArray(target[key])) {
+	            if (isArray(source[key]) && !isArray(target[key])) {
 	                target[key] = [];
 	            }
-	            merge(target[key], source[key], deep);
+	            _merge(target[key], source[key], deep);
 	        } else if (source[key] !== undefined) {
 	            target[key] = source[key];
 	        }
 	    }
 	}
 
+	function root (options, next) {
 
-/***/ },
-/* 145 */
-/***/ function(module, exports, __webpack_require__) {
+	    var url = next(options);
+
+	    if (isString(options.root) && !url.match(/^(https?:)?\//)) {
+	        url = options.root + '/' + url;
+	    }
+
+	    return url;
+	}
+
+	function query (options, next) {
+
+	    var urlParams = Object.keys(Url.options.params),
+	        query = {},
+	        url = next(options);
+
+	    each(options.params, function (value, key) {
+	        if (urlParams.indexOf(key) === -1) {
+	            query[key] = value;
+	        }
+	    });
+
+	    query = Url.params(query);
+
+	    if (query) {
+	        url += (url.indexOf('?') == -1 ? '?' : '&') + query;
+	    }
+
+	    return url;
+	}
+
+	function legacy (options, next) {
+
+	    var variables = [],
+	        url = next(options);
+
+	    url = url.replace(/(\/?):([a-z]\w*)/gi, function (match, slash, name) {
+
+	        warn('The `:' + name + '` parameter syntax has been deprecated. Use the `{' + name + '}` syntax instead.');
+
+	        if (options.params[name]) {
+	            variables.push(name);
+	            return slash + encodeUriSegment(options.params[name]);
+	        }
+
+	        return '';
+	    });
+
+	    variables.forEach(function (key) {
+	        delete options.params[key];
+	    });
+
+	    return url;
+	}
+
+	function encodeUriSegment(value) {
+
+	    return encodeUriQuery(value, true).replace(/%26/gi, '&').replace(/%3D/gi, '=').replace(/%2B/gi, '+');
+	}
+
+	function encodeUriQuery(value, spaces) {
+
+	    return encodeURIComponent(value).replace(/%40/gi, '@').replace(/%3A/gi, ':').replace(/%24/g, '$').replace(/%2C/gi, ',').replace(/%20/g, spaces ? '%20' : '+');
+	}
+
+	/**
+	 * URL Template v2.0.6 (https://github.com/bramstein/url-template)
+	 */
+
+	function expand(url, params, variables) {
+
+	    var tmpl = parse(url),
+	        expanded = tmpl.expand(params);
+
+	    if (variables) {
+	        variables.push.apply(variables, tmpl.vars);
+	    }
+
+	    return expanded;
+	}
+
+	function parse(template) {
+
+	    var operators = ['+', '#', '.', '/', ';', '?', '&'],
+	        variables = [];
+
+	    return {
+	        vars: variables,
+	        expand: function expand(context) {
+	            return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
+	                if (expression) {
+
+	                    var operator = null,
+	                        values = [];
+
+	                    if (operators.indexOf(expression.charAt(0)) !== -1) {
+	                        operator = expression.charAt(0);
+	                        expression = expression.substr(1);
+	                    }
+
+	                    expression.split(/,/g).forEach(function (variable) {
+	                        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
+	                        values.push.apply(values, getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
+	                        variables.push(tmp[1]);
+	                    });
+
+	                    if (operator && operator !== '+') {
+
+	                        var separator = ',';
+
+	                        if (operator === '?') {
+	                            separator = '&';
+	                        } else if (operator !== '#') {
+	                            separator = operator;
+	                        }
+
+	                        return (values.length !== 0 ? operator : '') + values.join(separator);
+	                    } else {
+	                        return values.join(',');
+	                    }
+	                } else {
+	                    return encodeReserved(literal);
+	                }
+	            });
+	        }
+	    };
+	}
+
+	function getValues(context, operator, key, modifier) {
+
+	    var value = context[key],
+	        result = [];
+
+	    if (isDefined(value) && value !== '') {
+	        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+	            value = value.toString();
+
+	            if (modifier && modifier !== '*') {
+	                value = value.substring(0, parseInt(modifier, 10));
+	            }
+
+	            result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
+	        } else {
+	            if (modifier === '*') {
+	                if (Array.isArray(value)) {
+	                    value.filter(isDefined).forEach(function (value) {
+	                        result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
+	                    });
+	                } else {
+	                    Object.keys(value).forEach(function (k) {
+	                        if (isDefined(value[k])) {
+	                            result.push(encodeValue(operator, value[k], k));
+	                        }
+	                    });
+	                }
+	            } else {
+	                var tmp = [];
+
+	                if (Array.isArray(value)) {
+	                    value.filter(isDefined).forEach(function (value) {
+	                        tmp.push(encodeValue(operator, value));
+	                    });
+	                } else {
+	                    Object.keys(value).forEach(function (k) {
+	                        if (isDefined(value[k])) {
+	                            tmp.push(encodeURIComponent(k));
+	                            tmp.push(encodeValue(operator, value[k].toString()));
+	                        }
+	                    });
+	                }
+
+	                if (isKeyOperator(operator)) {
+	                    result.push(encodeURIComponent(key) + '=' + tmp.join(','));
+	                } else if (tmp.length !== 0) {
+	                    result.push(tmp.join(','));
+	                }
+	            }
+	        }
+	    } else {
+	        if (operator === ';') {
+	            result.push(encodeURIComponent(key));
+	        } else if (value === '' && (operator === '&' || operator === '?')) {
+	            result.push(encodeURIComponent(key) + '=');
+	        } else if (value === '') {
+	            result.push('');
+	        }
+	    }
+
+	    return result;
+	}
+
+	function isDefined(value) {
+	    return value !== undefined && value !== null;
+	}
+
+	function isKeyOperator(operator) {
+	    return operator === ';' || operator === '&' || operator === '?';
+	}
+
+	function encodeValue(operator, value, key) {
+
+	    value = operator === '+' || operator === '#' ? encodeReserved(value) : encodeURIComponent(value);
+
+	    if (key) {
+	        return encodeURIComponent(key) + '=' + value;
+	    } else {
+	        return value;
+	    }
+	}
+
+	function encodeReserved(str) {
+	    return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
+	        if (!/%[0-9A-Fa-f]/.test(part)) {
+	            part = encodeURI(part);
+	        }
+	        return part;
+	    }).join('');
+	}
+
+	function template (options) {
+
+	    var variables = [],
+	        url = expand(options.url, options.params, variables);
+
+	    variables.forEach(function (key) {
+	        delete options.params[key];
+	    });
+
+	    return url;
+	}
 
 	/**
 	 * Service for URL templating.
 	 */
 
-	var _ = __webpack_require__(144);
 	var ie = document.documentMode;
 	var el = document.createElement('a');
 
 	function Url(url, params) {
 
-	    var options = url, transform;
+	    var self = this || {},
+	        options = url,
+	        transform;
 
-	    if (_.isString(url)) {
-	        options = {url: url, params: params};
+	    if (isString(url)) {
+	        options = { url: url, params: params };
 	    }
 
-	    options = _.merge({}, Url.options, this.$options, options);
+	    options = merge({}, Url.options, self.$options, options);
 
 	    Url.transforms.forEach(function (handler) {
-	        transform = factory(handler, transform, this.$vm);
-	    }, this);
+	        transform = factory(handler, transform, self.$vm);
+	    });
 
 	    return transform(options);
-	};
+	}
 
 	/**
 	 * Url options.
@@ -26630,12 +28607,7 @@ webpackJsonp([2,4],[
 	 * Url transforms.
 	 */
 
-	Url.transforms = [
-	    __webpack_require__(146),
-	    __webpack_require__(148),
-	    __webpack_require__(149),
-	    __webpack_require__(150)
-	];
+	Url.transforms = [template, legacy, query, root];
 
 	/**
 	 * Encodes a Url parameter string.
@@ -26645,11 +28617,12 @@ webpackJsonp([2,4],[
 
 	Url.params = function (obj) {
 
-	    var params = [], escape = encodeURIComponent;
+	    var params = [],
+	        escape = encodeURIComponent;
 
 	    params.add = function (key, value) {
 
-	        if (_.isFunction(value)) {
+	        if (isFunction(value)) {
 	            value = value();
 	        }
 
@@ -26700,11 +28673,13 @@ webpackJsonp([2,4],[
 
 	function serialize(params, obj, scope) {
 
-	    var array = _.isArray(obj), plain = _.isPlainObject(obj), hash;
+	    var array = isArray(obj),
+	        plain = isPlainObject(obj),
+	        hash;
 
-	    _.each(obj, function (value, key) {
+	    each(obj, function (value, key) {
 
-	        hash = _.isObject(value) || _.isArray(value);
+	        hash = isObject(value) || isArray(value);
 
 	        if (scope) {
 	            key = scope + '[' + (plain || hash ? key : '') + ']';
@@ -26720,478 +28695,185 @@ webpackJsonp([2,4],[
 	    });
 	}
 
-	module.exports = _.url = Url;
-
-
-/***/ },
-/* 146 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/**
-	 * URL Template (RFC 6570) Transform.
+	 * Promises/A+ polyfill v1.1.4 (https://github.com/bramstein/promis)
 	 */
 
-	var UrlTemplate = __webpack_require__(147);
-
-	module.exports = function (options) {
-
-	    var variables = [], url = UrlTemplate.expand(options.url, options.params, variables);
-
-	    variables.forEach(function (key) {
-	        delete options.params[key];
-	    });
-
-	    return url;
-	};
-
-
-/***/ },
-/* 147 */
-/***/ function(module, exports) {
-
-	/**
-	 * URL Template v2.0.6 (https://github.com/bramstein/url-template)
-	 */
-
-	exports.expand = function (url, params, variables) {
-
-	    var tmpl = this.parse(url), expanded = tmpl.expand(params);
-
-	    if (variables) {
-	        variables.push.apply(variables, tmpl.vars);
-	    }
-
-	    return expanded;
-	};
-
-	exports.parse = function (template) {
-
-	    var operators = ['+', '#', '.', '/', ';', '?', '&'], variables = [];
-
-	    return {
-	        vars: variables,
-	        expand: function (context) {
-	            return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
-	                if (expression) {
-
-	                    var operator = null, values = [];
-
-	                    if (operators.indexOf(expression.charAt(0)) !== -1) {
-	                        operator = expression.charAt(0);
-	                        expression = expression.substr(1);
-	                    }
-
-	                    expression.split(/,/g).forEach(function (variable) {
-	                        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-	                        values.push.apply(values, exports.getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
-	                        variables.push(tmp[1]);
-	                    });
-
-	                    if (operator && operator !== '+') {
-
-	                        var separator = ',';
-
-	                        if (operator === '?') {
-	                            separator = '&';
-	                        } else if (operator !== '#') {
-	                            separator = operator;
-	                        }
-
-	                        return (values.length !== 0 ? operator : '') + values.join(separator);
-	                    } else {
-	                        return values.join(',');
-	                    }
-
-	                } else {
-	                    return exports.encodeReserved(literal);
-	                }
-	            });
-	        }
-	    };
-	};
-
-	exports.getValues = function (context, operator, key, modifier) {
-
-	    var value = context[key], result = [];
-
-	    if (this.isDefined(value) && value !== '') {
-	        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-	            value = value.toString();
-
-	            if (modifier && modifier !== '*') {
-	                value = value.substring(0, parseInt(modifier, 10));
-	            }
-
-	            result.push(this.encodeValue(operator, value, this.isKeyOperator(operator) ? key : null));
-	        } else {
-	            if (modifier === '*') {
-	                if (Array.isArray(value)) {
-	                    value.filter(this.isDefined).forEach(function (value) {
-	                        result.push(this.encodeValue(operator, value, this.isKeyOperator(operator) ? key : null));
-	                    }, this);
-	                } else {
-	                    Object.keys(value).forEach(function (k) {
-	                        if (this.isDefined(value[k])) {
-	                            result.push(this.encodeValue(operator, value[k], k));
-	                        }
-	                    }, this);
-	                }
-	            } else {
-	                var tmp = [];
-
-	                if (Array.isArray(value)) {
-	                    value.filter(this.isDefined).forEach(function (value) {
-	                        tmp.push(this.encodeValue(operator, value));
-	                    }, this);
-	                } else {
-	                    Object.keys(value).forEach(function (k) {
-	                        if (this.isDefined(value[k])) {
-	                            tmp.push(encodeURIComponent(k));
-	                            tmp.push(this.encodeValue(operator, value[k].toString()));
-	                        }
-	                    }, this);
-	                }
-
-	                if (this.isKeyOperator(operator)) {
-	                    result.push(encodeURIComponent(key) + '=' + tmp.join(','));
-	                } else if (tmp.length !== 0) {
-	                    result.push(tmp.join(','));
-	                }
-	            }
-	        }
-	    } else {
-	        if (operator === ';') {
-	            result.push(encodeURIComponent(key));
-	        } else if (value === '' && (operator === '&' || operator === '?')) {
-	            result.push(encodeURIComponent(key) + '=');
-	        } else if (value === '') {
-	            result.push('');
-	        }
-	    }
-
-	    return result;
-	};
-
-	exports.isDefined = function (value) {
-	    return value !== undefined && value !== null;
-	};
-
-	exports.isKeyOperator = function (operator) {
-	    return operator === ';' || operator === '&' || operator === '?';
-	};
-
-	exports.encodeValue = function (operator, value, key) {
-
-	    value = (operator === '+' || operator === '#') ? this.encodeReserved(value) : encodeURIComponent(value);
-
-	    if (key) {
-	        return encodeURIComponent(key) + '=' + value;
-	    } else {
-	        return value;
-	    }
-	};
-
-	exports.encodeReserved = function (str) {
-	    return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
-	        if (!/%[0-9A-Fa-f]/.test(part)) {
-	            part = encodeURI(part);
-	        }
-	        return part;
-	    }).join('');
-	};
-
-
-/***/ },
-/* 148 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Legacy Transform.
-	 */
-
-	var _ = __webpack_require__(144);
-
-	module.exports = function (options, next) {
-
-	    var variables = [], url = next(options);
-
-	    url = url.replace(/(\/?):([a-z]\w*)/gi, function (match, slash, name) {
-
-	        _.warn('The `:' + name + '` parameter syntax has been deprecated. Use the `{' + name + '}` syntax instead.');
-
-	        if (options.params[name]) {
-	            variables.push(name);
-	            return slash + encodeUriSegment(options.params[name]);
-	        }
-
-	        return '';
-	    });
-
-	    variables.forEach(function (key) {
-	        delete options.params[key];
-	    });
-
-	    return url;
-	};
-
-	function encodeUriSegment(value) {
-
-	    return encodeUriQuery(value, true).
-	        replace(/%26/gi, '&').
-	        replace(/%3D/gi, '=').
-	        replace(/%2B/gi, '+');
-	}
-
-	function encodeUriQuery(value, spaces) {
-
-	    return encodeURIComponent(value).
-	        replace(/%40/gi, '@').
-	        replace(/%3A/gi, ':').
-	        replace(/%24/g, '$').
-	        replace(/%2C/gi, ',').
-	        replace(/%20/g, (spaces ? '%20' : '+'));
-	}
-
-
-/***/ },
-/* 149 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Query Parameter Transform.
-	 */
-
-	var _ = __webpack_require__(144);
-
-	module.exports = function (options, next) {
-
-	    var urlParams = Object.keys(_.url.options.params), query = {}, url = next(options);
-
-	   _.each(options.params, function (value, key) {
-	        if (urlParams.indexOf(key) === -1) {
-	            query[key] = value;
-	        }
-	    });
-
-	    query = _.url.params(query);
-
-	    if (query) {
-	        url += (url.indexOf('?') == -1 ? '?' : '&') + query;
-	    }
-
-	    return url;
-	};
-
-
-/***/ },
-/* 150 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Root Prefix Transform.
-	 */
-
-	var _ = __webpack_require__(144);
-
-	module.exports = function (options, next) {
-
-	    var url = next(options);
-
-	    if (_.isString(options.root) && !url.match(/^(https?:)?\//)) {
-	        url = options.root + '/' + url;
-	    }
-
-	    return url;
-	};
-
-
-/***/ },
-/* 151 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Service for sending network requests.
-	 */
-
-	var _ = __webpack_require__(144);
-	var Client = __webpack_require__(152);
-	var Promise = __webpack_require__(153);
-	var interceptor = __webpack_require__(156);
-	var jsonType = {'Content-Type': 'application/json'};
-
-	function Http(url, options) {
-
-	    var client = Client, request, promise;
-
-	    Http.interceptors.forEach(function (handler) {
-	        client = interceptor(handler, this.$vm)(client);
-	    }, this);
-
-	    options = _.isObject(url) ? url : _.extend({url: url}, options);
-	    request = _.merge({}, Http.options, this.$options, options);
-	    promise = client(request).bind(this.$vm).then(function (response) {
-
-	        return response.ok ? response : Promise.reject(response);
-
-	    }, function (response) {
-
-	        if (response instanceof Error) {
-	            _.error(response);
-	        }
-
-	        return Promise.reject(response);
-	    });
-
-	    if (request.success) {
-	        promise.success(request.success);
-	    }
-
-	    if (request.error) {
-	        promise.error(request.error);
-	    }
-
-	    return promise;
-	}
-
-	Http.options = {
-	    method: 'get',
-	    data: '',
-	    params: {},
-	    headers: {},
-	    xhr: null,
-	    upload: null,
-	    jsonp: 'callback',
-	    beforeSend: null,
-	    crossOrigin: null,
-	    emulateHTTP: false,
-	    emulateJSON: false,
-	    timeout: 0
-	};
-
-	Http.interceptors = [
-	    __webpack_require__(157),
-	    __webpack_require__(158),
-	    __webpack_require__(159),
-	    __webpack_require__(161),
-	    __webpack_require__(162),
-	    __webpack_require__(163),
-	    __webpack_require__(164)
-	];
-
-	Http.headers = {
-	    put: jsonType,
-	    post: jsonType,
-	    patch: jsonType,
-	    delete: jsonType,
-	    common: {'Accept': 'application/json, text/plain, */*'},
-	    custom: {'X-Requested-With': 'XMLHttpRequest'}
-	};
-
-	['get', 'put', 'post', 'patch', 'delete', 'jsonp'].forEach(function (method) {
-
-	    Http[method] = function (url, data, success, options) {
-
-	        if (_.isFunction(data)) {
-	            options = success;
-	            success = data;
-	            data = undefined;
-	        }
-
-	        if (_.isObject(success)) {
-	            options = success;
-	            success = undefined;
-	        }
-
-	        return this(url, _.extend({method: method, data: data, success: success}, options));
-	    };
-	});
-
-	module.exports = _.http = Http;
-
-
-/***/ },
-/* 152 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Base client.
-	 */
-
-	var _ = __webpack_require__(144);
-	var Promise = __webpack_require__(153);
-	var xhrClient = __webpack_require__(155);
-
-	module.exports = function (request) {
-
-	    var response = (request.client || xhrClient)(request);
-
-	    return Promise.resolve(response).then(function (response) {
-
-	        if (response.headers) {
-
-	            var headers = parseHeaders(response.headers);
-
-	            response.headers = function (name) {
-
-	                if (name) {
-	                    return headers[_.toLower(name)];
-	                }
-
-	                return headers;
-	            };
-
-	        }
-
-	        response.ok = response.status >= 200 && response.status < 300;
-
-	        return response;
-	    });
-
-	};
-
-	function parseHeaders(str) {
-
-	    var headers = {}, value, name, i;
-
-	    if (_.isString(str)) {
-	        _.each(str.split('\n'), function (row) {
-
-	            i = row.indexOf(':');
-	            name = _.trim(_.toLower(row.slice(0, i)));
-	            value = _.trim(row.slice(i + 1));
-
-	            if (headers[name]) {
-
-	                if (_.isArray(headers[name])) {
-	                    headers[name].push(value);
-	                } else {
-	                    headers[name] = [headers[name], value];
-	                }
-
-	            } else {
-
-	                headers[name] = value;
-	            }
-
+	var RESOLVED = 0;
+	var REJECTED = 1;
+	var PENDING = 2;
+
+	function Promise$2(executor) {
+
+	    this.state = PENDING;
+	    this.value = undefined;
+	    this.deferred = [];
+
+	    var promise = this;
+
+	    try {
+	        executor(function (x) {
+	            promise.resolve(x);
+	        }, function (r) {
+	            promise.reject(r);
 	        });
+	    } catch (e) {
+	        promise.reject(e);
 	    }
-
-	    return headers;
 	}
 
+	Promise$2.reject = function (r) {
+	    return new Promise$2(function (resolve, reject) {
+	        reject(r);
+	    });
+	};
 
-/***/ },
-/* 153 */
-/***/ function(module, exports, __webpack_require__) {
+	Promise$2.resolve = function (x) {
+	    return new Promise$2(function (resolve, reject) {
+	        resolve(x);
+	    });
+	};
 
-	/**
-	 * Promise adapter.
-	 */
+	Promise$2.all = function all(iterable) {
+	    return new Promise$2(function (resolve, reject) {
+	        var count = 0,
+	            result = [];
 
-	var _ = __webpack_require__(144);
-	var PromiseObj = window.Promise || __webpack_require__(154);
+	        if (iterable.length === 0) {
+	            resolve(result);
+	        }
 
-	function Promise(executor, context) {
+	        function resolver(i) {
+	            return function (x) {
+	                result[i] = x;
+	                count += 1;
+
+	                if (count === iterable.length) {
+	                    resolve(result);
+	                }
+	            };
+	        }
+
+	        for (var i = 0; i < iterable.length; i += 1) {
+	            Promise$2.resolve(iterable[i]).then(resolver(i), reject);
+	        }
+	    });
+	};
+
+	Promise$2.race = function race(iterable) {
+	    return new Promise$2(function (resolve, reject) {
+	        for (var i = 0; i < iterable.length; i += 1) {
+	            Promise$2.resolve(iterable[i]).then(resolve, reject);
+	        }
+	    });
+	};
+
+	var p$1 = Promise$2.prototype;
+
+	p$1.resolve = function resolve(x) {
+	    var promise = this;
+
+	    if (promise.state === PENDING) {
+	        if (x === promise) {
+	            throw new TypeError('Promise settled with itself.');
+	        }
+
+	        var called = false;
+
+	        try {
+	            var then = x && x['then'];
+
+	            if (x !== null && (typeof x === 'undefined' ? 'undefined' : _typeof(x)) === 'object' && typeof then === 'function') {
+	                then.call(x, function (x) {
+	                    if (!called) {
+	                        promise.resolve(x);
+	                    }
+	                    called = true;
+	                }, function (r) {
+	                    if (!called) {
+	                        promise.reject(r);
+	                    }
+	                    called = true;
+	                });
+	                return;
+	            }
+	        } catch (e) {
+	            if (!called) {
+	                promise.reject(e);
+	            }
+	            return;
+	        }
+
+	        promise.state = RESOLVED;
+	        promise.value = x;
+	        promise.notify();
+	    }
+	};
+
+	p$1.reject = function reject(reason) {
+	    var promise = this;
+
+	    if (promise.state === PENDING) {
+	        if (reason === promise) {
+	            throw new TypeError('Promise settled with itself.');
+	        }
+
+	        promise.state = REJECTED;
+	        promise.value = reason;
+	        promise.notify();
+	    }
+	};
+
+	p$1.notify = function notify() {
+	    var promise = this;
+
+	    nextTick(function () {
+	        if (promise.state !== PENDING) {
+	            while (promise.deferred.length) {
+	                var deferred = promise.deferred.shift(),
+	                    onResolved = deferred[0],
+	                    onRejected = deferred[1],
+	                    resolve = deferred[2],
+	                    reject = deferred[3];
+
+	                try {
+	                    if (promise.state === RESOLVED) {
+	                        if (typeof onResolved === 'function') {
+	                            resolve(onResolved.call(undefined, promise.value));
+	                        } else {
+	                            resolve(promise.value);
+	                        }
+	                    } else if (promise.state === REJECTED) {
+	                        if (typeof onRejected === 'function') {
+	                            resolve(onRejected.call(undefined, promise.value));
+	                        } else {
+	                            reject(promise.value);
+	                        }
+	                    }
+	                } catch (e) {
+	                    reject(e);
+	                }
+	            }
+	        }
+	    });
+	};
+
+	p$1.then = function then(onResolved, onRejected) {
+	    var promise = this;
+
+	    return new Promise$2(function (resolve, reject) {
+	        promise.deferred.push([onResolved, onRejected, resolve, reject]);
+	        promise.notify();
+	    });
+	};
+
+	p$1.catch = function (onRejected) {
+	    return this.then(undefined, onRejected);
+	};
+
+	var PromiseObj = window.Promise || Promise$2;
+
+	function Promise$1(executor, context) {
 
 	    if (executor instanceof PromiseObj) {
 	        this.promise = executor;
@@ -27202,23 +28884,23 @@ webpackJsonp([2,4],[
 	    this.context = context;
 	}
 
-	Promise.all = function (iterable, context) {
-	    return new Promise(PromiseObj.all(iterable), context);
+	Promise$1.all = function (iterable, context) {
+	    return new Promise$1(PromiseObj.all(iterable), context);
 	};
 
-	Promise.resolve = function (value, context) {
-	    return new Promise(PromiseObj.resolve(value), context);
+	Promise$1.resolve = function (value, context) {
+	    return new Promise$1(PromiseObj.resolve(value), context);
 	};
 
-	Promise.reject = function (reason, context) {
-	    return new Promise(PromiseObj.reject(reason), context);
+	Promise$1.reject = function (reason, context) {
+	    return new Promise$1(PromiseObj.reject(reason), context);
 	};
 
-	Promise.race = function (iterable, context) {
-	    return new Promise(PromiseObj.race(iterable), context);
+	Promise$1.race = function (iterable, context) {
+	    return new Promise$1(PromiseObj.race(iterable), context);
 	};
 
-	var p = Promise.prototype;
+	var p = Promise$1.prototype;
 
 	p.bind = function (context) {
 	    this.context = context;
@@ -27254,18 +28936,17 @@ webpackJsonp([2,4],[
 	p.finally = function (callback) {
 
 	    return this.then(function (value) {
-	            callback.call(this);
-	            return value;
-	        }, function (reason) {
-	            callback.call(this);
-	            return PromiseObj.reject(reason);
-	        }
-	    );
+	        callback.call(this);
+	        return value;
+	    }, function (reason) {
+	        callback.call(this);
+	        return PromiseObj.reject(reason);
+	    });
 	};
 
 	p.success = function (callback) {
 
-	    _.warn('The `success` method has been deprecated. Use the `then` method instead.');
+	    warn('The `success` method has been deprecated. Use the `then` method instead.');
 
 	    return this.then(function (response) {
 	        return callback.call(this, response.data, response.status, response) || response;
@@ -27274,7 +28955,7 @@ webpackJsonp([2,4],[
 
 	p.error = function (callback) {
 
-	    _.warn('The `error` method has been deprecated. Use the `catch` method instead.');
+	    warn('The `error` method has been deprecated. Use the `catch` method instead.');
 
 	    return this.catch(function (response) {
 	        return callback.call(this, response.data, response.status, response) || response;
@@ -27283,417 +28964,121 @@ webpackJsonp([2,4],[
 
 	p.always = function (callback) {
 
-	    _.warn('The `always` method has been deprecated. Use the `finally` method instead.');
+	    warn('The `always` method has been deprecated. Use the `finally` method instead.');
 
-	    var cb = function (response) {
+	    var cb = function cb(response) {
 	        return callback.call(this, response.data, response.status, response) || response;
 	    };
 
 	    return this.then(cb, cb);
 	};
 
-	module.exports = Promise;
+	function xdrClient (request) {
+	    return new Promise$1(function (resolve) {
 
-
-/***/ },
-/* 154 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Promises/A+ polyfill v1.1.4 (https://github.com/bramstein/promis)
-	 */
-
-	var _ = __webpack_require__(144);
-
-	var RESOLVED = 0;
-	var REJECTED = 1;
-	var PENDING  = 2;
-
-	function Promise(executor) {
-
-	    this.state = PENDING;
-	    this.value = undefined;
-	    this.deferred = [];
-
-	    var promise = this;
-
-	    try {
-	        executor(function (x) {
-	            promise.resolve(x);
-	        }, function (r) {
-	            promise.reject(r);
-	        });
-	    } catch (e) {
-	        promise.reject(e);
-	    }
-	}
-
-	Promise.reject = function (r) {
-	    return new Promise(function (resolve, reject) {
-	        reject(r);
-	    });
-	};
-
-	Promise.resolve = function (x) {
-	    return new Promise(function (resolve, reject) {
-	        resolve(x);
-	    });
-	};
-
-	Promise.all = function all(iterable) {
-	    return new Promise(function (resolve, reject) {
-	        var count = 0, result = [];
-
-	        if (iterable.length === 0) {
-	            resolve(result);
-	        }
-
-	        function resolver(i) {
-	            return function (x) {
-	                result[i] = x;
-	                count += 1;
-
-	                if (count === iterable.length) {
-	                    resolve(result);
-	                }
-	            };
-	        }
-
-	        for (var i = 0; i < iterable.length; i += 1) {
-	            Promise.resolve(iterable[i]).then(resolver(i), reject);
-	        }
-	    });
-	};
-
-	Promise.race = function race(iterable) {
-	    return new Promise(function (resolve, reject) {
-	        for (var i = 0; i < iterable.length; i += 1) {
-	            Promise.resolve(iterable[i]).then(resolve, reject);
-	        }
-	    });
-	};
-
-	var p = Promise.prototype;
-
-	p.resolve = function resolve(x) {
-	    var promise = this;
-
-	    if (promise.state === PENDING) {
-	        if (x === promise) {
-	            throw new TypeError('Promise settled with itself.');
-	        }
-
-	        var called = false;
-
-	        try {
-	            var then = x && x['then'];
-
-	            if (x !== null && typeof x === 'object' && typeof then === 'function') {
-	                then.call(x, function (x) {
-	                    if (!called) {
-	                        promise.resolve(x);
-	                    }
-	                    called = true;
-
-	                }, function (r) {
-	                    if (!called) {
-	                        promise.reject(r);
-	                    }
-	                    called = true;
-	                });
-	                return;
-	            }
-	        } catch (e) {
-	            if (!called) {
-	                promise.reject(e);
-	            }
-	            return;
-	        }
-
-	        promise.state = RESOLVED;
-	        promise.value = x;
-	        promise.notify();
-	    }
-	};
-
-	p.reject = function reject(reason) {
-	    var promise = this;
-
-	    if (promise.state === PENDING) {
-	        if (reason === promise) {
-	            throw new TypeError('Promise settled with itself.');
-	        }
-
-	        promise.state = REJECTED;
-	        promise.value = reason;
-	        promise.notify();
-	    }
-	};
-
-	p.notify = function notify() {
-	    var promise = this;
-
-	    _.nextTick(function () {
-	        if (promise.state !== PENDING) {
-	            while (promise.deferred.length) {
-	                var deferred = promise.deferred.shift(),
-	                    onResolved = deferred[0],
-	                    onRejected = deferred[1],
-	                    resolve = deferred[2],
-	                    reject = deferred[3];
-
-	                try {
-	                    if (promise.state === RESOLVED) {
-	                        if (typeof onResolved === 'function') {
-	                            resolve(onResolved.call(undefined, promise.value));
-	                        } else {
-	                            resolve(promise.value);
-	                        }
-	                    } else if (promise.state === REJECTED) {
-	                        if (typeof onRejected === 'function') {
-	                            resolve(onRejected.call(undefined, promise.value));
-	                        } else {
-	                            reject(promise.value);
-	                        }
-	                    }
-	                } catch (e) {
-	                    reject(e);
-	                }
-	            }
-	        }
-	    });
-	};
-
-	p.then = function then(onResolved, onRejected) {
-	    var promise = this;
-
-	    return new Promise(function (resolve, reject) {
-	        promise.deferred.push([onResolved, onRejected, resolve, reject]);
-	        promise.notify();
-	    });
-	};
-
-	p.catch = function (onRejected) {
-	    return this.then(undefined, onRejected);
-	};
-
-	module.exports = Promise;
-
-
-/***/ },
-/* 155 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * XMLHttp client.
-	 */
-
-	var _ = __webpack_require__(144);
-	var Promise = __webpack_require__(153);
-
-	module.exports = function (request) {
-	    return new Promise(function (resolve) {
-
-	        var xhr = new XMLHttpRequest(), response = {request: request}, handler;
+	        var xdr = new XDomainRequest(),
+	            response = { request: request },
+	            handler;
 
 	        request.cancel = function () {
-	            xhr.abort();
+	            xdr.abort();
 	        };
 
-	        xhr.open(request.method, _.url(request), true);
+	        xdr.open(request.method, Url(request), true);
 
-	        handler = function (event) {
+	        handler = function handler(event) {
 
-	            response.data = xhr.responseText;
-	            response.status = xhr.status;
-	            response.statusText = xhr.statusText;
-	            response.headers = xhr.getAllResponseHeaders();
+	            response.data = xdr.responseText;
+	            response.status = xdr.status;
+	            response.statusText = xdr.statusText || '';
 
 	            resolve(response);
 	        };
 
-	        xhr.timeout = 0;
-	        xhr.onload = handler;
-	        xhr.onabort = handler;
-	        xhr.onerror = handler;
-	        xhr.ontimeout = function () {};
-	        xhr.onprogress = function () {};
+	        xdr.timeout = 0;
+	        xdr.onload = handler;
+	        xdr.onabort = handler;
+	        xdr.onerror = handler;
+	        xdr.ontimeout = function () {};
+	        xdr.onprogress = function () {};
 
-	        if (_.isPlainObject(request.xhr)) {
-	            _.extend(xhr, request.xhr);
-	        }
-
-	        if (_.isPlainObject(request.upload)) {
-	            _.extend(xhr.upload, request.upload);
-	        }
-
-	        _.each(request.headers || {}, function (value, header) {
-	            xhr.setRequestHeader(header, value);
-	        });
-
-	        xhr.send(request.data);
+	        xdr.send(request.data);
 	    });
-	};
-
-
-/***/ },
-/* 156 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Interceptor factory.
-	 */
-
-	var _ = __webpack_require__(144);
-	var Promise = __webpack_require__(153);
-
-	module.exports = function (handler, vm) {
-
-	    return function (client) {
-
-	        if (_.isFunction(handler)) {
-	            handler = handler.call(vm, Promise);
-	        }
-
-	        return function (request) {
-
-	            if (_.isFunction(handler.request)) {
-	                request = handler.request.call(vm, request);
-	            }
-
-	            return when(request, function (request) {
-	                return when(client(request), function (response) {
-
-	                    if (_.isFunction(handler.response)) {
-	                        response = handler.response.call(vm, response);
-	                    }
-
-	                    return response;
-	                });
-	            });
-	        };
-	    };
-	};
-
-	function when(value, fulfilled, rejected) {
-
-	    var promise = Promise.resolve(value);
-
-	    if (arguments.length < 2) {
-	        return promise;
-	    }
-
-	    return promise.then(fulfilled, rejected);
 	}
 
+	var originUrl = Url.parse(location.href);
+	var supportCors = 'withCredentials' in new XMLHttpRequest();
 
-/***/ },
-/* 157 */
-/***/ function(module, exports, __webpack_require__) {
+	var exports$1 = {
+	    request: function request(_request) {
 
-	/**
-	 * Before Interceptor.
-	 */
-
-	var _ = __webpack_require__(144);
-
-	module.exports = {
-
-	    request: function (request) {
-
-	        if (_.isFunction(request.beforeSend)) {
-	            request.beforeSend.call(this, request);
+	        if (_request.crossOrigin === null) {
+	            _request.crossOrigin = crossOrigin(_request);
 	        }
 
-	        return request;
-	    }
+	        if (_request.crossOrigin) {
 
-	};
-
-
-/***/ },
-/* 158 */
-/***/ function(module, exports) {
-
-	/**
-	 * Timeout Interceptor.
-	 */
-
-	module.exports = function () {
-
-	    var timeout;
-
-	    return {
-
-	        request: function (request) {
-
-	            if (request.timeout) {
-	                timeout = setTimeout(function () {
-	                    request.cancel();
-	                }, request.timeout);
+	            if (!supportCors) {
+	                _request.client = xdrClient;
 	            }
 
-	            return request;
-	        },
-
-	        response: function (response) {
-
-	            clearTimeout(timeout);
-
-	            return response;
+	            _request.emulateHTTP = false;
 	        }
 
-	    };
-	};
-
-
-/***/ },
-/* 159 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * JSONP Interceptor.
-	 */
-
-	var jsonpClient = __webpack_require__(160);
-
-	module.exports = {
-
-	    request: function (request) {
-
-	        if (request.method == 'JSONP') {
-	            request.client = jsonpClient;
-	        }
-
-	        return request;
+	        return _request;
 	    }
-
 	};
 
+	function crossOrigin(request) {
 
-/***/ },
-/* 160 */
-/***/ function(module, exports, __webpack_require__) {
+	    var requestUrl = Url.parse(Url(request));
 
-	/**
-	 * JSONP client.
-	 */
+	    return requestUrl.protocol !== originUrl.protocol || requestUrl.host !== originUrl.host;
+	}
 
-	var _ = __webpack_require__(144);
-	var Promise = __webpack_require__(153);
+	var exports$2 = {
+	    request: function request(_request) {
 
-	module.exports = function (request) {
-	    return new Promise(function (resolve) {
+	        if (_request.emulateJSON && isPlainObject(_request.data)) {
+	            _request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+	            _request.data = Url.params(_request.data);
+	        }
 
-	        var callback = '_jsonp' + Math.random().toString(36).substr(2), response = {request: request, data: null}, handler, script;
+	        if (isObject(_request.data) && /FormData/i.test(_request.data.toString())) {
+	            delete _request.headers['Content-Type'];
+	        }
+
+	        if (isPlainObject(_request.data)) {
+	            _request.data = JSON.stringify(_request.data);
+	        }
+
+	        return _request;
+	    },
+	    response: function response(_response) {
+
+	        try {
+	            _response.data = JSON.parse(_response.data);
+	        } catch (e) {}
+
+	        return _response;
+	    }
+	};
+
+	function jsonpClient (request) {
+	    return new Promise$1(function (resolve) {
+
+	        var callback = '_jsonp' + Math.random().toString(36).substr(2),
+	            response = { request: request, data: null },
+	            handler,
+	            script;
 
 	        request.params[request.jsonp] = callback;
 	        request.cancel = function () {
-	            handler({type: 'cancel'});
+	            handler({ type: 'cancel' });
 	        };
 
 	        script = document.createElement('script');
-	        script.src = _.url(request);
+	        script.src = Url(request);
 	        script.type = 'text/javascript';
 	        script.async = true;
 
@@ -27701,7 +29086,7 @@ webpackJsonp([2,4],[
 	            response.data = data;
 	        };
 
-	        handler = function (event) {
+	        handler = function handler(event) {
 
 	            if (event.type === 'load' && response.data !== null) {
 	                response.status = 200;
@@ -27722,217 +29107,331 @@ webpackJsonp([2,4],[
 
 	        document.body.appendChild(script);
 	    });
+	}
+
+	var exports$3 = {
+	    request: function request(_request) {
+
+	        if (_request.method == 'JSONP') {
+	            _request.client = jsonpClient;
+	        }
+
+	        return _request;
+	    }
 	};
 
+	var exports$4 = {
+	    request: function request(_request) {
 
-/***/ },
-/* 161 */
-/***/ function(module, exports) {
+	        if (isFunction(_request.beforeSend)) {
+	            _request.beforeSend.call(this, _request);
+	        }
+
+	        return _request;
+	    }
+	};
 
 	/**
 	 * HTTP method override Interceptor.
 	 */
 
-	module.exports = {
+	var exports$5 = {
+	    request: function request(_request) {
 
-	    request: function (request) {
-
-	        if (request.emulateHTTP && /^(PUT|PATCH|DELETE)$/i.test(request.method)) {
-	            request.headers['X-HTTP-Method-Override'] = request.method;
-	            request.method = 'POST';
+	        if (_request.emulateHTTP && /^(PUT|PATCH|DELETE)$/i.test(_request.method)) {
+	            _request.headers['X-HTTP-Method-Override'] = _request.method;
+	            _request.method = 'POST';
 	        }
 
-	        return request;
+	        return _request;
 	    }
-
 	};
 
+	var exports$6 = {
+	    request: function request(_request) {
 
-/***/ },
-/* 162 */
-/***/ function(module, exports, __webpack_require__) {
+	        _request.method = _request.method.toUpperCase();
+	        _request.headers = extend({}, Http.headers.common, !_request.crossOrigin ? Http.headers.custom : {}, Http.headers[_request.method.toLowerCase()], _request.headers);
 
-	/**
-	 * Mime Interceptor.
-	 */
-
-	var _ = __webpack_require__(144);
-
-	module.exports = {
-
-	    request: function (request) {
-
-	        if (request.emulateJSON && _.isPlainObject(request.data)) {
-	            request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-	            request.data = _.url.params(request.data);
+	        if (isPlainObject(_request.data) && /^(GET|JSONP)$/i.test(_request.method)) {
+	            extend(_request.params, _request.data);
+	            delete _request.data;
 	        }
 
-	        if (_.isObject(request.data) && /FormData/i.test(request.data.toString())) {
-	            delete request.headers['Content-Type'];
-	        }
-
-	        if (_.isPlainObject(request.data)) {
-	            request.data = JSON.stringify(request.data);
-	        }
-
-	        return request;
-	    },
-
-	    response: function (response) {
-
-	        try {
-	            response.data = JSON.parse(response.data);
-	        } catch (e) {}
-
-	        return response;
+	        return _request;
 	    }
-
 	};
 
-
-/***/ },
-/* 163 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/**
-	 * Header Interceptor.
+	 * Timeout Interceptor.
 	 */
 
-	var _ = __webpack_require__(144);
+	var exports$7 = function exports() {
 
-	module.exports = {
+	    var timeout;
 
-	    request: function (request) {
+	    return {
+	        request: function request(_request) {
 
-	        request.method = request.method.toUpperCase();
-	        request.headers = _.extend({}, _.http.headers.common,
-	            !request.crossOrigin ? _.http.headers.custom : {},
-	            _.http.headers[request.method.toLowerCase()],
-	            request.headers
-	        );
-
-	        if (_.isPlainObject(request.data) && /^(GET|JSONP)$/i.test(request.method)) {
-	            _.extend(request.params, request.data);
-	            delete request.data;
-	        }
-
-	        return request;
-	    }
-
-	};
-
-
-/***/ },
-/* 164 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * CORS Interceptor.
-	 */
-
-	var _ = __webpack_require__(144);
-	var xdrClient = __webpack_require__(165);
-	var xhrCors = 'withCredentials' in new XMLHttpRequest();
-	var originUrl = _.url.parse(location.href);
-
-	module.exports = {
-
-	    request: function (request) {
-
-	        if (request.crossOrigin === null) {
-	            request.crossOrigin = crossOrigin(request);
-	        }
-
-	        if (request.crossOrigin) {
-
-	            if (!xhrCors) {
-	                request.client = xdrClient;
+	            if (_request.timeout) {
+	                timeout = setTimeout(function () {
+	                    _request.cancel();
+	                }, _request.timeout);
 	            }
 
-	            request.emulateHTTP = false;
+	            return _request;
+	        },
+	        response: function response(_response) {
+
+	            clearTimeout(timeout);
+
+	            return _response;
 	        }
-
-	        return request;
-	    }
-
+	    };
 	};
 
-	function crossOrigin(request) {
+	function interceptor (handler, vm) {
 
-	    var requestUrl = _.url.parse(_.url(request));
+	    return function (client) {
 
-	    return (requestUrl.protocol !== originUrl.protocol || requestUrl.host !== originUrl.host);
+	        if (isFunction(handler)) {
+	            handler = handler.call(vm, Promise$1);
+	        }
+
+	        return function (request) {
+
+	            if (isFunction(handler.request)) {
+	                request = handler.request.call(vm, request);
+	            }
+
+	            return when(request, function (request) {
+	                return when(client(request), function (response) {
+
+	                    if (isFunction(handler.response)) {
+	                        response = handler.response.call(vm, response);
+	                    }
+
+	                    return response;
+	                });
+	            });
+	        };
+	    };
 	}
 
+	function when(value, fulfilled, rejected) {
 
-/***/ },
-/* 165 */
-/***/ function(module, exports, __webpack_require__) {
+	    var promise = Promise$1.resolve(value);
 
-	/**
-	 * XDomain client (Internet Explorer).
-	 */
+	    if (arguments.length < 2) {
+	        return promise;
+	    }
 
-	var _ = __webpack_require__(144);
-	var Promise = __webpack_require__(153);
+	    return promise.then(fulfilled, rejected);
+	}
 
-	module.exports = function (request) {
-	    return new Promise(function (resolve) {
+	function xhrClient (request) {
+	    return new Promise$1(function (resolve) {
 
-	        var xdr = new XDomainRequest(), response = {request: request}, handler;
+	        var xhr = new XMLHttpRequest(),
+	            response = { request: request },
+	            handler;
 
 	        request.cancel = function () {
-	            xdr.abort();
+	            xhr.abort();
 	        };
 
-	        xdr.open(request.method, _.url(request), true);
+	        xhr.open(request.method, Url(request), true);
 
-	        handler = function (event) {
+	        handler = function handler(event) {
 
-	            response.data = xdr.responseText;
-	            response.status = xdr.status;
-	            response.statusText = xdr.statusText;
+	            response.data = 'response' in xhr ? xhr.response : xhr.responseText;
+	            response.status = xhr.status === 1223 ? 204 : xhr.status; // IE9 status bug
+	            response.statusText = trim(xhr.statusText || '');
+	            response.headers = xhr.getAllResponseHeaders();
 
 	            resolve(response);
 	        };
 
-	        xdr.timeout = 0;
-	        xdr.onload = handler;
-	        xdr.onabort = handler;
-	        xdr.onerror = handler;
-	        xdr.ontimeout = function () {};
-	        xdr.onprogress = function () {};
+	        xhr.timeout = 0;
+	        xhr.onload = handler;
+	        xhr.onabort = handler;
+	        xhr.onerror = handler;
+	        xhr.ontimeout = function () {};
+	        xhr.onprogress = function () {};
 
-	        xdr.send(request.data);
+	        if (isPlainObject(request.xhr)) {
+	            extend(xhr, request.xhr);
+	        }
+
+	        if (isPlainObject(request.upload)) {
+	            extend(xhr.upload, request.upload);
+	        }
+
+	        each(request.headers || {}, function (value, header) {
+	            xhr.setRequestHeader(header, value);
+	        });
+
+	        xhr.send(request.data);
 	    });
-	};
+	}
 
+	function Client (request) {
 
-/***/ },
-/* 166 */
-/***/ function(module, exports, __webpack_require__) {
+	    var response = (request.client || xhrClient)(request);
+
+	    return Promise$1.resolve(response).then(function (response) {
+
+	        if (response.headers) {
+
+	            var headers = parseHeaders(response.headers);
+
+	            response.headers = function (name) {
+
+	                if (name) {
+	                    return headers[toLower(name)];
+	                }
+
+	                return headers;
+	            };
+	        }
+
+	        response.ok = response.status >= 200 && response.status < 300;
+
+	        return response;
+	    });
+	}
+
+	function parseHeaders(str) {
+
+	    var headers = {},
+	        value,
+	        name,
+	        i;
+
+	    if (isString(str)) {
+	        each(str.split('\n'), function (row) {
+
+	            i = row.indexOf(':');
+	            name = trim(toLower(row.slice(0, i)));
+	            value = trim(row.slice(i + 1));
+
+	            if (headers[name]) {
+
+	                if (isArray(headers[name])) {
+	                    headers[name].push(value);
+	                } else {
+	                    headers[name] = [headers[name], value];
+	                }
+	            } else {
+
+	                headers[name] = value;
+	            }
+	        });
+	    }
+
+	    return headers;
+	}
 
 	/**
-	 * Service for interacting with RESTful services.
+	 * Service for sending network requests.
 	 */
 
-	var _ = __webpack_require__(144);
+	var jsonType = { 'Content-Type': 'application/json' };
+
+	function Http(url, options) {
+
+	    var self = this || {},
+	        client = Client,
+	        request,
+	        promise;
+
+	    Http.interceptors.forEach(function (handler) {
+	        client = interceptor(handler, self.$vm)(client);
+	    });
+
+	    options = isObject(url) ? url : extend({ url: url }, options);
+	    request = merge({}, Http.options, self.$options, options);
+	    promise = client(request).bind(self.$vm).then(function (response) {
+
+	        return response.ok ? response : Promise$1.reject(response);
+	    }, function (response) {
+
+	        if (response instanceof Error) {
+	            error(response);
+	        }
+
+	        return Promise$1.reject(response);
+	    });
+
+	    if (request.success) {
+	        promise.success(request.success);
+	    }
+
+	    if (request.error) {
+	        promise.error(request.error);
+	    }
+
+	    return promise;
+	}
+
+	Http.options = {
+	    method: 'get',
+	    data: '',
+	    params: {},
+	    headers: {},
+	    xhr: null,
+	    upload: null,
+	    jsonp: 'callback',
+	    beforeSend: null,
+	    crossOrigin: null,
+	    emulateHTTP: false,
+	    emulateJSON: false,
+	    timeout: 0
+	};
+
+	Http.headers = {
+	    put: jsonType,
+	    post: jsonType,
+	    patch: jsonType,
+	    delete: jsonType,
+	    common: { 'Accept': 'application/json, text/plain, */*' },
+	    custom: { 'X-Requested-With': 'XMLHttpRequest' }
+	};
+
+	Http.interceptors = [exports$4, exports$7, exports$3, exports$5, exports$2, exports$6, exports$1];
+
+	['get', 'put', 'post', 'patch', 'delete', 'jsonp'].forEach(function (method) {
+
+	    Http[method] = function (url, data, success, options) {
+
+	        if (isFunction(data)) {
+	            options = success;
+	            success = data;
+	            data = undefined;
+	        }
+
+	        if (isObject(success)) {
+	            options = success;
+	            success = undefined;
+	        }
+
+	        return this(url, extend({ method: method, data: data, success: success }, options));
+	    };
+	});
 
 	function Resource(url, params, actions, options) {
 
-	    var self = this, resource = {};
+	    var self = this || {},
+	        resource = {};
 
-	    actions = _.extend({},
-	        Resource.actions,
-	        actions
-	    );
+	    actions = extend({}, Resource.actions, actions);
 
-	    _.each(actions, function (action, name) {
+	    each(actions, function (action, name) {
 
-	        action = _.merge({url: url, params: params || {}}, options, action);
+	        action = merge({ url: url, params: params || {} }, options, action);
 
 	        resource[name] = function () {
-	            return (self.$http || _.http)(opts(action, arguments));
+	            return (self.$http || Http)(opts(action, arguments));
 	        };
 	    });
 
@@ -27941,7 +29440,11 @@ webpackJsonp([2,4],[
 
 	function opts(action, args) {
 
-	    var options = _.extend({}, action), params = {}, data, success, error;
+	    var options = extend({}, action),
+	        params = {},
+	        data,
+	        success,
+	        error;
 
 	    switch (args.length) {
 
@@ -27953,9 +29456,9 @@ webpackJsonp([2,4],[
 	        case 3:
 	        case 2:
 
-	            if (_.isFunction(args[1])) {
+	            if (isFunction(args[1])) {
 
-	                if (_.isFunction(args[0])) {
+	                if (isFunction(args[0])) {
 
 	                    success = args[0];
 	                    error = args[1];
@@ -27965,7 +29468,6 @@ webpackJsonp([2,4],[
 
 	                success = args[1];
 	                error = args[2];
-
 	            } else {
 
 	                params = args[0];
@@ -27977,7 +29479,7 @@ webpackJsonp([2,4],[
 
 	        case 1:
 
-	            if (_.isFunction(args[0])) {
+	            if (isFunction(args[0])) {
 	                success = args[0];
 	            } else if (/^(POST|PUT|PATCH)$/i.test(options.method)) {
 	                data = args[0];
@@ -27997,7 +29499,7 @@ webpackJsonp([2,4],[
 	    }
 
 	    options.data = data;
-	    options.params = _.extend({}, options.params, params);
+	    options.params = extend({}, options.params, params);
 
 	    if (success) {
 	        options.success = success;
@@ -28012,32 +29514,81 @@ webpackJsonp([2,4],[
 
 	Resource.actions = {
 
-	    get: {method: 'GET'},
-	    save: {method: 'POST'},
-	    query: {method: 'GET'},
-	    update: {method: 'PUT'},
-	    remove: {method: 'DELETE'},
-	    delete: {method: 'DELETE'}
+	    get: { method: 'GET' },
+	    save: { method: 'POST' },
+	    query: { method: 'GET' },
+	    update: { method: 'PUT' },
+	    remove: { method: 'DELETE' },
+	    delete: { method: 'DELETE' }
 
 	};
 
-	module.exports = _.resource = Resource;
+	function plugin(Vue) {
 
+	    if (plugin.installed) {
+	        return;
+	    }
+
+	    Util(Vue);
+
+	    Vue.url = Url;
+	    Vue.http = Http;
+	    Vue.resource = Resource;
+	    Vue.Promise = Promise$1;
+
+	    Object.defineProperties(Vue.prototype, {
+
+	        $url: {
+	            get: function get() {
+	                return options(Vue.url, this, this.$options.url);
+	            }
+	        },
+
+	        $http: {
+	            get: function get() {
+	                return options(Vue.http, this, this.$options.http);
+	            }
+	        },
+
+	        $resource: {
+	            get: function get() {
+	                return Vue.resource.bind(this);
+	            }
+	        },
+
+	        $promise: {
+	            get: function get() {
+	                var _this = this;
+
+	                return function (executor) {
+	                    return new Vue.Promise(executor, _this);
+	                };
+	            }
+	        }
+
+	    });
+	}
+
+	if (typeof window !== 'undefined' && window.Vue) {
+	    window.Vue.use(plugin);
+	}
+
+	module.exports = plugin;
 
 /***/ },
-/* 167 */,
-/* 168 */,
-/* 169 */
+/* 144 */,
+/* 145 */,
+/* 146 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	__webpack_require__(170)
-	__vue_script__ = __webpack_require__(172)
+	__webpack_require__(147)
+	__vue_script__ = __webpack_require__(149)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
 	    Object.keys(__vue_script__).length > 1) {
 	  console.warn("[vue-loader] vendor\\components\\room.vue: named exports in *.vue files are ignored.")}
-	__vue_template__ = __webpack_require__(282)
+	__vue_template__ = __webpack_require__(259)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
 	if (__vue_template__) {
@@ -28045,9 +29596,9 @@ webpackJsonp([2,4],[
 	}
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
-	  hotAPI.install(require("vue"), true)
+	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "D:\\cancelStation\\liveApp\\vendor\\components\\room.vue"
+	  var id = "./room.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -28056,13 +29607,13 @@ webpackJsonp([2,4],[
 	})()}
 
 /***/ },
-/* 170 */
+/* 147 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(171);
+	var content = __webpack_require__(148);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
 	var update = __webpack_require__(9)(content, {});
@@ -28082,7 +29633,7 @@ webpackJsonp([2,4],[
 	}
 
 /***/ },
-/* 171 */
+/* 148 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports = module.exports = __webpack_require__(8)();
@@ -28096,25 +29647,25 @@ webpackJsonp([2,4],[
 
 
 /***/ },
-/* 172 */
+/* 149 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";Object.defineProperty(exports,"__esModule",{value:true});var _store=__webpack_require__(123);var _store2=_interopRequireDefault(_store);var _io=__webpack_require__(173);var _io2=_interopRequireDefault(_io);var _$=__webpack_require__(174);var _$2=_interopRequireDefault(_$);var _lodash=__webpack_require__(125);var _lodash2=_interopRequireDefault(_lodash);var _login=__webpack_require__(131);var _login2=_interopRequireDefault(_login);var _actions=__webpack_require__(11);var _moment=__webpack_require__(175);var _moment2=_interopRequireDefault(_moment);var _dialog=__webpack_require__(277);var _dialog2=_interopRequireDefault(_dialog);var _utils=__webpack_require__(12);function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}exports.default={store:_store2.default,vuex:{getters:{user:function user(_ref){var _user=_ref.user;return _user;},room:function room(_ref2){var _room=_ref2.room;return _room;},knight:function knight(_ref3){var _knight=_ref3.knight;return _knight;},livestate:function livestate(_ref4){var _livestate=_ref4.livestate;return _livestate;},gift:function gift(_ref5){var _gift=_ref5.gift;return _gift;},judgeSub:function judgeSub(_ref6){var _judgeSub=_ref6.judgeSub;return _judgeSub;},room_id:function room_id(_ref7){var _room_id=_ref7.room_id;return _room_id;}},actions:{logout:_actions.logout,changeGift:_actions.changeGift,refreshUser:_actions.refreshUser,subscribe:_actions.subscribe,unsubscribe:_actions.unsubscribe,refreshBalance:_actions.refreshBalance,refreshRoom:_actions.refreshRoom}},data:function data(){return {socket:(0,_io2.default)(),giftList:[{type:0,name:"计时",curr:true},{type:1,name:"幸运",curr:false},{type:2,name:"普通",curr:false},{type:3,name:"浪漫",curr:false},{type:4,name:"奢华",curr:false},{type:5,name:"定制",curr:false}],chartWarp:[],userList:[],logined:"none",showItem:false,targetGift:null,giftNum:1,isShowDialog:"none",dialogContent:"请选择礼物",moverGift:null,showQuick:false,quickList:[10,66,99,188,520,1314,9999],top:null,top23:null};},ready:function ready(){if(this.livestate.status!=0){jwplayer("v_Player").setup({sources:[{file:"rtmp://120.27.199.10/live/"+this.livestate.livecode}],stretching:'fill',image:"/images/family-room/f-room.png",autostart:true,controls:false,aspectratio:'24:10',width:480,height:360,primary:"flash",flashplayer:"/javascripts/jwplayer/jwplayer.flash6.6.swf"});}var self=this;var chartpane=(0,_$2.default)(this.$els.chartpane);chartpane.parent().height((0,_$2.default)("#PUB_CHART").height()+"px");chartpane.height((0,_$2.default)("#PUB_CHART").height()+"px");(0,_$2.default)(this.$els.chartpane).show();if(!!this.user){this.socket.emit("add user",this.user);}this.socket.on('user joined',function(user,room){self.addChartwarp(_lodash2.default.extend({type:"join"},user));self.userList=room;});this.socket.on('send message',function(user){self.addChartwarp(_lodash2.default.extend({type:"msg",time:(0,_moment2.default)().format("hh:mm")},user));});this.socket.on('send gift',function(gift){self.sendGiftSwf(gift);});this.socket.on("update Top23",function(top23){console.log(top23);self.top23=top23;});this.socket.on("update Top",function(top){self.top=top;});},methods:{targeQuick:function targeQuick(){this.showQuick=!this.showQuick;},setQuick:function setQuick(n){this.giftNum=n;this.showQuick=false;},refreshDom:function refreshDom(){setTimeout(function(){var chartObj=document.querySelector("#PUB_SCROLL");chartObj.scrollTop=chartObj.style.height.replace("px",0);console.log(chartObj.style.height.replace("px",0));},100);},addChartwarp:function addChartwarp(chart){this.chartWarp.push(chart);this.refreshDom();},currGift:function currGift(evt,t){(0,_$2.default)(evt.currentTarget).siblings().removeClass("curr");(0,_$2.default)(evt.currentTarget).toggleClass("curr");this.targetGift=t;},showLogin:function showLogin(type){this.logined=type;},logoutActions:function logoutActions(){this.logout();window.location.href="/";},setShowItem:function setShowItem(bool){this.showItem=!this.showItem;},chartSendMessage:function chartSendMessage(){if(this.user==null){this.showLogin("login");window.location.href="/";}else if(!_lodash2.default.isEmpty(this.message)){this.socket.emit('send message',_lodash2.default.extend({message:this.message},this.user));this.message='';}},moverGiftEvent:function moverGiftEvent(g,evt){this.moverGift=g;var position=(0,_$2.default)(evt.target).offset();position.top=position.top-(0,_$2.default)("#domgt").outerHeight()-2;(0,_$2.default)("#domgt").css(position);},sendGift:function sendGift(){var _this=this;var self=this;if(this.user==null){this.showLogin("login");window.location.href="/";}else {if(this.targetGift==null){this.isShowDialog="block";this.dialogContent="请选择礼物";}else {(function(){var r={};r.gift=_this.targetGift;r.total=_this.giftNum;r.type="gift";(0,_utils.httper)("/php/consume/giveGift?gift_id="+_this.targetGift.id+"&artist_id="+_this.room.artist_id+"&num="+_this.giftNum).then(function(response){if(response.data.code==0){self.socket.emit("send gift",self.targetGift,r.total,self.user,self.room);self.socket.emit('send message',_lodash2.default.extend(r,self.user));self.refreshBalance(_lodash2.default.result(response,"data.data[1]"));self.refreshRoom(self.room_id);}else {self.isShowDialog="block";self.dialogContent=_lodash2.default.result(response,"data.message");}});})();}}},sendGiftSwf:function sendGiftSwf(gift,artist_id){swfobject.embedSWF(gift.swf,"domgiftEffect","500","420","10.0.0",null,null,{wmode:"transparent"},{loop:"loop"});_lodash2.default.delay(function(){(0,_$2.default)("#domgiftEffect").replaceWith("<div id='domgiftEffect'></div>");},(parseInt(gift.swf_time)+1)*1000);},focus:function focus(type){if(this.user==null){this.showLogin("login");window.location.href="/";}else {if(_lodash2.default.isEmpty(type)){this.subscribe(_lodash2.default.result(this.room,"artist_id"));}else {this.unsubscribe(_lodash2.default.result(this.room,"artist_id"));}}},changeFocusState:function changeFocusState(state,evt){switch(state){case "over":(0,_$2.default)(evt.target).removeClass().addClass("u-atten-v").text("取消关注");break;default:(0,_$2.default)(evt.target).removeClass().addClass("u-atten-c").text("已关注");break;}},giftTypeChange:function giftTypeChange(type){var _this2=this;_lodash2.default.each(this.giftList,function(gift){if(gift.type==type){gift.curr=true;_this2.changeGift(type);}else {gift.curr=false;}});}},components:{login:_login2.default,dialog:_dialog2.default}};
+	"use strict";Object.defineProperty(exports,"__esModule",{value:true});var _store=__webpack_require__(123);var _store2=_interopRequireDefault(_store);var _io=__webpack_require__(150);var _io2=_interopRequireDefault(_io);var _$=__webpack_require__(151);var _$2=_interopRequireDefault(_$);var _lodash=__webpack_require__(125);var _lodash2=_interopRequireDefault(_lodash);var _login=__webpack_require__(131);var _login2=_interopRequireDefault(_login);var _actions=__webpack_require__(11);var _moment=__webpack_require__(152);var _moment2=_interopRequireDefault(_moment);var _dialog=__webpack_require__(254);var _dialog2=_interopRequireDefault(_dialog);var _utils=__webpack_require__(12);function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}exports.default={store:_store2.default,vuex:{getters:{user:function user(_ref){var _user=_ref.user;return _user;},room:function room(_ref2){var _room=_ref2.room;return _room;},knight:function knight(_ref3){var _knight=_ref3.knight;return _knight;},livestate:function livestate(_ref4){var _livestate=_ref4.livestate;return _livestate;},gift:function gift(_ref5){var _gift=_ref5.gift;return _gift;},judgeSub:function judgeSub(_ref6){var _judgeSub=_ref6.judgeSub;return _judgeSub;},room_id:function room_id(_ref7){var _room_id=_ref7.room_id;return _room_id;}},actions:{logout:_actions.logout,changeGift:_actions.changeGift,refreshUser:_actions.refreshUser,subscribe:_actions.subscribe,unsubscribe:_actions.unsubscribe,refreshBalance:_actions.refreshBalance,refreshRoom:_actions.refreshRoom}},data:function data(){return{socket:(0,_io2.default)(),giftList:[{type:0,name:"计时",curr:true},{type:1,name:"幸运",curr:false},{type:2,name:"普通",curr:false},{type:3,name:"浪漫",curr:false},{type:4,name:"奢华",curr:false},{type:5,name:"定制",curr:false}],chartWarp:[],userList:[],logined:"none",showItem:false,targetGift:null,giftNum:1,isShowDialog:"none",dialogContent:"请选择礼物",moverGift:null,showQuick:false,quickList:[10,66,99,188,520,1314,9999],top:null,top23:null};},ready:function ready(){if(this.livestate.status!=0){jwplayer("v_Player").setup({sources:[{file:"rtmp://120.27.199.10/live/"+this.livestate.livecode}],stretching:'fill',image:"/images/family-room/f-room.png",autostart:true,controls:false,aspectratio:'24:10',width:480,height:360,primary:"flash",flashplayer:"/javascripts/jwplayer/jwplayer.flash6.6.swf"});}var self=this;var chartpane=(0,_$2.default)(this.$els.chartpane);chartpane.parent().height((0,_$2.default)("#PUB_CHART").height()+"px");chartpane.height((0,_$2.default)("#PUB_CHART").height()+"px");(0,_$2.default)(this.$els.chartpane).show();if(!!this.user){this.socket.emit("add user",this.user);}this.socket.on('user joined',function(user,room,top1,top23){self.addChartwarp(_lodash2.default.extend({type:"join"},user));self.userList=room;self.top=top1;self.top23=top23;});this.socket.on('send message',function(user){self.addChartwarp(_lodash2.default.extend({type:"msg",time:(0,_moment2.default)().format("hh:mm")},user));});this.socket.on('send gift',function(gift){self.sendGiftSwf(gift);});this.socket.on("update Top23",function(top23){console.log(top23);self.top23=top23;});this.socket.on("update Top",function(top){self.top=top;});},computed:{getToptimes:function getToptimes(){if(_lodash2.default.isEmpty(top))return"";var minutes=(0,_moment2.default)(top.time).add(3,"minutes").diff((0,_moment2.default)());if(minutes<=0)return"00:00";minutes=parseInt(minutes/1000);}},methods:{moment:_moment2.default,targeQuick:function targeQuick(){this.showQuick=!this.showQuick;},setQuick:function setQuick(n){this.giftNum=n;this.showQuick=false;},refreshDom:function refreshDom(){setTimeout(function(){var chartObj=document.querySelector("#PUB_SCROLL");chartObj.scrollTop=chartObj.style.height.replace("px",0);console.log(chartObj.style.height.replace("px",0));},100);},addChartwarp:function addChartwarp(chart){this.chartWarp.push(chart);this.refreshDom();},currGift:function currGift(evt,t){(0,_$2.default)(evt.currentTarget).siblings().removeClass("curr");(0,_$2.default)(evt.currentTarget).toggleClass("curr");this.targetGift=t;},showLogin:function showLogin(type){this.logined=type;},logoutActions:function logoutActions(){this.logout();window.location.href="/";},setShowItem:function setShowItem(bool){this.showItem=!this.showItem;},chartSendMessage:function chartSendMessage(){if(this.user==null){this.showLogin("login");window.location.href="/";}else if(!_lodash2.default.isEmpty(this.message)){this.socket.emit('send message',_lodash2.default.extend({message:this.message},this.user));this.message='';}},moverGiftEvent:function moverGiftEvent(g,evt){this.moverGift=g;var position=(0,_$2.default)(evt.target).offset();position.top=position.top-(0,_$2.default)("#domgt").outerHeight()-2;(0,_$2.default)("#domgt").css(position);},sendGift:function sendGift(){var _this=this;var self=this;if(this.user==null){this.showLogin("login");window.location.href="/";}else{if(this.targetGift==null){this.isShowDialog="block";this.dialogContent="请选择礼物";}else{(function(){var r={};r.gift=_this.targetGift;r.total=_this.giftNum;r.type="gift";(0,_utils.httper)("/php/consume/giveGift?gift_id="+_this.targetGift.id+"&artist_id="+_this.room.artist_id+"&num="+_this.giftNum).then(function(response){if(response.data.code==0){self.socket.emit("send gift",self.targetGift,r.total,self.user,self.room);self.refreshBalance(_lodash2.default.result(response,"data.data[1]"));self.refreshRoom(self.room_id);}else{self.isShowDialog="block";self.dialogContent=_lodash2.default.result(response,"data.message");}});})();}}},sendGiftSwf:function sendGiftSwf(gift,artist_id){swfobject.embedSWF(gift.swf,"domgiftEffect","500","420","10.0.0",null,null,{wmode:"transparent"},{loop:"loop"});_lodash2.default.delay(function(){(0,_$2.default)("#domgiftEffect").replaceWith("<div id='domgiftEffect'></div>");},(parseInt(gift.swf_time)+1)*1000);},focus:function focus(type){if(this.user==null){this.showLogin("login");window.location.href="/";}else{if(_lodash2.default.isEmpty(type)){this.subscribe(_lodash2.default.result(this.room,"artist_id"));}else{this.unsubscribe(_lodash2.default.result(this.room,"artist_id"));}}},changeFocusState:function changeFocusState(state,evt){switch(state){case"over":(0,_$2.default)(evt.target).removeClass().addClass("u-atten-v").text("取消关注");break;default:(0,_$2.default)(evt.target).removeClass().addClass("u-atten-c").text("已关注");break;}},giftTypeChange:function giftTypeChange(type){var _this2=this;_lodash2.default.each(this.giftList,function(gift){if(gift.type==type){gift.curr=true;_this2.changeGift(type);}else{gift.curr=false;}});}},components:{login:_login2.default,dialog:_dialog2.default}};
 
 /***/ },
-/* 173 */
+/* 150 */
 /***/ function(module, exports) {
 
 	module.exports = io;
 
 /***/ },
-/* 174 */
+/* 151 */
 /***/ function(module, exports) {
 
 	module.exports = $;
 
 /***/ },
-/* 175 */
+/* 152 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(module) {//! moment.js
@@ -28515,7 +30066,7 @@ webpackJsonp([2,4],[
 	                module && module.exports) {
 	            try {
 	                oldLocale = globalLocale._abbr;
-	                __webpack_require__(176)("./" + name);
+	                __webpack_require__(153)("./" + name);
 	                // because defineLocale currently also sets the global locale, we
 	                // want to undo that for lazy loaded locales
 	                locale_locales__getSetGlobalLocale(oldLocale);
@@ -32160,210 +33711,210 @@ webpackJsonp([2,4],[
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(126)(module)))
 
 /***/ },
-/* 176 */
+/* 153 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var map = {
-		"./af": 177,
-		"./af.js": 177,
-		"./ar": 178,
-		"./ar-ma": 179,
-		"./ar-ma.js": 179,
-		"./ar-sa": 180,
-		"./ar-sa.js": 180,
-		"./ar-tn": 181,
-		"./ar-tn.js": 181,
-		"./ar.js": 178,
-		"./az": 182,
-		"./az.js": 182,
-		"./be": 183,
-		"./be.js": 183,
-		"./bg": 184,
-		"./bg.js": 184,
-		"./bn": 185,
-		"./bn.js": 185,
-		"./bo": 186,
-		"./bo.js": 186,
-		"./br": 187,
-		"./br.js": 187,
-		"./bs": 188,
-		"./bs.js": 188,
-		"./ca": 189,
-		"./ca.js": 189,
-		"./cs": 190,
-		"./cs.js": 190,
-		"./cv": 191,
-		"./cv.js": 191,
-		"./cy": 192,
-		"./cy.js": 192,
-		"./da": 193,
-		"./da.js": 193,
-		"./de": 194,
-		"./de-at": 195,
-		"./de-at.js": 195,
-		"./de.js": 194,
-		"./dv": 196,
-		"./dv.js": 196,
-		"./el": 197,
-		"./el.js": 197,
-		"./en-au": 198,
-		"./en-au.js": 198,
-		"./en-ca": 199,
-		"./en-ca.js": 199,
-		"./en-gb": 200,
-		"./en-gb.js": 200,
-		"./en-ie": 201,
-		"./en-ie.js": 201,
-		"./en-nz": 202,
-		"./en-nz.js": 202,
-		"./eo": 203,
-		"./eo.js": 203,
-		"./es": 204,
-		"./es.js": 204,
-		"./et": 205,
-		"./et.js": 205,
-		"./eu": 206,
-		"./eu.js": 206,
-		"./fa": 207,
-		"./fa.js": 207,
-		"./fi": 208,
-		"./fi.js": 208,
-		"./fo": 209,
-		"./fo.js": 209,
-		"./fr": 210,
-		"./fr-ca": 211,
-		"./fr-ca.js": 211,
-		"./fr-ch": 212,
-		"./fr-ch.js": 212,
-		"./fr.js": 210,
-		"./fy": 213,
-		"./fy.js": 213,
-		"./gd": 214,
-		"./gd.js": 214,
-		"./gl": 215,
-		"./gl.js": 215,
-		"./he": 216,
-		"./he.js": 216,
-		"./hi": 217,
-		"./hi.js": 217,
-		"./hr": 218,
-		"./hr.js": 218,
-		"./hu": 219,
-		"./hu.js": 219,
-		"./hy-am": 220,
-		"./hy-am.js": 220,
-		"./id": 221,
-		"./id.js": 221,
-		"./is": 222,
-		"./is.js": 222,
-		"./it": 223,
-		"./it.js": 223,
-		"./ja": 224,
-		"./ja.js": 224,
-		"./jv": 225,
-		"./jv.js": 225,
-		"./ka": 226,
-		"./ka.js": 226,
-		"./kk": 227,
-		"./kk.js": 227,
-		"./km": 228,
-		"./km.js": 228,
-		"./ko": 229,
-		"./ko.js": 229,
-		"./ky": 230,
-		"./ky.js": 230,
-		"./lb": 231,
-		"./lb.js": 231,
-		"./lo": 232,
-		"./lo.js": 232,
-		"./lt": 233,
-		"./lt.js": 233,
-		"./lv": 234,
-		"./lv.js": 234,
-		"./me": 235,
-		"./me.js": 235,
-		"./mk": 236,
-		"./mk.js": 236,
-		"./ml": 237,
-		"./ml.js": 237,
-		"./mr": 238,
-		"./mr.js": 238,
-		"./ms": 239,
-		"./ms-my": 240,
-		"./ms-my.js": 240,
-		"./ms.js": 239,
-		"./my": 241,
-		"./my.js": 241,
-		"./nb": 242,
-		"./nb.js": 242,
-		"./ne": 243,
-		"./ne.js": 243,
-		"./nl": 244,
-		"./nl.js": 244,
-		"./nn": 245,
-		"./nn.js": 245,
-		"./pa-in": 246,
-		"./pa-in.js": 246,
-		"./pl": 247,
-		"./pl.js": 247,
-		"./pt": 248,
-		"./pt-br": 249,
-		"./pt-br.js": 249,
-		"./pt.js": 248,
-		"./ro": 250,
-		"./ro.js": 250,
-		"./ru": 251,
-		"./ru.js": 251,
-		"./se": 252,
-		"./se.js": 252,
-		"./si": 253,
-		"./si.js": 253,
-		"./sk": 254,
-		"./sk.js": 254,
-		"./sl": 255,
-		"./sl.js": 255,
-		"./sq": 256,
-		"./sq.js": 256,
-		"./sr": 257,
-		"./sr-cyrl": 258,
-		"./sr-cyrl.js": 258,
-		"./sr.js": 257,
-		"./ss": 259,
-		"./ss.js": 259,
-		"./sv": 260,
-		"./sv.js": 260,
-		"./sw": 261,
-		"./sw.js": 261,
-		"./ta": 262,
-		"./ta.js": 262,
-		"./te": 263,
-		"./te.js": 263,
-		"./th": 264,
-		"./th.js": 264,
-		"./tl-ph": 265,
-		"./tl-ph.js": 265,
-		"./tlh": 266,
-		"./tlh.js": 266,
-		"./tr": 267,
-		"./tr.js": 267,
-		"./tzl": 268,
-		"./tzl.js": 268,
-		"./tzm": 269,
-		"./tzm-latn": 270,
-		"./tzm-latn.js": 270,
-		"./tzm.js": 269,
-		"./uk": 271,
-		"./uk.js": 271,
-		"./uz": 272,
-		"./uz.js": 272,
-		"./vi": 273,
-		"./vi.js": 273,
-		"./x-pseudo": 274,
-		"./x-pseudo.js": 274,
-		"./zh-cn": 275,
-		"./zh-cn.js": 275,
-		"./zh-tw": 276,
-		"./zh-tw.js": 276
+		"./af": 154,
+		"./af.js": 154,
+		"./ar": 155,
+		"./ar-ma": 156,
+		"./ar-ma.js": 156,
+		"./ar-sa": 157,
+		"./ar-sa.js": 157,
+		"./ar-tn": 158,
+		"./ar-tn.js": 158,
+		"./ar.js": 155,
+		"./az": 159,
+		"./az.js": 159,
+		"./be": 160,
+		"./be.js": 160,
+		"./bg": 161,
+		"./bg.js": 161,
+		"./bn": 162,
+		"./bn.js": 162,
+		"./bo": 163,
+		"./bo.js": 163,
+		"./br": 164,
+		"./br.js": 164,
+		"./bs": 165,
+		"./bs.js": 165,
+		"./ca": 166,
+		"./ca.js": 166,
+		"./cs": 167,
+		"./cs.js": 167,
+		"./cv": 168,
+		"./cv.js": 168,
+		"./cy": 169,
+		"./cy.js": 169,
+		"./da": 170,
+		"./da.js": 170,
+		"./de": 171,
+		"./de-at": 172,
+		"./de-at.js": 172,
+		"./de.js": 171,
+		"./dv": 173,
+		"./dv.js": 173,
+		"./el": 174,
+		"./el.js": 174,
+		"./en-au": 175,
+		"./en-au.js": 175,
+		"./en-ca": 176,
+		"./en-ca.js": 176,
+		"./en-gb": 177,
+		"./en-gb.js": 177,
+		"./en-ie": 178,
+		"./en-ie.js": 178,
+		"./en-nz": 179,
+		"./en-nz.js": 179,
+		"./eo": 180,
+		"./eo.js": 180,
+		"./es": 181,
+		"./es.js": 181,
+		"./et": 182,
+		"./et.js": 182,
+		"./eu": 183,
+		"./eu.js": 183,
+		"./fa": 184,
+		"./fa.js": 184,
+		"./fi": 185,
+		"./fi.js": 185,
+		"./fo": 186,
+		"./fo.js": 186,
+		"./fr": 187,
+		"./fr-ca": 188,
+		"./fr-ca.js": 188,
+		"./fr-ch": 189,
+		"./fr-ch.js": 189,
+		"./fr.js": 187,
+		"./fy": 190,
+		"./fy.js": 190,
+		"./gd": 191,
+		"./gd.js": 191,
+		"./gl": 192,
+		"./gl.js": 192,
+		"./he": 193,
+		"./he.js": 193,
+		"./hi": 194,
+		"./hi.js": 194,
+		"./hr": 195,
+		"./hr.js": 195,
+		"./hu": 196,
+		"./hu.js": 196,
+		"./hy-am": 197,
+		"./hy-am.js": 197,
+		"./id": 198,
+		"./id.js": 198,
+		"./is": 199,
+		"./is.js": 199,
+		"./it": 200,
+		"./it.js": 200,
+		"./ja": 201,
+		"./ja.js": 201,
+		"./jv": 202,
+		"./jv.js": 202,
+		"./ka": 203,
+		"./ka.js": 203,
+		"./kk": 204,
+		"./kk.js": 204,
+		"./km": 205,
+		"./km.js": 205,
+		"./ko": 206,
+		"./ko.js": 206,
+		"./ky": 207,
+		"./ky.js": 207,
+		"./lb": 208,
+		"./lb.js": 208,
+		"./lo": 209,
+		"./lo.js": 209,
+		"./lt": 210,
+		"./lt.js": 210,
+		"./lv": 211,
+		"./lv.js": 211,
+		"./me": 212,
+		"./me.js": 212,
+		"./mk": 213,
+		"./mk.js": 213,
+		"./ml": 214,
+		"./ml.js": 214,
+		"./mr": 215,
+		"./mr.js": 215,
+		"./ms": 216,
+		"./ms-my": 217,
+		"./ms-my.js": 217,
+		"./ms.js": 216,
+		"./my": 218,
+		"./my.js": 218,
+		"./nb": 219,
+		"./nb.js": 219,
+		"./ne": 220,
+		"./ne.js": 220,
+		"./nl": 221,
+		"./nl.js": 221,
+		"./nn": 222,
+		"./nn.js": 222,
+		"./pa-in": 223,
+		"./pa-in.js": 223,
+		"./pl": 224,
+		"./pl.js": 224,
+		"./pt": 225,
+		"./pt-br": 226,
+		"./pt-br.js": 226,
+		"./pt.js": 225,
+		"./ro": 227,
+		"./ro.js": 227,
+		"./ru": 228,
+		"./ru.js": 228,
+		"./se": 229,
+		"./se.js": 229,
+		"./si": 230,
+		"./si.js": 230,
+		"./sk": 231,
+		"./sk.js": 231,
+		"./sl": 232,
+		"./sl.js": 232,
+		"./sq": 233,
+		"./sq.js": 233,
+		"./sr": 234,
+		"./sr-cyrl": 235,
+		"./sr-cyrl.js": 235,
+		"./sr.js": 234,
+		"./ss": 236,
+		"./ss.js": 236,
+		"./sv": 237,
+		"./sv.js": 237,
+		"./sw": 238,
+		"./sw.js": 238,
+		"./ta": 239,
+		"./ta.js": 239,
+		"./te": 240,
+		"./te.js": 240,
+		"./th": 241,
+		"./th.js": 241,
+		"./tl-ph": 242,
+		"./tl-ph.js": 242,
+		"./tlh": 243,
+		"./tlh.js": 243,
+		"./tr": 244,
+		"./tr.js": 244,
+		"./tzl": 245,
+		"./tzl.js": 245,
+		"./tzm": 246,
+		"./tzm-latn": 247,
+		"./tzm-latn.js": 247,
+		"./tzm.js": 246,
+		"./uk": 248,
+		"./uk.js": 248,
+		"./uz": 249,
+		"./uz.js": 249,
+		"./vi": 250,
+		"./vi.js": 250,
+		"./x-pseudo": 251,
+		"./x-pseudo.js": 251,
+		"./zh-cn": 252,
+		"./zh-cn.js": 252,
+		"./zh-tw": 253,
+		"./zh-tw.js": 253
 	};
 	function webpackContext(req) {
 		return __webpack_require__(webpackContextResolve(req));
@@ -32376,11 +33927,11 @@ webpackJsonp([2,4],[
 	};
 	webpackContext.resolve = webpackContextResolve;
 	module.exports = webpackContext;
-	webpackContext.id = 176;
+	webpackContext.id = 153;
 
 
 /***/ },
-/* 177 */
+/* 154 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32388,7 +33939,7 @@ webpackJsonp([2,4],[
 	//! author : Werner Mollentze : https://github.com/wernerm
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32457,7 +34008,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 178 */
+/* 155 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32467,7 +34018,7 @@ webpackJsonp([2,4],[
 	//! Native plural forms: forabi https://github.com/forabi
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32598,7 +34149,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 179 */
+/* 156 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32607,7 +34158,7 @@ webpackJsonp([2,4],[
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32662,7 +34213,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 180 */
+/* 157 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32670,7 +34221,7 @@ webpackJsonp([2,4],[
 	//! author : Suhail Alkowaileet : https://github.com/xsoh
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32770,14 +34321,14 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 181 */
+/* 158 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
 	//! locale  : Tunisian Arabic (ar-tn)
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32832,7 +34383,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 182 */
+/* 159 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32840,7 +34391,7 @@ webpackJsonp([2,4],[
 	//! author : topchiyev : https://github.com/topchiyev
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -32941,7 +34492,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 183 */
+/* 160 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -32951,7 +34502,7 @@ webpackJsonp([2,4],[
 	//! Author : Menelion Elensúle : https://github.com/Oire
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33079,7 +34630,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 184 */
+/* 161 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33087,7 +34638,7 @@ webpackJsonp([2,4],[
 	//! author : Krasen Borisov : https://github.com/kraz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33173,7 +34724,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 185 */
+/* 162 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33181,7 +34732,7 @@ webpackJsonp([2,4],[
 	//! author : Kaushik Gandhi : https://github.com/kaushikgandhi
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33296,7 +34847,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 186 */
+/* 163 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33304,7 +34855,7 @@ webpackJsonp([2,4],[
 	//! author : Thupten N. Chakrishar : https://github.com/vajradog
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33419,7 +34970,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 187 */
+/* 164 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33427,7 +34978,7 @@ webpackJsonp([2,4],[
 	//! author : Jean-Baptiste Le Duigou : https://github.com/jbleduigou
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33531,7 +35082,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 188 */
+/* 165 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33540,7 +35091,7 @@ webpackJsonp([2,4],[
 	//! based on (hr) translation by Bojan Marković
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33678,7 +35229,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 189 */
+/* 166 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33686,7 +35237,7 @@ webpackJsonp([2,4],[
 	//! author : Juan G. Hurtado : https://github.com/juanghurtado
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33763,7 +35314,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 190 */
+/* 167 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33771,7 +35322,7 @@ webpackJsonp([2,4],[
 	//! author : petrbela : https://github.com/petrbela
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -33938,7 +35489,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 191 */
+/* 168 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -33946,7 +35497,7 @@ webpackJsonp([2,4],[
 	//! author : Anatoly Mironov : https://github.com/mirontoli
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34005,7 +35556,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 192 */
+/* 169 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34013,7 +35564,7 @@ webpackJsonp([2,4],[
 	//! author : Robert Allen
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34089,7 +35640,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 193 */
+/* 170 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34097,7 +35648,7 @@ webpackJsonp([2,4],[
 	//! author : Ulrik Nielsen : https://github.com/mrbase
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34153,7 +35704,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 194 */
+/* 171 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34163,7 +35714,7 @@ webpackJsonp([2,4],[
 	//! author : Mikolaj Dadela : https://github.com/mik01aj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34235,7 +35786,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 195 */
+/* 172 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34246,7 +35797,7 @@ webpackJsonp([2,4],[
 	//! author : Mikolaj Dadela : https://github.com/mik01aj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34318,7 +35869,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 196 */
+/* 173 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34326,7 +35877,7 @@ webpackJsonp([2,4],[
 	//! author : Jawish Hameed : https://github.com/jawish
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34421,7 +35972,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 197 */
+/* 174 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34429,7 +35980,7 @@ webpackJsonp([2,4],[
 	//! author : Aggelos Karalias : https://github.com/mehiel
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34523,14 +36074,14 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 198 */
+/* 175 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
 	//! locale : australian english (en-au)
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34593,7 +36144,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 199 */
+/* 176 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34601,7 +36152,7 @@ webpackJsonp([2,4],[
 	//! author : Jonathan Abourbih : https://github.com/jonbca
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34660,7 +36211,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 200 */
+/* 177 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34668,7 +36219,7 @@ webpackJsonp([2,4],[
 	//! author : Chris Gedrim : https://github.com/chrisgedrim
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34731,7 +36282,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 201 */
+/* 178 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34739,7 +36290,7 @@ webpackJsonp([2,4],[
 	//! author : Chris Cartlidge : https://github.com/chriscartlidge
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34802,14 +36353,14 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 202 */
+/* 179 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
 	//! locale : New Zealand english (en-nz)
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34872,7 +36423,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 203 */
+/* 180 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34882,7 +36433,7 @@ webpackJsonp([2,4],[
 	//!          Se ne, bonvolu korekti kaj avizi min por ke mi povas lerni!
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -34949,7 +36500,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 204 */
+/* 181 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -34957,7 +36508,7 @@ webpackJsonp([2,4],[
 	//! author : Julio Napurí : https://github.com/julionc
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35034,7 +36585,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 205 */
+/* 182 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35043,7 +36594,7 @@ webpackJsonp([2,4],[
 	//! improvements : Illimar Tambek : https://github.com/ragulka
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35118,7 +36669,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 206 */
+/* 183 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35126,7 +36677,7 @@ webpackJsonp([2,4],[
 	//! author : Eneko Illarramendi : https://github.com/eillarra
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35188,7 +36739,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 207 */
+/* 184 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35196,7 +36747,7 @@ webpackJsonp([2,4],[
 	//! author : Ebrahim Byagowi : https://github.com/ebraminio
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35298,7 +36849,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 208 */
+/* 185 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35306,7 +36857,7 @@ webpackJsonp([2,4],[
 	//! author : Tarmo Aidantausta : https://github.com/bleadof
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35409,7 +36960,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 209 */
+/* 186 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35417,7 +36968,7 @@ webpackJsonp([2,4],[
 	//! author : Ragnar Johannesen : https://github.com/ragnar123
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35473,7 +37024,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 210 */
+/* 187 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35481,7 +37032,7 @@ webpackJsonp([2,4],[
 	//! author : John Fischer : https://github.com/jfroffice
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35541,7 +37092,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 211 */
+/* 188 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35549,7 +37100,7 @@ webpackJsonp([2,4],[
 	//! author : Jonathan Abourbih : https://github.com/jonbca
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35605,7 +37156,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 212 */
+/* 189 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35613,7 +37164,7 @@ webpackJsonp([2,4],[
 	//! author : Gaspard Bucher : https://github.com/gaspard
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35673,7 +37224,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 213 */
+/* 190 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35681,7 +37232,7 @@ webpackJsonp([2,4],[
 	//! author : Robin van der Vliet : https://github.com/robin0van0der0v
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35750,7 +37301,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 214 */
+/* 191 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35758,7 +37309,7 @@ webpackJsonp([2,4],[
 	//! author : Jon Ashdown : https://github.com/jonashdown
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35830,7 +37381,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 215 */
+/* 192 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35838,7 +37389,7 @@ webpackJsonp([2,4],[
 	//! author : Juan G. Hurtado : https://github.com/juanghurtado
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -35911,7 +37462,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 216 */
+/* 193 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35921,7 +37472,7 @@ webpackJsonp([2,4],[
 	//! author : Tal Ater : https://github.com/TalAter
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36014,7 +37565,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 217 */
+/* 194 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36022,7 +37573,7 @@ webpackJsonp([2,4],[
 	//! author : Mayank Singhal : https://github.com/mayanksinghal
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36142,7 +37693,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 218 */
+/* 195 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36150,7 +37701,7 @@ webpackJsonp([2,4],[
 	//! author : Bojan Marković : https://github.com/bmarkovic
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36291,7 +37842,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 219 */
+/* 196 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36299,7 +37850,7 @@ webpackJsonp([2,4],[
 	//! author : Adam Brunner : https://github.com/adambrunner
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36404,7 +37955,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 220 */
+/* 197 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36412,7 +37963,7 @@ webpackJsonp([2,4],[
 	//! author : Armendarabyan : https://github.com/armendarabyan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36503,7 +38054,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 221 */
+/* 198 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36512,7 +38063,7 @@ webpackJsonp([2,4],[
 	//! reference: http://id.wikisource.org/wiki/Pedoman_Umum_Ejaan_Bahasa_Indonesia_yang_Disempurnakan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36590,7 +38141,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 222 */
+/* 199 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36598,7 +38149,7 @@ webpackJsonp([2,4],[
 	//! author : Hinrik Örn Sigurðsson : https://github.com/hinrik
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36721,7 +38272,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 223 */
+/* 200 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36730,7 +38281,7 @@ webpackJsonp([2,4],[
 	//! author: Mattia Larentis: https://github.com/nostalgiaz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36795,7 +38346,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 224 */
+/* 201 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36803,7 +38354,7 @@ webpackJsonp([2,4],[
 	//! author : LI Long : https://github.com/baryon
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36875,7 +38426,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 225 */
+/* 202 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36884,7 +38435,7 @@ webpackJsonp([2,4],[
 	//! reference: http://jv.wikipedia.org/wiki/Basa_Jawa
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -36962,7 +38513,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 226 */
+/* 203 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36970,7 +38521,7 @@ webpackJsonp([2,4],[
 	//! author : Irakli Janiashvili : https://github.com/irakli-janiashvili
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37055,7 +38606,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 227 */
+/* 204 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37063,7 +38614,7 @@ webpackJsonp([2,4],[
 	//! authors : Nurlan Rakhimzhanov : https://github.com/nurlan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37146,7 +38697,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 228 */
+/* 205 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37154,7 +38705,7 @@ webpackJsonp([2,4],[
 	//! author : Kruy Vanna : https://github.com/kruyvanna
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37208,7 +38759,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 229 */
+/* 206 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37220,7 +38771,7 @@ webpackJsonp([2,4],[
 	//! - Jeeeyul Lee <jeeeyul@gmail.com>
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37280,7 +38831,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 230 */
+/* 207 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37288,7 +38839,7 @@ webpackJsonp([2,4],[
 	//! author : Chyngyz Arystan uulu : https://github.com/chyngyz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37372,7 +38923,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 231 */
+/* 208 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37380,7 +38931,7 @@ webpackJsonp([2,4],[
 	//! author : mweimerskirch : https://github.com/mweimerskirch, David Raison : https://github.com/kwisatz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37512,7 +39063,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 232 */
+/* 209 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37520,7 +39071,7 @@ webpackJsonp([2,4],[
 	//! author : Ryan Hart : https://github.com/ryanhart2
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37586,7 +39137,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 233 */
+/* 210 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37594,7 +39145,7 @@ webpackJsonp([2,4],[
 	//! author : Mindaugas Mozūras : https://github.com/mmozuras
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37706,7 +39257,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 234 */
+/* 211 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37715,7 +39266,7 @@ webpackJsonp([2,4],[
 	//! author : Jānis Elmeris : https://github.com/JanisE
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37807,7 +39358,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 235 */
+/* 212 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37815,7 +39366,7 @@ webpackJsonp([2,4],[
 	//! author : Miodrag Nikač <miodrag@restartit.me> : https://github.com/miodragnikac
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -37922,7 +39473,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 236 */
+/* 213 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37930,7 +39481,7 @@ webpackJsonp([2,4],[
 	//! author : Borislav Mickov : https://github.com/B0k0
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38016,7 +39567,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 237 */
+/* 214 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38024,7 +39575,7 @@ webpackJsonp([2,4],[
 	//! author : Floyd Pink : https://github.com/floydpink
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38101,7 +39652,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 238 */
+/* 215 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38110,7 +39661,7 @@ webpackJsonp([2,4],[
 	//! author : Vivek Athalye : https://github.com/vnathalye
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38264,7 +39815,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 239 */
+/* 216 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38272,7 +39823,7 @@ webpackJsonp([2,4],[
 	//! author : Weldan Jamili : https://github.com/weldan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38350,7 +39901,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 240 */
+/* 217 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38358,7 +39909,7 @@ webpackJsonp([2,4],[
 	//! author : Weldan Jamili : https://github.com/weldan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38436,7 +39987,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 241 */
+/* 218 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38444,7 +39995,7 @@ webpackJsonp([2,4],[
 	//! author : Squar team, mysquar.com
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38533,7 +40084,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 242 */
+/* 219 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38542,7 +40093,7 @@ webpackJsonp([2,4],[
 	//!           Sigurd Gartmann : https://github.com/sigurdga
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38600,7 +40151,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 243 */
+/* 220 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38608,7 +40159,7 @@ webpackJsonp([2,4],[
 	//! author : suvash : https://github.com/suvash
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38727,7 +40278,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 244 */
+/* 221 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38735,7 +40286,7 @@ webpackJsonp([2,4],[
 	//! author : Joris Röling : https://github.com/jjupiter
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38804,7 +40355,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 245 */
+/* 222 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38812,7 +40363,7 @@ webpackJsonp([2,4],[
 	//! author : https://github.com/mechuwind
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38868,7 +40419,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 246 */
+/* 223 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38876,7 +40427,7 @@ webpackJsonp([2,4],[
 	//! author : Harpreet Singh : https://github.com/harpreetkhalsagtbit
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -38996,7 +40547,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 247 */
+/* 224 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39004,7 +40555,7 @@ webpackJsonp([2,4],[
 	//! author : Rafal Hirsz : https://github.com/evoL
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39105,7 +40656,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 248 */
+/* 225 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39113,7 +40664,7 @@ webpackJsonp([2,4],[
 	//! author : Jefferson : https://github.com/jalex79
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39174,7 +40725,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 249 */
+/* 226 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39182,7 +40733,7 @@ webpackJsonp([2,4],[
 	//! author : Caio Ribeiro Pereira : https://github.com/caio-ribeiro-pereira
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39239,7 +40790,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 250 */
+/* 227 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39248,7 +40799,7 @@ webpackJsonp([2,4],[
 	//! author : Valentin Agachi : https://github.com/avaly
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39318,7 +40869,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 251 */
+/* 228 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39328,7 +40879,7 @@ webpackJsonp([2,4],[
 	//! author : Коренберг Марк : https://github.com/socketpair
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39497,7 +41048,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 252 */
+/* 229 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39505,7 +41056,7 @@ webpackJsonp([2,4],[
 	//! authors : Bård Rolstad Henriksen : https://github.com/karamell
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39562,7 +41113,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 253 */
+/* 230 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39570,7 +41121,7 @@ webpackJsonp([2,4],[
 	//! author : Sampath Sitinamaluwa : https://github.com/sampathsris
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39637,7 +41188,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 254 */
+/* 231 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39646,7 +41197,7 @@ webpackJsonp([2,4],[
 	//! based on work of petrbela : https://github.com/petrbela
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39791,7 +41342,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 255 */
+/* 232 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39799,7 +41350,7 @@ webpackJsonp([2,4],[
 	//! author : Robert Sedovšek : https://github.com/sedovsek
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -39957,7 +41508,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 256 */
+/* 233 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39967,7 +41518,7 @@ webpackJsonp([2,4],[
 	//! author : Oerd Cukalla : https://github.com/oerd (fixes)
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40031,7 +41582,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 257 */
+/* 234 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40039,7 +41590,7 @@ webpackJsonp([2,4],[
 	//! author : Milan Janačković<milanjanackovic@gmail.com> : https://github.com/milan-j
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40145,7 +41696,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 258 */
+/* 235 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40153,7 +41704,7 @@ webpackJsonp([2,4],[
 	//! author : Milan Janačković<milanjanackovic@gmail.com> : https://github.com/milan-j
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40259,7 +41810,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 259 */
+/* 236 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40267,7 +41818,7 @@ webpackJsonp([2,4],[
 	//! author : Nicolai Davies<mail@nicolai.io> : https://github.com/nicolaidavies
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40352,7 +41903,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 260 */
+/* 237 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40360,7 +41911,7 @@ webpackJsonp([2,4],[
 	//! author : Jens Alm : https://github.com/ulmus
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40425,7 +41976,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 261 */
+/* 238 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40433,7 +41984,7 @@ webpackJsonp([2,4],[
 	//! author : Fahad Kassim : https://github.com/fadsel
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40488,7 +42039,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 262 */
+/* 239 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40496,7 +42047,7 @@ webpackJsonp([2,4],[
 	//! author : Arjunkumar Krishnamoorthy : https://github.com/tk120404
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40621,7 +42172,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 263 */
+/* 240 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40629,7 +42180,7 @@ webpackJsonp([2,4],[
 	//! author : Krishna Chaitanya Thota : https://github.com/kcthota
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40714,7 +42265,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 264 */
+/* 241 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40722,7 +42273,7 @@ webpackJsonp([2,4],[
 	//! author : Kridsada Thanabulpong : https://github.com/sirn
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40785,7 +42336,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 265 */
+/* 242 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40793,7 +42344,7 @@ webpackJsonp([2,4],[
 	//! author : Dan Hagman
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40851,7 +42402,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 266 */
+/* 243 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40859,7 +42410,7 @@ webpackJsonp([2,4],[
 	//! author : Dominika Kruk : https://github.com/amaranthrose
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -40975,7 +42526,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 267 */
+/* 244 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40984,7 +42535,7 @@ webpackJsonp([2,4],[
 	//!           Burak Yiğit Kaya: https://github.com/BYK
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41069,7 +42620,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 268 */
+/* 245 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41077,7 +42628,7 @@ webpackJsonp([2,4],[
 	//! author : Robin van der Vliet : https://github.com/robin0van0der0v with the help of Iustì Canun
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41164,7 +42715,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 269 */
+/* 246 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41172,7 +42723,7 @@ webpackJsonp([2,4],[
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41226,7 +42777,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 270 */
+/* 247 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41234,7 +42785,7 @@ webpackJsonp([2,4],[
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41288,7 +42839,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 271 */
+/* 248 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41297,7 +42848,7 @@ webpackJsonp([2,4],[
 	//! Author : Menelion Elensúle : https://github.com/Oire
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41438,7 +42989,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 272 */
+/* 249 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41446,7 +42997,7 @@ webpackJsonp([2,4],[
 	//! author : Sardor Muminov : https://github.com/muminoff
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41500,7 +43051,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 273 */
+/* 250 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41508,7 +43059,7 @@ webpackJsonp([2,4],[
 	//! author : Bang Nguyen : https://github.com/bangnk
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41583,7 +43134,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 274 */
+/* 251 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41591,7 +43142,7 @@ webpackJsonp([2,4],[
 	//! author : Andrew Hood : https://github.com/andrewhood125
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41655,7 +43206,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 275 */
+/* 252 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41664,7 +43215,7 @@ webpackJsonp([2,4],[
 	//! author : Zeno Zeng : https://github.com/zenozeng
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41786,7 +43337,7 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 276 */
+/* 253 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41794,7 +43345,7 @@ webpackJsonp([2,4],[
 	//! author : Ben : https://github.com/ben-lin
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(175)) :
+	    true ? factory(__webpack_require__(152)) :
 	   typeof define === 'function' && define.amd ? define(['moment'], factory) :
 	   factory(global.moment)
 	}(this, function (moment) { 'use strict';
@@ -41891,17 +43442,17 @@ webpackJsonp([2,4],[
 	}));
 
 /***/ },
-/* 277 */
+/* 254 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_script__, __vue_template__
-	__webpack_require__(278)
-	__vue_script__ = __webpack_require__(280)
+	__webpack_require__(255)
+	__vue_script__ = __webpack_require__(257)
 	if (__vue_script__ &&
 	    __vue_script__.__esModule &&
 	    Object.keys(__vue_script__).length > 1) {
 	  console.warn("[vue-loader] vendor\\components\\tools\\dialog.vue: named exports in *.vue files are ignored.")}
-	__vue_template__ = __webpack_require__(281)
+	__vue_template__ = __webpack_require__(258)
 	module.exports = __vue_script__ || {}
 	if (module.exports.__esModule) module.exports = module.exports.default
 	if (__vue_template__) {
@@ -41909,9 +43460,9 @@ webpackJsonp([2,4],[
 	}
 	if (false) {(function () {  module.hot.accept()
 	  var hotAPI = require("vue-hot-reload-api")
-	  hotAPI.install(require("vue"), true)
+	  hotAPI.install(require("vue"), false)
 	  if (!hotAPI.compatible) return
-	  var id = "D:\\cancelStation\\liveApp\\vendor\\components\\tools\\dialog.vue"
+	  var id = "./dialog.vue"
 	  if (!module.hot.data) {
 	    hotAPI.createRecord(id, module.exports)
 	  } else {
@@ -41920,13 +43471,13 @@ webpackJsonp([2,4],[
 	})()}
 
 /***/ },
-/* 278 */
+/* 255 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(279);
+	var content = __webpack_require__(256);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
 	var update = __webpack_require__(9)(content, {});
@@ -41946,7 +43497,7 @@ webpackJsonp([2,4],[
 	}
 
 /***/ },
-/* 279 */
+/* 256 */
 /***/ function(module, exports, __webpack_require__) {
 
 	exports = module.exports = __webpack_require__(8)();
@@ -41960,7 +43511,7 @@ webpackJsonp([2,4],[
 
 
 /***/ },
-/* 280 */
+/* 257 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -41978,16 +43529,16 @@ webpackJsonp([2,4],[
 	};
 
 /***/ },
-/* 281 */
+/* 258 */
 /***/ function(module, exports) {
 
-	module.exports = "\n<div tabindex=\"-1\" style=\"position: fixed; outline: 0px; left: 515px; top: 323px; z-index: 1027;display:{{show}}\" class=\"ui-popup ui-popup-modal ui-popup-show ui-popup-focus\">\n<div i=\"dialog\" class=\"ui-dialog\" style=\"min-width:300px\">\n    <div class=\"ui-dialog-arrow-a\"></div>\n    <div class=\"ui-dialog-arrow-b\"></div>\n    <table class=\"ui-dialog-grid\" style=\"width:100%\">\n    <tbody>\n        <tr>\n        <td i=\"header\" class=\"ui-dialog-header\">\n            <button i=\"close\" class=\"ui-dialog-close\" title=\"取消\" @click=\"close\">×</button>\n            <div i=\"title\" class=\"ui-dialog-title\" id=\"title:art_dialog\">提示</div></td>\n        </tr>\n        <tr>\n        <td i=\"body\" class=\"ui-dialog-body\">\n            <div i=\"content\" class=\"ui-dialog-content\" id=\"content:art_dialog\">{{content}}</div></td>\n        </tr>\n        <tr>\n        <td i=\"footer\" class=\"ui-dialog-footer\">\n            <div i=\"statusbar\" class=\"ui-dialog-statusbar\" style=\"display: none;\"></div>\n            <div i=\"button\" class=\"ui-dialog-button\">\n            <button type=\"button\" data-id=\"ok\" autofocus=\"\" class=\"ui-dialog-autofocus\" @click=\"close\">确定</button></div>\n        </td>\n        </tr>\n    </tbody>\n    </table>\n</div>\n</div>\n";
+	module.exports = "\n\n\n<div tabindex=\"-1\" style=\"position: fixed; outline: 0px; left: 515px; top: 323px; z-index: 1027;display:{{show}}\" class=\"ui-popup ui-popup-modal ui-popup-show ui-popup-focus\">\n<div i=\"dialog\" class=\"ui-dialog\" style=\"min-width:300px\">\n    <div class=\"ui-dialog-arrow-a\"></div>\n    <div class=\"ui-dialog-arrow-b\"></div>\n    <table class=\"ui-dialog-grid\" style=\"width:100%\">\n    <tbody>\n        <tr>\n        <td i=\"header\" class=\"ui-dialog-header\">\n            <button i=\"close\" class=\"ui-dialog-close\" title=\"取消\" @click=\"close\">×</button>\n            <div i=\"title\" class=\"ui-dialog-title\" id=\"title:art_dialog\">提示</div></td>\n        </tr>\n        <tr>\n        <td i=\"body\" class=\"ui-dialog-body\">\n            <div i=\"content\" class=\"ui-dialog-content\" id=\"content:art_dialog\">{{content}}</div></td>\n        </tr>\n        <tr>\n        <td i=\"footer\" class=\"ui-dialog-footer\">\n            <div i=\"statusbar\" class=\"ui-dialog-statusbar\" style=\"display: none;\"></div>\n            <div i=\"button\" class=\"ui-dialog-button\">\n            <button type=\"button\" data-id=\"ok\" autofocus=\"\" class=\"ui-dialog-autofocus\" @click=\"close\">确定</button></div>\n        </td>\n        </tr>\n    </tbody>\n    </table>\n</div>\n</div>\n";
 
 /***/ },
-/* 282 */
+/* 259 */
 /***/ function(module, exports) {
 
-	module.exports = "\n\t<div _v-146d1284=\"\">\n\t\t<div id=\"noviceTask\" class=\"f-dn noviceTask1\" _v-146d1284=\"\">\n    <i class=\"btn-novice\" _v-146d1284=\"\">\n    </i>\n</div>\n<div class=\"side-menu\" id=\"dom_room_head\" ms-controller=\"roomHeadController\" _v-146d1284=\"\">\n    <div class=\"header-box-dd\" _v-146d1284=\"\">\n        <div class=\"f-cb\" _v-146d1284=\"\">\n            <div class=\"f-cb bord\" _v-146d1284=\"\">\n                <a class=\"logo\" href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" target=\"_blank\" _v-146d1284=\"\">\n                </a>\n            </div>\n            <div class=\"user-panel f-cb bord\" _v-146d1284=\"\">\n                <ul id=\"left_nav\" _v-146d1284=\"\">\n                    <!-- 用户头像 -->\n                    <li class=\"pers\" :class=\"{{curr: !!user}}\" v-if=\"!!user\" _v-146d1284=\"\">\n                        <img width=\"50\" height=\"50\" class=\"pho\" ms-click=\"showPanel('user')\" :src=\"user.pic\" @click=\"setShowItem()\" _v-146d1284=\"\">\n                        <div class=\"dlg dlg-merber\" v-show=\"showItem\" _v-146d1284=\"\">\n                            <div class=\"d-con\" _v-146d1284=\"\">\n                                <h3 _v-146d1284=\"\">\n                                    {{user.nickname}}\n                                </h3>\n                                <div _v-146d1284=\"\">\n                                    <em class=\"ul ul{{parseInt(user.userlevel)+1>9?parseInt(user.userlevel)+1:'0'+(parseInt(user.userlevel)+1)}}\" _v-146d1284=\"\">\n                                    </em>\n                                </div>\n                                <ul class=\"f-cb\" _v-146d1284=\"\">\n                                    <li style=\"clear:left;\" _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-1\" _v-146d1284=\"\">\n                                            </i>\n                                            个人资料\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-2\" _v-146d1284=\"\">\n                                            </i>\n                                            个人设置\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-3\" _v-146d1284=\"\">\n                                            </i>\n                                            充值查询\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/myAttention\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-4\" _v-146d1284=\"\">\n                                            </i>\n                                            我的关注\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/car\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-5\" _v-146d1284=\"\">\n                                            </i>\n                                            我的座驾\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/vip\" tppabs=\"/user/info\" class=\"u-vip\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon i-vip\" _v-146d1284=\"\">\n                                            </i>\n                                            特权VIP\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"javascript:void(0)\" @click=\"logoutActions\" _v-146d1284=\"\">\n                                            <i class=\"icon u-quit\" _v-146d1284=\"\">\n                                            </i>\n                                            退出\n                                        </a>\n                                    </li>\n                                </ul>\n                            </div>\n                        </div>\n                    </li>\n                    <!-- 秀币余额 -->\n                    <li class=\"pay bord\" v-if=\"!!user\" _v-146d1284=\"\">\n                        <div class=\"money\" _v-146d1284=\"\">\n                            <i class=\"icon u-cf\" _v-146d1284=\"\">\n                            </i>\n                            <b _v-146d1284=\"\">\n                                秀币\n                            </b>\n                            <br _v-146d1284=\"\">\n                            <strong class=\"num\" _v-146d1284=\"\">\n                            {{user.balance}}\n                            </strong>\n                            <a class=\"u-btn-2 u-recharge\" href=\"/order\" target=\"_blank\" _v-146d1284=\"\">\n                                充值\n                            </a>\n                        </div>\n                    </li>\n                    <!-- 登录区域 -->\n                    <li class=\"bord reg-btx\" v-if=\"user ==null\" _v-146d1284=\"\">\n                        <span class=\"btn-log xiusta\" @click=\"showLogin('login')\" _v-146d1284=\"\">\n                            登录\n                        </span>\n                        <span class=\"btn-reg xiusta\" @click=\"showLogin('registe')\" _v-146d1284=\"\">\n                            注册\n                        </span>\n                    </li>\n                    <!-- 主播区域独立配置 -->\n                    <li class=\"pers\" id=\"anchorInfo\" ms-if=\"isShowBroad == true\" ms-visible=\"isShowBroad == true\" style=\"display:none;\" _v-146d1284=\"\">\n                        <img class=\"pho\" alt=\"\" ms-src=\"'+ head_info.uid +'.jpg'}}\" tppabs=\"http://www.xiu8.com/{{'http://image.cache.xiu8.com/avatar/110/110/'+ head_info.uid +'.jpg'}}\" ms-mouseenter=\"showAnchorTip($event)\" ms-mouseleave=\"showAnchorTip($event)\" _v-146d1284=\"\">\n                        <span class=\"a-name\" ms-text=\"head_info.unn\" _v-146d1284=\"\">\n                        </span>\n                        <span class=\"u-atten\" _v-146d1284=\"\">\n                            关注\n                        </span>\n                        <span style=\"display:none;\" class=\"u-atten-c\" _v-146d1284=\"\">\n                            已关注\n                        </span>\n                    </li>\n                    <li ms-class=\"{{tipPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a href=\"javascript:void(0);\" ms-click=\"showPanel('tip')\" _v-146d1284=\"\">\n                            消息\n                            <i class=\"number\" style=\"display:none;\" ms-visible=\"tipPanel_num>0\" ms-text=\"tipPanel_num>99 ? '99+' : tipPanel_num\" _v-146d1284=\"\">\n                            </i>\n                        </a>\n                    </li>\n                    <li ms-class=\"{{lobbyPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a href=\"javascript:void(0);\" ms-click=\"showPanel('lobby')\" _v-146d1284=\"\">\n                            广场\n                        </a>\n                        <div class=\"dlg-sq\" style=\"display: none\" id=\"js-dlg-sq\" _v-146d1284=\"\">\n                            <button class=\"btn\" _v-146d1284=\"\">\n                                点击\n                            </button>\n                        </div>\n                    </li>\n                    <li ms-class=\"{{signPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a id=\"js-show-sign\" href=\"javascript:void(0)\" ms-click=\"showPanel('sign')\" _v-146d1284=\"\">\n                            签到\n                            <i class=\"point\" style=\"display: none\" _v-146d1284=\"\">\n                            </i>\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a href=\"vip-1.htm\" tppabs=\"http://www.xiu8.com/mall\" target=\"_blank\" _v-146d1284=\"\">\n                            商城\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"userRole == 6\" ms-visible=\"userRole == 6\" _v-146d1284=\"\">\n                        <a ms-click=\"showBroadPanel()\" _v-146d1284=\"\">\n                            管理\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"userRole == 1\" ms-visible=\"userRole == 1\" _v-146d1284=\"\">\n                        <a ms-click=\"showSysPanel()\" _v-146d1284=\"\">\n                            管理\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"family_role == 1 || family_role == 3\" ms-visible=\"family_role == 1 || family_role == 3\" _v-146d1284=\"\">\n                        <a ms-click=\"showFPanel()\" _v-146d1284=\"\">\n                            隐身\n                        </a>\n                    </li>\n                    <!-- 贴吧返回提示 -->\n                    <li class=\"women-live\" ms-visible=\"isTbLive == true\" style=\"display: none;\" _v-146d1284=\"\">\n                        <a href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                            美女直播吧\n                        </a>\n                        <div class=\"dlg-sq dlg-ld\" id=\"tbLive\" style=\"display: none\" _v-146d1284=\"\">\n                            <button class=\"btn\" _v-146d1284=\"\">\n                                点击\n                            </button>\n                        </div>\n                    </li>\n                </ul>\n            </div>\n            <div class=\"module-area\" _v-146d1284=\"\">\n                <ul id=\"m_area\" _v-146d1284=\"\">\n                    <li class=\"app-down\" id=\"appIcon\" _v-146d1284=\"\">\n                        <a target=\"_blank\" href=\"#\" class=\"down\" _v-146d1284=\"\">\n                            <i class=\"u-show\" _v-146d1284=\"\">\n                            </i>\n                            下载\n                        </a>\n                        <div id=\"QRCode\" class=\"sub-dlg\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"#\" _v-146d1284=\"\">\n                                <img style=\"vertical-align: middle;\" src=\"http://www.xiu8.com/assets/images/room/er-code.jpg\" tppabs=\"http://www.xiu8.com/assets/images/room/er-code.jpg\" _v-146d1284=\"\">\n                            </a>\n                            <p class=\"txt pt10 t-c\" _v-146d1284=\"\">\n                                秀吧手机端\n                                <br _v-146d1284=\"\">\n                                轻松扫一扫\n                            </p>\n                        </div>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"service\" id=\"BZQQservice\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            客服\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"help\" target=\"_blank\" href=\"help-t=0.htm\" tppabs=\"http://www.xiu8.com/help?t=0\" _v-146d1284=\"\">\n                            帮助\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </div>\n</div>\n<div class=\"menu-dlg f-dn\" ms-controller=\"lobbyModuleController\" ms-css-height=\"{{setHeight}}px\" ms-if=\"lobby_flag == true\" ms-visible=\"lobby_flag\" _v-146d1284=\"\">\n    <div class=\"dlg-tab\" _v-146d1284=\"\">\n        <a href=\"javascript:void(0);\" onclick=\"hidePanel.hide()\" class=\"more xiusta\" stadata=\"{en:'lobby_close_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n            收起\n        </a>\n        <ul class=\"f-cb\" id=\"lobbyNav\" _v-146d1284=\"\">\n            <li class=\"cur\" _v-146d1284=\"\">\n                美女广场\n            </li>\n            <li ms-if=\"isShowCollect == true\" ms-visible=\"isShowCollect == true\" style=\"display:none;\" _v-146d1284=\"\">\n                我的关注\n            </li>\n        </ul>\n    </div>\n    <div class=\"bd an-list lobbyScroll\" _v-146d1284=\"\">\n        <div class=\"scrollbar\" _v-146d1284=\"\">\n            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"jscroll-c viewport\" id=\"lobbyBox\" ms-css-height=\"{{lobbyHeight}}px\" _v-146d1284=\"\">\n            <ol class=\"wholearea\" style=\"position: absolute;\" id=\"lobby_list\" _v-146d1284=\"\">\n            </ol>\n        </div>\n    </div>\n</div>\n<div class=\"menu-msg f-dn\" ms-controller=\"tipPanelController\" ms-css-height=\"{{tipPanelHeight}}px\" ms-if=\"showTip==true\" ms-visible=\"showTip\" _v-146d1284=\"\">\n    <h3 class=\"f-cb\" _v-146d1284=\"\">\n        <span _v-146d1284=\"\">\n            我的消息\n        </span>\n    </h3>\n    <div class=\"bd tippanel-scroll\" _v-146d1284=\"\">\n        <div class=\"scrollbar\" _v-146d1284=\"\">\n            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"jscroll-c viewport\" id=\"tipBox\" ms-css-height=\"{{tipHeight}}px\" _v-146d1284=\"\">\n            <ul class=\"wholearea\" style=\"position: absolute;\" id=\"tipPanel-ul\" _v-146d1284=\"\">\n            </ul>\n        </div>\n    </div>\n</div>\n<div class=\"room-bg Anchor-room\" _v-146d1284=\"\">\n    <!-- 直播间页面-开始 -->\n    <div class=\"g-room\" id=\"groom\" _v-146d1284=\"\">\n        <div class=\"g-bd\" _v-146d1284=\"\">\n            <!-- flash特效：超级礼物、座驾、流光 -->\n            <div id=\"domAnimation\" style=\"position:relative; width: 1px;height: 1px;z-index:13; top:1px;left:1px;\" ms-controller=\"baseAnimation\" _v-146d1284=\"\">\n                <div style=\"position: absolute;top:35px;left:58px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domCar\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div style=\"position: absolute;top:0px;left: 0px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domSupper\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div style=\"position: absolute;top:260px;left: 160px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domgiftEffect\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div id=\"cateran\" style=\"position: absolute;top:0px;left:0px;width:1px;height:1px;\" _v-146d1284=\"\">\n                </div>\n                <div id=\"ignitionBoy\" style=\"position: absolute;top:24px;left:60px;width:1px;height:1px;\" _v-146d1284=\"\">\n                </div>\n            </div>\n            <div class=\"g-sd\" _v-146d1284=\"\">\n                <!-- 主播个人信息 -->\n                <!-- 主播信息模板 -->\n                <div class=\"AR-infor\" ms-controller=\"broadInfo\" id=\"broadInfo\" _v-146d1284=\"\">\n                    <dl class=\"f-cb\" _v-146d1284=\"\">\n                        <dt _v-146d1284=\"\">\n                            <span id=\"broadHeaddress\" _v-146d1284=\"\">\n                            </span>\n                            <div class=\"photo\" _v-146d1284=\"\">\n                                <div class=\"cav\" _v-146d1284=\"\">\n                                    <canvas height=\"84\" width=\"84\" _v-146d1284=\"\">\n                                    </canvas>\n                                </div>\n                                <img alt=\"{{room.nickname}}\" :src=\"room.pic\" _v-146d1284=\"\">\n                            </div>\n                        </dt>\n                        <dd _v-146d1284=\"\">\n                            <div class=\"name\" _v-146d1284=\"\">\n                                {{room.nickname}}\n                            </div>\n                            <p class=\"attention\" id=\"g_coll\" _v-146d1284=\"\">\n                                <span class=\"u-atten xiusta\" @click=\"focus\" v-if=\" judgeSub == '' \" _v-146d1284=\"\">\n                                    关注\n                                </span>\n                                <span v-show=\" judgeSub != '' \" @click=\"focus('unsubscribe')\" @mouseover=\"changeFocusState('over', $event)\" @mouseleave=\"changeFocusState('leave', $event)\" class=\"u-atten-c\" _v-146d1284=\"\">\n                                    已关注\n                                </span>\n                                <span class=\"num\" _v-146d1284=\"\">\n                                    {{room.sub_count}}人\n                                </span>\n                            </p>\n                        </dd>\n                    </dl>\n                    <div class=\"M-progress\" _v-146d1284=\"\">\n                        <div class=\"slider\" style=\"width:{{Math.floor(room.artist_exp / room.level_exp * 100)}}%;\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"num\" _v-146d1284=\"\">\n                            还差{{ room.level_exp - room.artist_exp }}秀币\n                        </div>\n                        <span class=\"having\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al{{(parseInt(room.artist_level)+1)>9?parseInt(room.artist_level) + 1:'0'+(parseInt(room.artist_level)+1)}}\" ms-class=\"\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                        <span class=\"had\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al{{parseInt(room.next_level) + 1>9?parseInt(room.next_level) + 1:'0'+(parseInt(room.next_level)+1)}}\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                    </div>\n                    <div class=\"txt\" _v-146d1284=\"\">\n                        <p class=\"u-icon\" id=\"medalList\" _v-146d1284=\"\">\n                            徽章：\n                        </p>\n                    </div>\n                    <div class=\"hot-sign\" _v-146d1284=\"\">\n                        热力榜：第&nbsp;\n                        <em _v-146d1284=\"\">\n                            {{room.rank}}\n                        </em>\n                        &nbsp;名\n                    </div>\n                    <!-- <div class=\"signs\">\n                        <img src=\"http://image.cache.xiu8.com/family/120/120/11692.jpg\" tppabs=\"http://image.cache.xiu8.com/family/120/120/11692.jpg\" width=\"24\" height=\"24\"/>\n                        混血娱乐\n                    </div> -->\n                </div>\n                <!-- 守护主播 -->\n                <!-- 守护模板 -->\n                <div id=\"guardaAea\" class=\"guard-anchor\" _v-146d1284=\"\">\n                    <div class=\"title\" _v-146d1284=\"\">\n                        <a class=\"more a_graud_more\" style=\"display:none\" _v-146d1284=\"\">\n                            更多\n                        </a>\n                        <a target=\"_blank\" href=\"#\" tppabs=\"http://www.xiu8.com/mall/buyGuard?recvId=925075&amp;roomId=925075\" class=\"u-watch u-watch-g js-update-bdid\" _v-146d1284=\"\">\n                            守护团\n                        </a>\n                        开通\n                        <span class=\"sp_graud_no\" _v-146d1284=\"\">\n                        {{knight.length}}\n                        </span>\n                        人\n                    </div>\n                    <div class=\"u-list\" _v-146d1284=\"\">\n                        <ul class=\"f-cb js-graud-four\" _v-146d1284=\"\">\n                            <template v-for=\"index in [0,1,2,3]\">\n                                <template v-if=\"!!knight[index]\">\n                                    <li _v-146d1284=\"\">\n                                        <span class=\"txt\" _v-146d1284=\"\">亲密度<br _v-146d1284=\"\">1057480</span>\n                                        <span class=\"bg\" _v-146d1284=\"\"></span>\n                                        <img style=\"width: 57px;height: 57px\" alt=\"\" :src=\"knight[index].pic\" _v-146d1284=\"\"><span class=\"f-toe\" _v-146d1284=\"\">{{knight[index].nickname}}</span>\n                                    </li>\n                                </template>\n                                <template v-else=\"\">\n                                    <li _v-146d1284=\"\">\n                                        <a class=\"u-wait\" target=\"_blank\" href=\"javascript:;\" _v-146d1284=\"\">\n                                            <img width=\"57\" height=\"57\" alt=\"虚位以待\" src=\"http://www.xiu8.com/assets/images/public/trans.gif\" tppabs=\"http://www.xiu8.com/assets/images/public/trans.gif\" _v-146d1284=\"\">\n                                        </a>\n                                    </li>\n                                </template>\n                                \n                            </template>\n                        </ul>\n                    </div>\n                </div>\n                <!-- 用户列表 -->\n                <!-- 用户列表 -->\n                <div class=\"AR-user\" ms-controller=\"usreList\" _v-146d1284=\"\">\n                    <div class=\"m-tab f-cb\" style=\"height: 34px\" _v-146d1284=\"\">\n                        <ol _v-146d1284=\"\">\n                            <li class=\"curr\" _v-146d1284=\"\">\n                                <span _v-146d1284=\"\">\n                                    当前用户&nbsp;\n                                </span>\n                                <span ms-text=\"userNum\" _v-146d1284=\"\">\n                                    {{userList.length}}\n                                </span>\n                            </li>\n                            <li ms-class=\"{{showType === 2 ? 'curr' : ''}}\" ms-click=\"changeTag(2)\" _v-146d1284=\"\">\n                                <span _v-146d1284=\"\">\n                                    \n                                </span>\n                            </li>\n                            <li class=\"last\" _v-146d1284=\"\">\n                            </li>\n                        </ol>\n                    </div>\n                    <div class=\"bd uscroll\" ms-mouseenter=\"userShowscroll($event)\" ms-mouseleave=\"userShowscroll($event)\" _v-146d1284=\"\">\n                        <div class=\"scrollbar\" ms-visible=\"showSC\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                        <div class=\"jscroll-c viewport\" style=\"height: 343px\" _v-146d1284=\"\">\n                            <ul class=\"u-list wholearea\" id=\"ulist\" style=\"overflow-y: scroll; height: 100%; overflow-x: hidden;\" _v-146d1284=\"\">\n\n                                <li v-for=\"u in userList\" _v-146d1284=\"\">\n                                    <img class=\"pho\" :src=\"u.pic\" alt=\"{{u.nickname}}\" _v-146d1284=\"\">\n                                    <p _v-146d1284=\"\"><span class=\"user-name\" style=\"color: \" _v-146d1284=\"\">{{u.nickname}}</span><em _v-146d1284=\"\"></em></p>\n                                    <p class=\"mis\" _v-146d1284=\"\"><em class=\"ul ul{{parseInt(u.userlevel) + 1 > 9 ? parseInt(u.userlevel)+1 : '0'+(parseInt(u.userlevel)+1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em></p>\n                                </li>\n                            </ul>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <!-- 主内容的左栏 -->\n            <div id=\"roomCenter\" class=\"g-mn\" _v-146d1284=\"\">\n                <div class=\"m-room\" _v-146d1284=\"\">\n                    <!-- 视频位置 -->\n                    <div class=\"video-barrage\" id=\"js-barrage\" _v-146d1284=\"\">\n                        <div id=\"bPlayer\" v-el=\"player\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                    <div class=\"live-room\" id=\"videoView\" _v-146d1284=\"\">\n                        <div class=\"upper-l\" _v-146d1284=\"\">\n                            <span class=\"Charm-nub\" id=\"charmWrap\" _v-146d1284=\"\">\n                                <span class=\"n-bg\" _v-146d1284=\"\">\n                                    <i class=\"Charm-heart\" _v-146d1284=\"\">\n                                    </i>\n                                    <span class=\"js-charmNum\" _v-146d1284=\"\">\n                                    </span>\n                                </span>\n                            </span>\n                            <span id=\"charmAdd\" class=\"Charm-add\" _v-146d1284=\"\">\n                            </span>\n                        </div>\n                        <div id=\"charmDetail\" class=\"Charm-dlg f-dn\" _v-146d1284=\"\">\n                            <p _v-146d1284=\"\">\n                                魅力值总计：\n                                <strong class=\"js-charmNum\" _v-146d1284=\"\">\n                                </strong>\n                            </p>\n                            <p class=\"js-info\" _v-146d1284=\"\">\n                            </p>\n                            <p class=\"t-r xq\" _v-146d1284=\"\">\n                                <a href=\"rank.htm\" tppabs=\"http://www.xiu8.com/rank\" target=\"_blank\" _v-146d1284=\"\">\n                                    查看详情\n                                </a>\n                            </p>\n                        </div>\n                        <div id=\"commNews\" class=\"comm-news f-cb\" _v-146d1284=\"\">\n                        </div>\n                        <div id=\"guideLogin\" href=\"#\" class=\"atv-r5\" style=\"display: none;\" _v-146d1284=\"\">\n                            <span class=\"link\" id=\"gCloseBtn\" style=\"display: none;\" _v-146d1284=\"\">\n                            </span>\n                            <ul _v-146d1284=\"\">\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-1 xiusta\" stadata=\"{en:'login_show_room_GP_xiu',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-2 xiusta\" stadata=\"{en:'login_show_room_GP_BD',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-3 xiusta\" stadata=\"{en:'login_show_room_GP_QQ',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-4 xiusta\" stadata=\"{en:'login_show_room_TGP_BD',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                        <em class=\"login-icon ba-ic\" _v-146d1284=\"\">\n                                        </em>\n                                        百度登录\n                                    </a>\n                                </li>\n                            </ul>\n                        </div>\n                        <div id=\"v_Player\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"upper-l\" id=\"video-top\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"btm-l\" id=\"video-letfbot\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"btm-r\" id=\"video-bottom\" _v-146d1284=\"\">\n                        </div>\n                        <!-- 在线主播 -->\n                        <div class=\"live-extra\" id=\"randomBroad\" v-show=\"livestate.status == 0\" _v-146d1284=\"\">\n                            <div class=\"Anchor-rest t-c\" style=\"padding-top:60px;\" _v-146d1284=\"\">\n                                <span class=\"txt\" _v-146d1284=\"\">\n                                    主播正在休息\n                                </span>\n                            </div>\n                            <div class=\"cap f-cb f14\" _v-146d1284=\"\">\n                                <a class=\"trans js-trans\" target=\"_blank\" href=\"/lobby\" _v-146d1284=\"\">\n                                    换一换\n                                </a>\n                                <a target=\"_blank\" href=\"/lobby\" _v-146d1284=\"\">\n                                    更多精彩推荐\n                                </a>\n                            </div>\n                            <div class=\"an-list\" _v-146d1284=\"\">\n                                <ul class=\"js-list\" _v-146d1284=\"\">\n                                </ul>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n                <div id=\"roomStar\" class=\"room-Star\" style=\"display:none;\" _v-146d1284=\"\">\n                    <!--<ul>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                    </ul>\n                     <div class=\"atv-enter atv-enter-pst\" id=\"star-right\">\n                        <i class=\"u-hd js_laba_game xiusta\" id=\"laba-btn\" style=\"display:none;cursor: pointer;\" stadata=\"{en:'game_laba',xst:'c',et:'mc',tm:'more',v:1}\">\n                        </i>\n                    </div> \n                    <div id=\"ristIco\" class=\"rist-ico\">\n                    </div>-->\n                </div>\n                <!-- 道具框 -->\n                <div class=\"m-gift-box f-cb\" ms-controller=\"gifts\" id=\"baseGift\" style=\"top: inherit;\" _v-146d1284=\"\">\n                    <div class=\"atv-fly-enter f-dn\" _v-146d1284=\"\">\n                        <div class=\"act-year-fly\" _v-146d1284=\"\">\n                            <strong _v-146d1284=\"\">\n                                未开启\n                            </strong>\n                        </div>\n                        <div class=\"act-fly-div f-dn\" _v-146d1284=\"\">\n                            <h3 _v-146d1284=\"\">\n                                加速飞碟主要规则介绍\n                            </h3>\n                            <p _v-146d1284=\"\">\n                                今天可加速次数：\n                                <em id=\"fly-count\" _v-146d1284=\"\">\n                                    3次\n                                </em>\n                                <br _v-146d1284=\"\">\n                                1.晋级赛至总决赛比赛期间，比赛主播每次晋\n                                <br _v-146d1284=\"\">\n                                升1名可触发加速飞碟1次\n                                <br _v-146d1284=\"\">\n                                2.加速飞碟每次触发持续时间为10分钟\n                                <br _v-146d1284=\"\">\n                            </p>\n                            <p class=\"t-r\" _v-146d1284=\"\">\n                                <a href=\"http://bad_redirect\" target=\"_blank\" _v-146d1284=\"\">\n                                    更多规则详情\n                                </a>\n                            </p>\n                        </div>\n                    </div>\n                    <div class=\"m-tab f-cb\" _v-146d1284=\"\">\n                        <ul id=\"typelist\" _v-146d1284=\"\">\n                            <li v-for=\"gift in giftList\" :class=\"{'curr' : gift.curr}\" @click=\"giftTypeChange(gift.type)\" _v-146d1284=\"\"> {{gift.name}} </li>\n                        </ul>\n                    </div>\n                    <div class=\"bd f-cb g-scroll\" id=\"gift_box\" _v-146d1284=\"\">\n                        <div class=\"scrollbar\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                        <div class=\"jscroll-c viewport\" id=\"gift_wrap\" style=\"height:138px;\" _v-146d1284=\"\">\n                            <span class=\"icon arrow-l xiusta\" stadata=\"{en:'gift_left_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" id=\"lg_btn\" ms-click=\"arrowLeft()\" _v-146d1284=\"\">\n                            </span>\n                            <span class=\"icon arrow-r xiusta\" stadata=\"{en:'gift_right_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" id=\"rg_btn\" ms-click=\"arrowRight\" _v-146d1284=\"\">\n                            </span>\n                            <div class=\"gifts-wrap wholearea\" style=\"position: absolute;\" _v-146d1284=\"\">\n                                <ul id=\"giftList\" _v-146d1284=\"\">\n                                    <!-- 千纸鹤特殊道具 -->\n                                    <li v-for=\"g in gift\" @click=\"currGift($event, g)\" @mouseover=\"moverGiftEvent(g, $event)\" @mouseleave=\"moverGiftEvent(null, $event)\" title=\"{{g.giftname}}\" _v-146d1284=\"\">\n                                        <em class=\"giftIcon gift_{{g.id}}\" _v-146d1284=\"\">\n                                        </em>\n                                        <!--<i class=\"number\" id=\"origamiNum\">\n                                            \n                                        </i>-->\n                                    </li>\n                                </ul>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"ft\" _v-146d1284=\"\">\n                        <div class=\"t-user-list\" style=\"display: none;\" ms-visible=\"showSenderList\" _v-146d1284=\"\">\n                            <ul _v-146d1284=\"\">\n                                <li class=\"f-toe\" ms-repeat=\"sendList\" ms-click=\"setReceive($val)\" _v-146d1284=\"\">\n                                   \n                                </li>\n                            </ul>\n                        </div>\n                        <span class=\"num mr10\" _v-146d1284=\"\">\n                            数量\n                            <input class=\"ml10 ipt-txt qucknum\" type=\"text\" maxlength=\"4\" v-model=\"giftNum\" value=\"1\" _v-146d1284=\"\">\n                            <a class=\"icon shape qucknum\" href=\"javascript:void(0)\" @click=\"targeQuick()\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                        <span class=\"to-pers\" _v-146d1284=\"\">\n                            给\n                            <input size=\"23\" class=\"ml10 ipt-txt senderInput\" type=\"text\" readonly=\"readonly\" value=\"{{room.nickname}}\" _v-146d1284=\"\">\n                        </span>\n                        <a class=\"u-btn-1 u-send ml10 xiusta\" @click=\"sendGift\" _v-146d1284=\"\">\n                            发送礼物\n                        </a>\n                        <a id=\"btn-pay\" href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                            充值\n                        </a>\n                        <!-- 弹出选项 -->\n                        <div class=\"t-num-list f-dn\" style=\"display:{{showQuick?'block':'none'}}\" _v-146d1284=\"\">\n                            <ul _v-146d1284=\"\">\n\t\t\t\t                <li v-for=\"q in quickList\" @click=\"setQuick(q)\" _v-146d1284=\"\">{{q}}</li>\n                            </ul>\n                        </div>\n                    </div>\n                </div>\n                <!-- 礼物栏 -->\n            </div>\n            <!-- 中间-视频直播-礼物部分 -->\n            <div class=\"g-r-area\" _v-146d1284=\"\">\n                <div class=\"g-marg\" _v-146d1284=\"\">\n                    <!-- 排行榜 -->\n                    <div class=\"m-billboard\" _v-146d1284=\"\">\n                        <div class=\"m-tab f-cb\" _v-146d1284=\"\">\n                            <ul id=\"js-room-rank\" _v-146d1284=\"\">\n                                <li class=\"first js-li-rank\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-a\" _v-146d1284=\"\">\n                                            </i>\n                                            排行\n                                        </span>\n                                    </div>\n                                    <div id=\"js-rank-tab\" class=\"dlg dlg-star-ba f-dn\" ms-controller=\"roomRank\" _v-146d1284=\"\">\n                                        <div class=\"tab f-cb\" _v-146d1284=\"\">\n                                            <span class=\"curr\" _v-146d1284=\"\">\n                                                日\n                                            </span>\n                                            <span _v-146d1284=\"\">\n                                                周\n                                            </span>\n                                            <span _v-146d1284=\"\">\n                                                月\n                                            </span>\n                                        </div>\n                                        <!-- 本日之星 -->\n                                        <div class=\"bd\" style=\"display: block\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本日夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_day.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_day\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.xb\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.uid}}.jpg{{(typeof item.uiut !== 'undefined' &amp;&amp; item.uiut) ? '?v='+item.uiut : '' }}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.fuo.unn.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fuo.ulv >= 10 ? 'ul'+item.fuo.ulv : 'ul0'+item.fuo.ulv}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.fuo.uvl >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_day.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                        <!-- 本周之星 -->\n                                        <div class=\"bd bd-2\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本周夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_week.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_week\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.amount\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.user_id}}.jpg{{(typeof item.imgVersion !=='undefined' &amp;&amp; item.imgVersion)  ? '?v='+item.imgVersion : ''}}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.nickname.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fl >= 10 ? 'ul'+item.fl : 'ul0'+item.fl}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.isvip >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_week.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                        <!-- 本月之星 -->\n                                        <div class=\"bd bd-3\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本月夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_month.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_month\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.amount\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.user_id}}.jpg{{(typeof item.imgVersion !=='undefined' &amp;&amp; item.imgVersion)  ? '?v='+item.imgVersion : ''}}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.nickname.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fl >= 10 ? 'ul'+item.fl : 'ul0'+item.fl}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.isvip >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_month.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </li>\n                                <li class=\"js-li-rank\" id=\"js-game-list\" data-type=\"game\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-b\" _v-146d1284=\"\">\n                                            </i>\n                                            水果忍者\n                                            <i id=\"g-new\" _v-146d1284=\"\">\n                                            </i>\n                                        </span>\n                                    </div>\n                                    <div class=\"dlg dlg-star-ba pub-game\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar\" id=\"gameScroll-bar\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                    </div>\n                                                </div>\n                                            </div>\n                                        </div>\n                                        <div class=\"jscroll-c viewport\" id=\"game-content\" _v-146d1284=\"\">\n                                            <ol class=\"f-cb list pub-game wholearea\" id=\"game-list\" _v-146d1284=\"\">\n                                            </ol>\n                                        </div>\n                                    </div>\n                                </li>\n                                <li class=\"js-li-rank\" data-type=\"active\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-c\" _v-146d1284=\"\">\n                                            </i>\n                                            活动\n                                        </span>\n                                        <sup id=\"actNum\" style=\"display: none;\" _v-146d1284=\"\">\n                                        </sup>\n                                    </div>\n                                    <div class=\"dlg dlg-star-ba pub-activity\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar\" id=\"actScroll-bar\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                    </div>\n                                                </div>\n                                            </div>\n                                        </div>\n                                        <div class=\"jscroll-c viewport\" id=\"act-content\" _v-146d1284=\"\">\n                                            <ol class=\"f-cb list pub-game wholearea\" id=\"act-list\" _v-146d1284=\"\">\n                                            </ol>\n                                        </div>\n                                    </div>\n                                </li>\n                            </ul>\n                        </div>\n                    </div>\n                    <!-- 文字滚动条 -->\n                    <div class=\"m-top-line\" id=\"js-top-line\" _v-146d1284=\"\">\n                        <div class=\"dlg-msg\" style=\"display: none\" _v-146d1284=\"\">\n                            <p _v-146d1284=\"\">\n                                每条头条拥有\n                                <span _v-146d1284=\"\">\n                                    3分钟\n                                </span>\n                                保护期;\n                            </p>\n                            <p _v-146d1284=\"\">\n                                保护期间，\n                                <span _v-146d1284=\"\">\n                                    消费高于\n                                </span>\n                                当前头条,即刻取替其展示;\n                            </p>\n                            <p _v-146d1284=\"\">\n                                保护结束，消费满足\n                                <span _v-146d1284=\"\">\n                                    50,000秀币\n                                </span>\n                                即可抢得头条。\n                            </p>\n                        </div>\n                        <p class=\"js-top-animation\" _v-146d1284=\"\">\n                            <span class=\"date f-r\" style=\"margin-top: 12px\" _v-146d1284=\"\">\n                                <span class=\"js-runtime\" _v-146d1284=\"\">\n                                </span>\n                                <i class=\"icon icon-q\" _v-146d1284=\"\">\n                                </i>\n                            </span>\n                            <i class=\"icon u-topl\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"js-hl-top fonts\" style=\"line-height: 35px;\" v-if=\"!!top\" _v-146d1284=\"\">\n                                <a href=\"/{{top.room.room_id}}\" target=\"_blank\" style=\"color:#e9d70e;\" title=\"送了{{top.total}}个{{top.gift.giftname}},价值{{top.coin}}秀币\" _v-146d1284=\"\">{{top.user.nickname}}  给  {{top.room.nickname}} 送了{{top.total}}个</a><em class=\"giftIcon-s gift-s-{{top.gift.id}}\" _v-146d1284=\"\"></em>\n                            </span>\n                        </p>\n                        <ul class=\"js-hl-list\" style=\"height: auto;width: 100%\" v-if=\"!!top23 &amp;&amp; top23.length > 0\" _v-146d1284=\"\">\n                            <li v-for=\"t in top23\" _v-146d1284=\"\">\n                                <a target=\"_blank\" href=\"/{{t.room.room_id}}\" style=\"color:#FFFFFF;\" _v-146d1284=\"\">{{moment(t.time).format(\"hh:mm\")}}&nbsp;{{t.user.nickname}} 给 {{t.room.nickname}} 送了 {{t.total}} 个 {{t.gift.giftname}}&nbsp;&nbsp;<em class=\"giftIcon-s gift-s-{{t.gift.id}}\" _v-146d1284=\"\"></em></a>\n                            </li>\n                        </ul>\n                    </div>\n                    <!-- 聊天功能区(包含座当场礼物及活动) -->\n                    <!-- 聊天功能区 -->\n                    <div class=\"m-pub-box\" id=\"USER_CHART\" ms-controller=\"userChart\" _v-146d1284=\"\">\n                        <div id=\"CHART_BOX\" ms-visible=\"showPubChartList\" ms-css-height=\"{{setHeight}}px\" class=\"pub-list public-chat-box curr\" _v-146d1284=\"\">\n                            <div id=\"luckyBag\" class=\"new-pack\" style=\"display: none\" _v-146d1284=\"\">\n                                <span class=\"close\" _v-146d1284=\"\">\n                                </span>\n                                <span class=\"nub\" _v-146d1284=\"\">\n                                </span>\n                            </div>\n                            <div id=\"luckyDlg\" class=\"new-pack-dlg\" style=\"display: none\" _v-146d1284=\"\">\n                                <p _v-146d1284=\"\">\n                                    用户通过水果忍者游戏下注每达到标准\n                                    游戏币，即可获得1个神秘礼物，主播\n                                    可通过1个神秘礼物开启一次神秘福袋\n                                    开启福袋获得随机奖项.\n                                </p>\n                                <div class=\"t-r\" _v-146d1284=\"\">\n                                    <a href=\"langyalist.htm\" tppabs=\"http://www.xiu8.com/act/langyalist\" target=\"_blank\" _v-146d1284=\"\">\n                                        查看详情\n                                    </a>\n                                </div>\n                            </div>\n                            <div id=\"WORLD_NOTICE\" class=\"the-tran-side\" style=\"cursor:pointer;display:none;overflow:hidden;\" _v-146d1284=\"\">\n                                <p class=\"wri-words\" _v-146d1284=\"\">\n                                    <a _v-146d1284=\"\">\n                                        <span class=\"yan\" _v-146d1284=\"\">\n                                        </span>\n                                        <i class=\"wenzi\" _v-146d1284=\"\">\n                                        </i>\n                                        <span class=\"time\" _v-146d1284=\"\">\n                                        </span>\n                                    </a>\n                                </p>\n                            </div>\n                            <div id=\"PUB_CHART\" class=\"public-chat\" ms-css-height=\"{{setHeight-104}}px\" style=\"height: 350px;overflow: hidden;\" ms-mouseenter=\"clearOrScroll('pub',true,this)\" ms-mouseleave=\"clearOrScroll('pub',false,this)\" _v-146d1284=\"\">\n                                <div class=\"scrollbar\" ms-visible=\"showPubSC\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div id=\"PUB_SCROLL\" class=\"jscroll-c viewport\" style=\"height: 350px;overflow: auto;padding-bottom:0;\" _v-146d1284=\"\">\n                                    <ul class=\"wholearea\" style=\"display: none; position: absolute;\" v-el:chartpane=\"\" _v-146d1284=\"\">\n                                        <!-- <li class=\"grey\">欢迎&nbsp;&nbsp;<span></span>&nbsp;<span class=\"user-name\" style=\"\" ftid=\"9996137666809\">游客666809</span>&nbsp;进入房间</li>\n                                        <li><span>01:21</span><span class=\"namegroup\">&nbsp;<span><em class=\"ul ul03\" align=\"absmiddle\"></em><em class=\"ulvip grf_3\"></em></span><span class=\"user-name\" style=\"\" ftid=\"196016592\">梦想哆哆家的大少爷</span>&nbsp;</span>说：点歌要点火山的，点歌伤不起</li>\n                                        <li><span>21:59</span><span class=\"namegroup\">&nbsp;<span></span><span class=\"user-name\" style=\"\" ftid=\"199576977\">观心盘，浮屠船</span>&nbsp;</span>送&nbsp;<span class=\"gf-num\">1个</span>&nbsp;神秘钥匙&nbsp;<em class=\"giftIcon gift_300\"></em></li> -->\n                                        <template v-for=\"chart in chartWarp\">\n                                            <template v-if=\"chart.type=='join'\">\n                                                <!--<li class=\"grey\">欢迎&nbsp;&nbsp;<span></span>&nbsp;<span class=\"user-name\" style=\"\" ftid=\"9996137666809\">{{chart.nickname}}</span>&nbsp;进入房间</li>-->\n                                                <li _v-146d1284=\"\">\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">欢迎&nbsp;&nbsp;&nbsp;&nbsp;\n                                                        <span _v-146d1284=\"\">\n                                                            <em class=\"ul ul{{parseInt(chart.userlevel) + 1 >9?parseInt(chart.userlevel) + 1:'0'+ (parseInt(chart.userlevel) + 1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em>\n                                                            <!--<em class=\"ulvip grf_3\"></em>-->\n                                                        </span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"196016592\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>&nbsp;进入房间</li>\n                                                \n                                            </template>\n                                            <template v-if=\"chart.type == 'msg'\">\n                                                <li _v-146d1284=\"\">\n                                                    <span _v-146d1284=\"\">{{chart.time}}</span>\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">&nbsp;\n                                                        <span _v-146d1284=\"\">\n                                                            <em class=\"ul ul{{parseInt(chart.userlevel) + 1 >9?parseInt(chart.userlevel)+1:'0'+(parseInt(chart.userlevel)+1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em>\n                                                            <!--<em class=\"ulvip grf_3\"></em>-->\n                                                        </span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"196016592\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>说：{{chart.message}}</li>\n                                            </template>\n                                            <template v-if=\"chart.type == 'gift' \">\n                                                <li _v-146d1284=\"\">\n                                                    <span _v-146d1284=\"\">{{chart.time}}</span>\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">&nbsp;\n                                                        <span _v-146d1284=\"\"></span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"199576977\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>送&nbsp;<span class=\"gf-num\" _v-146d1284=\"\">{{chart.total}}个</span>&nbsp;{{chart.gift.giftname}}&nbsp;\n                                                    <em class=\"giftIcon gift_{{chart.gift.id}}\" _v-146d1284=\"\"></em>\n                                                </li>\n                                            </template>\n                                        </template>\n                                    </ul>\n                                </div>\n                                <!-- 聊天操作框 -->\n                                <div id=\"PUB_CLEAN_SCROLL\" class=\"pub-ed-msg\" ms-visible=\"showPubClearOrScroll\" style=\"z-index=1000;display:none;pisition:fix;\" _v-146d1284=\"\">\n                                    <a ms-visible=\"isOpenEffect\" ms-click=\"closeEffect(true)\" _v-146d1284=\"\">\n                                        <i class=\"icon open-eff\" _v-146d1284=\"\">\n                                        </i>\n                                        特效开\n                                    </a>\n                                    <a ms-visible=\"!isOpenEffect\" ms-click=\"closeEffect(false)\" _v-146d1284=\"\">\n                                        <i class=\"icon close-eff\" _v-146d1284=\"\">\n                                        </i>\n                                        特效关\n                                    </a>\n                                    <a ms-click=\"cleanScreen(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-CLS\" _v-146d1284=\"\">\n                                        </i>\n                                        清屏\n                                    </a>\n                                    <a ms-visible=\"isPubCanScroll\" ms-click=\"stopScroll(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-roll\" _v-146d1284=\"\">\n                                        </i>\n                                        滚屏\n                                    </a>\n                                    <a ms-visible=\"!isPubCanScroll\" ms-click=\"stopScroll(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-lock\" _v-146d1284=\"\">\n                                        </i>\n                                        锁屏\n                                    </a>\n                                </div>\n                                <a href=\"javascript:void(0)\" id=\"yPack\" class=\"f-dn\" _v-146d1284=\"\">\n                                </a>\n                            </div>\n                            <div id=\"DIV_LINE\" class=\"rolling\" _v-146d1284=\"\">\n                                <i class=\"icon u-resize\" _v-146d1284=\"\">\n                                </i>\n                            </div>\n                            <div id=\"PRV_CHART_BOX\" ms-mouseenter=\"clearOrScroll('prv',true,this)\" ms-mouseleave=\"clearOrScroll('prv',false,this)\" class=\"chat_room\" style=\"height: 96px;\" _v-146d1284=\"\">\n                                <div class=\"scrollbar\" ms-visible=\"showPrvSC\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div id=\"PRV_CHART\" class=\"chat_room_box viewport\" style=\"height: 72px;overflow: hidden;\" _v-146d1284=\"\">\n                                    <ul class=\"wholearea\" style=\"display:none;position: absolute;\" ms-visible=\"showPrvChart\" attr=\"private\" _v-146d1284=\"\">\n                                        <li _v-146d1284=\"\"><span class=\"user-name\" _v-146d1284=\"\">哆哆大美妞&nbsp;</span>对&nbsp;<span class=\"user-name\" _v-146d1284=\"\">您&nbsp;</span>说：新人求关注</li>\n                                    </ul>\n                                </div>\n                                <!-- 聊天操作框 -->\n                                <div id=\"PRV_CLEAN_SCROLL\" class=\"pub-ed-msg\" ms-visible=\"showPrvClearOrScroll\" style=\"display:none;\" _v-146d1284=\"\">\n                                    <a ms-click=\"cleanScreen(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-CLS\" _v-146d1284=\"\">\n                                        </i>\n                                        清屏\n                                    </a>\n                                    <a ms-visible=\"isPrvCanScroll\" ms-click=\"stopScroll(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-roll\" _v-146d1284=\"\">\n                                        </i>\n                                        滚屏\n                                    </a>\n                                    <a ms-visible=\"!isPrvCanScroll\" ms-click=\"stopScroll(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-lock\" _v-146d1284=\"\">\n                                        </i>\n                                        锁屏\n                                    </a>\n                                </div>\n                            </div>\n                        </div>\n                        <!-- 聊天区 -->\n                        <div _v-146d1284=\"\">\n                            <div class=\"to-said\" style=\"display:none;\" id=\"CHART_OPERATION\" ms-visible=\"showChatOperation\" _v-146d1284=\"\">\n                                <div class=\"t-user-list\" id=\"TALK_TO_USER\" ms-visible=\"showTalkToUserList\" _v-146d1284=\"\">\n                                    <ul _v-146d1284=\"\">\n                                        <li class=\"f-toe\" ms-repeat-item=\"talkToUserList\" ms-click=\"talkToClick(this)\" ms-attr-attr=\"item.uid\" ms-text=\"item.uname\" _v-146d1284=\"\">\n                                        </li>\n                                    </ul>\n                                </div>\n                                <span class=\"num\" _v-146d1284=\"\">\n                                    <em ms-visible=\"showTalkToUnit\" _v-146d1284=\"\">\n                                        <input id=\"TALK_TO\" readonly=\"readonly\" class=\"all\" ms-click=\"talkToInputClick(false)\" autocomplete=\"off\" type=\"text\" attr=\"0\" value=\"所有人\" size=\"24\" _v-146d1284=\"\">\n                                        <a id=\"TALK_TO_ARROW\" title=\"点击\" class=\"icon shape\" ms-click=\"talkToInputClick(true)\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                                        </a>\n                                    </em>\n                                </span>\n                                <span ms-visible=\"showTalkToUnit\" class=\"checkbox\" style=\"cursor: pointer;\" _v-146d1284=\"\">\n                                    <input id=\"QUITELY_CHECKBOX\" type=\"checkbox\" autocomplete=\"off\" _v-146d1284=\"\">\n                                    <span ms-click=\"clickQuitely(event)\" _v-146d1284=\"\">\n                                        悄悄说\n                                    </span>\n                                </span>\n                            </div>\n                            <!-- 表情框 -->\n                            <div id=\"dFace\" class=\"face-list msg_face\" style=\"display: none; bottom: 40px;\" _v-146d1284=\"\">\n                                <div id=\"msg-face\" class=\"tab\" _v-146d1284=\"\">\n                                    <div id=\"dFtype\" class=\"tab-t\" style=\"z-index: 1;\" _v-146d1284=\"\">\n                                    </div>\n                                    <div class=\"tab-c\" style=\"overflow: hidden;\" _v-146d1284=\"\">\n                                        <div class=\"normalFaceList list\" style=\"overflow: hidden; display: block;\" _v-146d1284=\"\">\n                                            <div id=\"NOR_FACE_SCROLL\" class=\"scrollbar\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                        </div>\n                                                    </div>\n                                                </div>\n                                            </div>\n                                            <div class=\"viewport\" style=\"height: 92px; position: absolute;\" _v-146d1284=\"\">\n                                                <ul class=\"face_list wholearea\" style=\"position: absolute;\" id=\"face_list\" _v-146d1284=\"\">\n                                                </ul>\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                            </div>\n                            <!-- 切换区-礼物模块 -->\n                            <div class=\"watch-chat-box\" id=\"TALK_DIV\" style=\"z-index:4;\" _v-146d1284=\"\">\n                                <div ms-click=\"talkDivClick(this)\" style=\"left:0px;\" id=\"TALK_TO_LIST\" ms-visible=\"showTalkDiv\" class=\"t-speak-list\" _v-146d1284=\"\">\n                                    <ul _v-146d1284=\"\">\n                                        <li ms-mousedown=\"talkType('world')\" _v-146d1284=\"\">\n                                            世界说\n                                        </li>\n                                        <li ms-mousedown=\"talkType('barrage')\" _v-146d1284=\"\">\n                                            弹幕\n                                        </li>\n                                        <li ms-mousedown=\"talkType('pub')\" _v-146d1284=\"\">\n                                            聊天\n                                        </li>\n                                        <a id=\"msgtemp\" _v-146d1284=\"\">\n                                        </a>\n                                    </ul>\n                                </div>\n                                <div class=\"inputk\" _v-146d1284=\"\">\n                                    <div class=\"to-pers\" _v-146d1284=\"\">\n                                        <a ms-click=\"faceButtonClick\" id=\"FACE_ICON\" title=\"表情\" class=\"icon u-face\" href=\"javascript:void(0)\" _v-146d1284=\"\">\n                                        </a>\n                                        <a href=\"javascript:;\" id=\"TALK_TO_BUTTON\" class=\"icon u-speak\" ms-click=\"talkToButtonClick\" ms-html=\"talkToButtonText\" _v-146d1284=\"\">\n                                            世界说\n                                            <i class=\"icon u-opt\" _v-146d1284=\"\">\n                                            </i>\n                                        </a>\n                                        <input class=\"ipt-txt xiusta\" v-model=\"message\" id=\"CHART_MESSAGE\" @keyup.enter=\"chartSendMessage\" type=\"text\" placeholder=\"点击这里可以调戏主播！\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                                <button id=\"SEND_MSG_BUTTON\" @click=\"chartSendMessage\" class=\"u-btn-1 u-send xiusta\" _v-146d1284=\"\">\n                                    发送\n                                </button>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <!-- 左侧内容部分 -->\n        </div>\n    </div>\n    <!-- 主播、超管权限 -->\n    <!-- 主播、超管管理菜单 -->\n    <!-- 主播管理 -->\n    <div style=\"top: 100px;left: 20%;margin-left:0px;display: none;\" class=\"dlg-w dlg-admin\" id=\"domBroadPanel\" ms-controller=\"roomManager\" ms-visible=\"showBroadM\" ms-if=\"isBroad\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeMPannel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                主播管理\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat=\"Tab\" ms-class=\"{{showTab == $index ? 'curr':''}}\" ms-click=\"changTab($index)\" _v-146d1284=\"\">\n                        {{el}}\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a target=\"_blank\" href=\"help.htm\" tppabs=\"http://www.xiu8.com/help\" style=\"color:#FFF;\" _v-146d1284=\"\">\n                            直播帮助\n                        </a>\n                    </li>\n                </ul>\n                <!-- 公告设置面板 -->\n                <div class=\"d-tab-con the-an-set\" ms-if=\"showTab == 0\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            房间公告\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            最多不超过20个字\n                        </span>\n                    </div>\n                    <ul class=\"f-cbli\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePb\" placeholder=\"请输入文字 不超过20个字\" maxlength=\"20\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePU\" placeholder=\"公告文字链接\" maxlength=\"40\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                    </ul>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            私聊文字\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            最多不超过20个字\n                        </span>\n                    </div>\n                    <ul class=\"\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePrv\" placeholder=\"欢迎来到我的房间\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                    </ul>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"updateNotice()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 装扮空间 -->\n                <div class=\"d-tab-con dr-space\" ms-if=\"showTab == 100\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            设置头像照片\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            图片格式为jpg,不大于1M\n                        </span>\n                    </div>\n                    <div class=\"photo-upload\" _v-146d1284=\"\">\n                        <button class=\"photo-upload-btn\" _v-146d1284=\"\">\n                            选择您的照片\n                        </button>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 聊天设置 -->\n                <div class=\"d-tab-con chat-settings\" ms-if=\"showTab == 1\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            游客进出提示\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"r_visitor\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                开启\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"r_visitor\" type=\"radio\" value=\"0\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                关闭\n                            </b>\n                        </span>\n                    </div>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            公聊设置\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <select name=\"r_public_lv\" _v-146d1284=\"\">\n                            <option ms-repeat=\"pubcList\" ms-value=\"$index\" _v-146d1284=\"\">\n                                {{el}}\n                            </option>\n                        </select>\n                    </div>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            私聊设置\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            以下爵位私聊信息不接收。\n                        </span>\n                    </div>\n                    <div class=\"the-title\" _v-146d1284=\"\">\n                        <select name=\"s_public_lv\" _v-146d1284=\"\">\n                            <option ms-repeat=\"sayLvList\" ms-value=\"$index\" _v-146d1284=\"\">\n                                {{el}}\n                            </option>\n                        </select>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"updateRoomPrint()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 礼物特效 -->\n                <div class=\"d-tab-con gift-special\" ms-if=\"showTab == 200\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            选择为不提示\n                        </b>\n                    </div>\n                    <div class=\"rodio-top\" _v-146d1284=\"\">\n                        <div class=\"radio \" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(1)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                超级礼物特效\n                            </label>\n                        </div>\n                        <div class=\"radio\" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(2)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                礼物组合特效\n                            </label>\n                        </div>\n                        <div class=\"radio\" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(3)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                普通礼物特效\n                            </label>\n                        </div>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"gifts_on_of(0)\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 直播状态 -->\n                <div class=\"d-tab-con live\" ms-if=\"showTab == 2\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            选择状态\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <input name=\"video_status\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            直播\n                        </b>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"video_status\" type=\"radio\" value=\"2\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                录像\n                            </b>\n                        </span>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"setVideoStatus()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 超管管理 -->\n    <div class=\"dlg-w dlg-admin\" style=\"top:100px;left:30%;margin-left:0px;display:none;\" id=\"domSysPanel\" ms-controller=\"sysManager\" ms-visible=\"showSysPanel\" ms-if=\"isAdmin\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeSysPanel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                超级管理\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat=\"sysTab\" ms-class=\"{{showsysIndex == $index ? 'curr':''}}\" ms-click=\"changsysTab($index)\" _v-146d1284=\"\">\n                        {{el}}\n                    </li>\n                </ul>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 0\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            直播状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"video_status_sys\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                直播\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"video_status_sys\" type=\"radio\" value=\"2\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                录像\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setVideoStatus_sys()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 1\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            警告内容\n                        </strong>\n                        <span class=\"gray9\" _v-146d1284=\"\">\n                            （最多不超过200字）\n                        </span>\n                    </p>\n                    <p _v-146d1284=\"\">\n                        <textarea style=\"height:60px\" class=\"ipt textare\" id=\"txtWarning\" ms-duplex=\"warningTxt\" _v-146d1284=\"\">                        </textarea>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setWarning()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 2\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            选择状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"invisible\" type=\"radio\" value=\"0\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                显身\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"invisible\" type=\"radio\" value=\"1\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                隐身\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setInvisible()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 3\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <input type=\"text\" class=\"ipt ipt-txt\" size=\"6\" maxlength=\"3\" id=\"txtLockTime\" ms-duplex=\"lockTime\" _v-146d1284=\"\">\n                        <span class=\"ml10\" _v-146d1284=\"\">\n                            分钟\n                        </span>\n                    </p>\n                    <p class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            备注\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            （最多不超过200字）\n                        </span>\n                    </p>\n                    <p class=\"photo-upload\" _v-146d1284=\"\">\n                        <textarea style=\"height:60px\" class=\"ipt textare\" id=\"txtLockMsg\" ms-duplex=\"lockMsg\" _v-146d1284=\"\">                        </textarea>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"stopLive()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 家族族长和副族长管理 -->\n    <div class=\"dlg-w dlg-admin\" style=\"top:100px;left:30%;margin-left:0px;display:none;\" id=\"domFm\" ms-controller=\"familyManager\" ms-visible=\"isShowFM\" ms-if=\"isFadmin\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeFPanel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                隐身设置\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li class=\"curr\" _v-146d1284=\"\">\n                        隐身设置\n                    </li>\n                </ul>\n                <div class=\"d-tab-con d-room-set\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            选择状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"Finvisible\" type=\"radio\" value=\"0\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                显身\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"Finvisible\" type=\"radio\" value=\"1\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                隐身\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setFInvisible()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 用户权限菜单 -->\n    <div class=\"dlg-w dlg-u-card\" style=\"top: 0px; left: 0px; display: none; position: absolute;z-index=13;\" id=\"divTips\" ms-controller=\"userTips\" ms-css-top=\"{{tips_top}}px\" ms-css-left=\"{{tips_left}}px\" ms-css-display=\"{{tips_visible === true ? 'block':'none'}}\" ms-mouseenter=\"mouseHanlder($event)\" ms-mouseleave=\"mouseHanlder($event)\" _v-146d1284=\"\">\n        <div class=\"card-infor\" _v-146d1284=\"\">\n            <dl class=\"f-cb user-infor\" _v-146d1284=\"\">\n                <dt class=\"photo\" _v-146d1284=\"\">\n                    <img ms-src=\"'+userId+'.jpg'}}{{uiutId}}\" tppabs=\"http://www.xiu8.com/{{'http://image.cache.xiu8.com/avatar/110/110/'+userId+'.jpg'}}{{uiutId}}\" alt=\"\" _v-146d1284=\"\">\n                </dt>\n                <dd _v-146d1284=\"\">\n                    <p class=\"name\" _v-146d1284=\"\">\n                        {{ nickName }}\n                    </p>\n                    <p class=\"num\" ms-if=\"isleave == true\" ms-visible=\"isleave == true\" ms-title=\"{{ userId }}\" _v-146d1284=\"\">\n                        ({{ coolNumber }})\n                    </p>\n                    <div class=\"mis\" ms-if=\"isleave == true\" ms-visible=\"isleave == true\" _v-146d1284=\"\">\n                        {{ getICON(userId) | html }}\n                    </div>\n                </dd>\n            </dl>\n            <div class=\"u-action\" _v-146d1284=\"\">\n                <p class=\"user-icon\" id=\"tip-medal\" _v-146d1284=\"\">\n                </p>\n                <ul class=\"clearfix f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat-item=\"power\" ms-click=\"powerCmdPublish(item.cmd,userId,nickName)\" _v-146d1284=\"\">\n                        <a _v-146d1284=\"\">\n                            <em class=\"icon\" ms-class=\"{{item.ico}}\" _v-146d1284=\"\">\n                            </em>\n                            {{item.name}}\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </div>\n    <!-- 浮动层 -->\n    <!-- 守护特权 -->\n    <div id=\"guardPrivi\" class=\"dlg-w dlg-to-watch-privi f-dn\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                加入守护团拥有特权\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"guardian-privi\" _v-146d1284=\"\">\n                <div class=\"d-con\" _v-146d1284=\"\">\n                    <ul class=\"u-list f-cb\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-car\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-1.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-1.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属豪车\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-place\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-2.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-2.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属座位\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-sole\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-3.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-3.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属徽章\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-manage\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-4.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-4.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                房间管理\n                            </span>\n                        </li>\n                    </ul>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 守护浮动面板 -->\n    <div id=\"guardAll\" class=\"dlg-w dlg-to-watch f-dn\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"u-watch\" id=\"addGuardLink\" style=\"margin-right: 20px;\" target=\"_blank\" href=\"#\" _v-146d1284=\"\">\n                +守护TA\n            </a>\n            <a class=\"d-close\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                守护团 开通\n                <span class=\"sp_graud_no\" _v-146d1284=\"\">\n                </span>\n                人\n            </span>\n        </div>\n        <div class=\"dlg-bd gruadSC\" _v-146d1284=\"\">\n            <div class=\"scrollbar\" _v-146d1284=\"\">\n                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <div class=\"d-con jscroll-c viewport\" style=\"max-height: 348px;overflow: hidden;\" _v-146d1284=\"\">\n                <ul class=\"u-list f-cb wholearea js-graud-list\" style=\"position: relative;\" _v-146d1284=\"\">\n                </ul>\n            </div>\n        </div>\n    </div>\n    <!-- 贴条 -->\n    <div id=\"domStickers\" style=\"top:258px;left:25%;margin-left:120px;display: none;\" class=\"dlg-w dlg-stickers\" ms-controller=\"stickers\" ms-visible=\"isShow\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"hideStickers()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                贴条\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                <li ms-repeat=\"stickerType\" ms-class=\"{{ stickerType[$index].id == currShow ? 'curr':'' }}\" ms-click=\"changeType(stickerType[$index].id)\" _v-146d1284=\"\">\n                    {{stickerType[$index].name }}\n                </li>\n            </ul>\n            <div class=\"d-tab-con f-cb\" _v-146d1284=\"\">\n                <ul class=\"vy_list\" id=\"notes_list_ul\" _v-146d1284=\"\">\n                    <li ms-repeat=\"showList\" ms-class=\"{{  $val.id  === currGiftId  ? 'cur' : '' }}\" ms-click=\"selectStickers($val.id)\" _v-146d1284=\"\">\n                        <em ms-class=\"{{className+ $val.id }}\" ms-title=\"{{$val.gold +'秀币，持续5分钟'}}\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                </ul>\n            </div>\n        </div>\n        <div class=\"dlg-ft t-c\" _v-146d1284=\"\">\n            <button class=\"u-btn-1\" ms-click=\"sendStickers()\" _v-146d1284=\"\">\n                确定\n            </button>\n        </div>\n    </div>\n    <!-- 弹出层 -->\n    <div class=\"dlg dlg-txt f-dn\" style=\"top: 420px; margin-left: -480px; left: 50%;\" _v-146d1284=\"\">\n        剩余守护天数：\n        <strong _v-146d1284=\"\">\n            320\n        </strong>\n        天\n    </div>\n    <!-- 道具鼠标提示框 -->\n    <div class=\"dlg dlg-gift\" id=\"domgt\" style=\"min-width:300px;\" v-show=\"moverGift != null\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <em class=\"giftImg-b gift-b-{{moverGift&amp;&amp;moverGift.id}}\" _v-146d1284=\"\">\n                </em>\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    {{ moverGift &amp;&amp; moverGift.giftname}}\n                    <template v-if=\"moverGift.gifttype == 0\">\n                        <strong class=\"pl10\" _v-146d1284=\"\">\n                            还有10秒可获得一个千纸鹤\n                        </strong>\n                    </template>\n                    <template v-else=\"\">\n                        <strong class=\"pl10\" _v-146d1284=\"\">\n                            {{moverGift &amp;&amp; moverGift.coin}}秀币\n                        </strong>\n                    </template>\n                    \n                    <br _v-146d1284=\"\">\n                    <!--<span ms-if=\"currGiftObj.luck == 1\" class=\"c_62\">\n                        最高可中1000倍大奖。\n                    </span>-->\n                </p>\n                <template v-if=\"moverGift.gifttype == 0\">\n                    <p class=\"pt10\" _v-146d1284=\"\">\n                        普通用户3分钟可获得一个,送出可为\n                        <br _v-146d1284=\"\">\n                        主播增加魅力值\n                    </p>\n                </template>\n                <template v-else=\"\">\n                    <p class=\"pt10\" _v-146d1284=\"\">\n                        一次赠送\n                        <em _v-146d1284=\"\">\n                            0\n                        </em>\n                        个触发\n                        <em _v-146d1284=\"\">\n                            0\n                        </em>\n                        级流光效果\n                    </p>\n                    <!--<p ms-if=\"currGiftObj.send ==0\" class=\"pt10\">\n                        不能直接使用，系统自动扣除\n                    </p>-->\n                </template>\n                \n            </dd>\n        </dl>\n    </div>\n    <!-- 千纸鹤鼠标提示框 -->\n    <div class=\"dlg dlg-gift\" id=\"origami\" style=\"top:500px; min-width:300px; display: none;\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <img width=\"70\" height=\"70\" src=\"http://image.cache.xiu8.com/goods/317_b.png\" tppabs=\"http://image.cache.xiu8.com/goods/317_b.png\" alt=\"千纸鹤\" _v-146d1284=\"\">\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    千纸鹤\n                    <strong class=\"js-type pl10\" _v-146d1284=\"\">\n                    </strong>\n                </p>\n                <p class=\"pt10\" _v-146d1284=\"\">\n                    普通用户3分钟可获得一个,送出可为\n                    <br _v-146d1284=\"\">\n                    主播增加魅力值\n                    <a href=\"origami.htm\" tppabs=\"http://www.xiu8.com/help/origami\" target=\"_blank\" style=\"color:#127adf \" _v-146d1284=\"\">\n                        查看详情\n                    </a>\n                </p>\n            </dd>\n        </dl>\n    </div>\n    <!-- 关注成功 -->\n    <div style=\"display:none;top: 50%;left:50%;margin: -110px 0 0 -190px;\" id=\"tipsM\" class=\"dlg-w dlg-prompt dlg-attention\" ms-controller=\"broadInfo\" ms-visible=\"showOKTips\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"closeTipsM\" _v-146d1284=\"\">\n                &nbsp;\n            </a>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <h3 class=\"h-title c_e02\" _v-146d1284=\"\">\n                关注成功！\n            </h3>\n            <p _v-146d1284=\"\">\n                安装手机端可收到主播开播通知更有豪礼相送！\n                <br _v-146d1284=\"\">\n                添加到主播到桌面，精彩随时看.\n                <a class=\"u-icon-atten\" href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                    <img src=\"http://www.xiu8.com/assets/images/room/tips-pic.png\" tppabs=\"http://www.xiu8.com/assets/images/room/tips-pic.png\" _v-146d1284=\"\">\n                </a>\n            </p>\n        </div>\n    </div>\n    <!-- 主播tips -->\n    <div class=\"dlg-w dlg-u-card\" ms-controller=\"broadInfo\" style=\"top: 534px; left: 923px; display: none; position:absolute\" id=\"bdInfotip\" _v-146d1284=\"\">\n        <div class=\"card-infor\" _v-146d1284=\"\">\n            <dl class=\"f-cb user-infor\" _v-146d1284=\"\">\n                <dt class=\"photo\" _v-146d1284=\"\">\n                    <img width=\"57\" height=\"57\" src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/110/110/925075.jpg\" alt=\"\" _v-146d1284=\"\">\n                </dt>\n                <dd _v-146d1284=\"\">\n                    <p class=\"name\" _v-146d1284=\"\">\n                        混血↘↙笑笑\n                    </p>\n                    <p class=\"num\" _v-146d1284=\"\">\n                        (925075)\n                    </p>\n                    <div class=\"mis\" _v-146d1284=\"\">\n                        <em align=\"absmiddle\" class=\"ul ul01\" _v-146d1284=\"\">\n                        </em>\n                        <a target=\"_blank\" href=\"11692-1.htm\" tppabs=\"http://www.xiu8.com/clan/myfamily/11692\" _v-146d1284=\"\">\n                            <img alt=\"家族\" src=\"http://image.cache.xiu8.com/medal-family/11692.png\" tppabs=\"http://image.cache.xiu8.com/medal-family/11692.png\" style=\"height: 16px; vertical-align: middle;\" _v-146d1284=\"\">\n                        </a>\n                        <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al01\" align=\"absmiddle\" _v-146d1284=\"\">\n                        </a>\n                    </div>\n                </dd>\n            </dl>\n            <div class=\"u-action\" _v-146d1284=\"\">\n                <p class=\"user-icon\" id=\"bdTipMedalList\" _v-146d1284=\"\">\n                </p>\n                <p class=\"user-txt c_7d pb5\" _v-146d1284=\"\">\n                    <span style=\"display:inline-block;width:42%\" _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            地址：\n                        </strong>\n                        未知省份\n                    </span>\n                    <span class=\"ml15\" id=\"tipsStartTime\" _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            开播：\n                        </strong>\n                        暂未开播\n                    </span>\n                </p>\n                <div class=\"void f-cb\" _v-146d1284=\"\">\n                    <strong class=\"f-l\" _v-146d1284=\"\">\n                        公告：\n                    </strong>\n                    <span class=\"f-r\" id=\"bdTipsNotice\" _v-146d1284=\"\">\n                        欢迎大家来到我的直播间\n                    </span>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 勋章提示框 -->\n    <div style=\"top:260px;left:20%; z-index:9999;display: none\" class=\"dlg dlg-w dlg-meta2\" id=\"medalTips\" _v-146d1284=\"\">\n    </div>\n    <!-- 主播上下麦 -->\n    <div class=\"dlg-f-room dlg-f-room3\" ms-controller=\"broadList\" style=\"display:none;\" ms-visible=\"showPannel\" _v-146d1284=\"\">\n        <div class=\"hd\" _v-146d1284=\"\">\n            <span class=\"close f-dn\" ms-click=\"togglePannel()\" _v-146d1284=\"\">\n                X\n            </span>\n            当前房间在线主播\n        </div>\n        <div class=\"bscroll\" _v-146d1284=\"\">\n            <div class=\"scrollbar\" _v-146d1284=\"\">\n                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <div class=\"jscroll-cd viewport\" _v-146d1284=\"\">\n                <div class=\"jslist-b wholearea\" _v-146d1284=\"\">\n                    <p ms-repeat=\"bl\" _v-146d1284=\"\">\n                        <span class=\"name\" ms-text=\"el.unn.hexToDec()\" _v-146d1284=\"\">\n                        </span>\n                        <a ms-if=\"el.uid != bid\" ms-click=\"changeVideo(1,el.uid)\" _v-146d1284=\"\">\n                            上麦\n                        </a>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 最热工会模板|热力榜 -->\n    <div class=\"hot-bar-sp f-dn\" _v-146d1284=\"\">\n        <h3 class=\"b1 b2\" _v-146d1284=\"\">\n        </h3>\n        <div class=\"bd\" _v-146d1284=\"\">\n            <p _v-146d1284=\"\">\n                本轮时间：\n                <em id=\"act-time\" _v-146d1284=\"\">\n                    12:10\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                当前排名：\n                <em id=\"act-rank\" _v-146d1284=\"\">\n                    第20+名\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                距上一名主播：\n                <em id=\"act-name\" _v-146d1284=\"\">\n                    某某某\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                距上一名相差：\n                <em id=\"act-money\" _v-146d1284=\"\">\n                    123355\n                </em>\n                秀币\n            </p>\n            <p style=\"padding-top: 17px\" _v-146d1284=\"\">\n                榜单规则：根据主播\n                <em _v-146d1284=\"\">\n                    10分钟\n                </em>\n                收到的秀币数量进行排名;\n            </p>\n            <p _v-146d1284=\"\">\n                榜单奖励：官方首页推荐，直播间\n                <em _v-146d1284=\"\">\n                    爆红包\n                </em>\n                ，主播可以额外获得经验值奖励;\n            </p>\n            <p class=\"t-r\" _v-146d1284=\"\">\n                <a class=\"xq\" href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" target=\"_blank\" _v-146d1284=\"\">\n                    查看详情\n                </a>\n            </p>\n        </div>\n    </div>\n    <!-- 勋章tips -->\n    <div id=\"POP_TIPS\" style=\"display: none;height: auto;width:188px;\" class=\"dlg dlg-w dlg-meta\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt f-cb\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <img width=\"31\" height=\"31\" _v-146d1284=\"\">\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <h2 class=\"js-tipName\" _v-146d1284=\"\">\n                </h2>\n                <p _v-146d1284=\"\">\n                    <i class=\"js-tipTitle\" _v-146d1284=\"\">\n                    </i>\n                    <a href=\"javascript:void(0)\" style=\"display: none\" target=\"_blank\" class=\"hz_link\" _v-146d1284=\"\">\n                        活动详情\n                    </a>\n                </p>\n            </dd>\n        </dl>\n    </div>\n    <!-- 登陆框 -->\n    <div id=\"_login_window_form\" _v-146d1284=\"\">\n    </div>\n    <div id=\"js-sign\" style=\"display: none\" class=\"sign-in\" _v-146d1284=\"\">\n        <span class=\"b-close\" _v-146d1284=\"\">\n        </span>\n        <div class=\"sign-in-box\" _v-146d1284=\"\">\n            <div class=\"time-box\" _v-146d1284=\"\">\n                <div class=\"hd f-cb\" _v-146d1284=\"\">\n                    <span class=\"date js-year-month\" _v-146d1284=\"\">\n                    </span>\n                    <a href=\"javascript:void(0)\" id=\"js-btn-sign\" class=\"sign-btn\" _v-146d1284=\"\">\n                        签到\n                    </a>\n                </div>\n                <ul class=\"time f-cb\" _v-146d1284=\"\">\n                    <li class=\"week\" _v-146d1284=\"\">\n                        一\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        二\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        三\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        四\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        五\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        六\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        日\n                    </li>\n                </ul>\n                <ul style=\"height: 240px;\" class=\"js-days time f-cb\" _v-146d1284=\"\">\n                </ul>\n            </div>\n            <div class=\"Continuous\" _v-146d1284=\"\">\n                <span class=\"Speed\" _v-146d1284=\"\">\n                    <i class=\"js-scale scale\" _v-146d1284=\"\">\n                    </i>\n                </span>\n                <ul _v-146d1284=\"\">\n                    <li class=\"a\" _v-146d1284=\"\">\n                        连续3天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-01\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"b\" _v-146d1284=\"\">\n                        连续5天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-02\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"c\" _v-146d1284=\"\">\n                        连续7天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-03\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"d\" _v-146d1284=\"\">\n                        连续15天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-04\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"d\" _v-146d1284=\"\">\n                        连续25天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-05\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"e\" _v-146d1284=\"\">\n                        全勤\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-06\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                </ul>\n            </div>\n        </div>\n        <div class=\"sign-txt\" _v-146d1284=\"\">\n            <p _v-146d1284=\"\">\n                您已连续签到\n                <strong class=\"js-sign-num\" _v-146d1284=\"\">\n                </strong>\n                天\n            </p>\n            <p class=\"t-c\" style=\"height:64px;\" _v-146d1284=\"\">\n                <em id=\"js-con-gift\" _v-146d1284=\"\">\n                </em>\n            </p>\n            <p class=\"t-c js-desc-con\" style=\"height: 40px;\" _v-146d1284=\"\">\n            </p>\n            <div class=\"quanq\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    当月全勤有机会获得神秘礼包\n                </p>\n                <a href=\"javascript:void(0)\" id=\"js-open-gift\" class=\"btn-open btn-open-dis\" _v-146d1284=\"\">\n                </a>\n            </div>\n        </div>\n        <!-- 签到提示 -->\n        <div id=\"js-sign-tips\" style=\"display: none\" class=\"sign-tips\" _v-146d1284=\"\">\n            <div class=\"bd\" _v-146d1284=\"\">\n                <ul _v-146d1284=\"\">\n                </ul>\n                <div class=\"t-c\" _v-146d1284=\"\">\n                    <a class=\"js-close-gift btn\" href=\"javascript:void(0)\" _v-146d1284=\"\">\n                        确 定\n                    </a>\n                </div>\n            </div>\n        </div>\n        <div class=\"sign-tips-mark\" style=\"display: none\" _v-146d1284=\"\">\n        </div>\n    </div>\n    <div class=\"ft-wrap f-dn\" _v-146d1284=\"\">\n        <div class=\"f-bg\" _v-146d1284=\"\">\n        </div>\n        <div class=\"footer-login\" _v-146d1284=\"\">\n            <span class=\"tit-img\" _v-146d1284=\"\">\n            </span>\n            <ul class=\"zb-list\" id=\"run-girl\" _v-146d1284=\"\">\n            </ul>\n            <div class=\"other\" _v-146d1284=\"\">\n                <a href=\"javascript:void(0);\" class=\"trans-btn\" id=\"exchange-btn\" _v-146d1284=\"\">\n                    换批妹纸\n                </a>\n                <a href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" class=\"more-btn xiusta\" stadata=\"{en:'bPanel_btn_more',xst:'c',et:'mc',tm:'more',v:1}\" target=\"_blank\" _v-146d1284=\"\">\n                    更多艺人\n                </a>\n            </div>\n            <div class=\"F-login\" _v-146d1284=\"\">\n                <ol _v-146d1284=\"\">\n                    <li _v-146d1284=\"\">\n                        <a class=\"xiu-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            秀吧登录\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"bai-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            百度登录\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"QQ-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            QQ登录\n                        </a>\n                    </li>\n                </ol>\n                <i class=\"txt\" _v-146d1284=\"\">\n                    一键注册赢取百元大礼包！\n                </i>\n            </div>\n            <a class=\"ft-close\" _v-146d1284=\"\">\n                <i class=\"icn-close\" _v-146d1284=\"\">\n                </i>\n            </a>\n        </div>\n    </div>\n    <div class=\"ristPanel\" id=\"ristPanel\" _v-146d1284=\"\">\n        <div class=\"ristLogo\" _v-146d1284=\"\">\n        </div>\n        <a href=\"javascript:\" data-fn=\"closePl\" class=\"js-risk ristPanelClosed\" _v-146d1284=\"\">\n        </a>\n        <div id=\"ristInner\" _v-146d1284=\"\">\n        </div>\n        <div class=\"rist-rule-box\" _v-146d1284=\"\">\n            <div class=\"rist-rule-font rist-uscroll\" _v-146d1284=\"\">\n                <div class=\"scrollbar\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                            </div>\n                        </div>\n                    </div>\n                </div>\n                <div class=\"jscroll-c viewport\" _v-146d1284=\"\">\n                    <ul class=\"rist-rule-list wholearea\" _v-146d1284=\"\">\n                        <li class=\"t\" _v-146d1284=\"\">\n                            活动规则：\n                        </li>\n                        <li _v-146d1284=\"\">\n                            1、用户发起冒险时，则会扣除用户冒险所需花的秀币；如主播拒绝冒险，系统会返还秀币;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            2、主播点击“接受”冒险，无论答题成功或失败，均可获得用户发起冒险的50%秀币;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            3、主播答题失败，需要接受惩罚；\n                        </li>\n                        <li class=\"t mgt30\" _v-146d1284=\"\">\n                            玩法介绍：\n                        </li>\n                        <li _v-146d1284=\"\">\n                            1、用户选择难度越高花费的秀币越多，同时主播受到的惩罚等级越高;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            2、用户选择难度后，惩罚内容根据选择的难度系统随机选择惩罚项;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            3、用户选择题目类型后，试题内容根据选择的题目类型系统随机选择题目;\n                        </li>\n                    </ul>\n                </div>\n            </div>\n            <a href=\"javascript:\" data-fn=\"closeRule\" class=\"js-risk rist-btn-byel\" _v-146d1284=\"\">\n                <span class=\"rist-ft-yrzx\" _v-146d1284=\"\">\n                </span>\n            </a>\n        </div>\n    </div>\n</div>\n\t</div>\n    <dialog :show.sync=\"isShowDialog\" :content.sync=\"dialogContent\" _v-146d1284=\"\"></dialog>\n    <login :display.sync=\"logined\" _v-146d1284=\"\"></login>\n";
+	module.exports = "\n\n\n\n\t<div _v-146d1284=\"\">\n\t\t<div id=\"noviceTask\" class=\"f-dn noviceTask1\" _v-146d1284=\"\">\n    <i class=\"btn-novice\" _v-146d1284=\"\">\n    </i>\n</div>\n<div class=\"side-menu\" id=\"dom_room_head\" ms-controller=\"roomHeadController\" _v-146d1284=\"\">\n    <div class=\"header-box-dd\" _v-146d1284=\"\">\n        <div class=\"f-cb\" _v-146d1284=\"\">\n            <div class=\"f-cb bord\" _v-146d1284=\"\">\n                <a class=\"logo\" href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" target=\"_blank\" _v-146d1284=\"\">\n                </a>\n            </div>\n            <div class=\"user-panel f-cb bord\" _v-146d1284=\"\">\n                <ul id=\"left_nav\" _v-146d1284=\"\">\n                    <!-- 用户头像 -->\n                    <li class=\"pers\" :class=\"{{curr: !!user}}\" v-if=\"!!user\" _v-146d1284=\"\">\n                        <img width=\"50\" height=\"50\" class=\"pho\" ms-click=\"showPanel('user')\" :src=\"user.pic\" @click=\"setShowItem()\" _v-146d1284=\"\">\n                        <div class=\"dlg dlg-merber\" v-show=\"showItem\" _v-146d1284=\"\">\n                            <div class=\"d-con\" _v-146d1284=\"\">\n                                <h3 _v-146d1284=\"\">\n                                    {{user.nickname}}\n                                </h3>\n                                <div _v-146d1284=\"\">\n                                    <em class=\"ul ul{{parseInt(user.userlevel)+1>9?parseInt(user.userlevel)+1:'0'+(parseInt(user.userlevel)+1)}}\" _v-146d1284=\"\">\n                                    </em>\n                                </div>\n                                <ul class=\"f-cb\" _v-146d1284=\"\">\n                                    <li style=\"clear:left;\" _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-1\" _v-146d1284=\"\">\n                                            </i>\n                                            个人资料\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-2\" _v-146d1284=\"\">\n                                            </i>\n                                            个人设置\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/info\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-3\" _v-146d1284=\"\">\n                                            </i>\n                                            充值查询\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/myAttention\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-4\" _v-146d1284=\"\">\n                                            </i>\n                                            我的关注\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/car\" tppabs=\"/user/info\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon u-i-5\" _v-146d1284=\"\">\n                                            </i>\n                                            我的座驾\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"/user/vip\" tppabs=\"/user/info\" class=\"u-vip\" target=\"_blank\" _v-146d1284=\"\">\n                                            <i class=\"icon i-vip\" _v-146d1284=\"\">\n                                            </i>\n                                            特权VIP\n                                        </a>\n                                    </li>\n                                    <li _v-146d1284=\"\">\n                                        <a href=\"javascript:void(0)\" @click=\"logoutActions\" _v-146d1284=\"\">\n                                            <i class=\"icon u-quit\" _v-146d1284=\"\">\n                                            </i>\n                                            退出\n                                        </a>\n                                    </li>\n                                </ul>\n                            </div>\n                        </div>\n                    </li>\n                    <!-- 秀币余额 -->\n                    <li class=\"pay bord\" v-if=\"!!user\" _v-146d1284=\"\">\n                        <div class=\"money\" _v-146d1284=\"\">\n                            <i class=\"icon u-cf\" _v-146d1284=\"\">\n                            </i>\n                            <b _v-146d1284=\"\">\n                                秀币\n                            </b>\n                            <br _v-146d1284=\"\">\n                            <strong class=\"num\" _v-146d1284=\"\">\n                            {{user.balance}}\n                            </strong>\n                            <a class=\"u-btn-2 u-recharge\" href=\"/order\" target=\"_blank\" _v-146d1284=\"\">\n                                充值\n                            </a>\n                        </div>\n                    </li>\n                    <!-- 登录区域 -->\n                    <li class=\"bord reg-btx\" v-if=\"user ==null\" _v-146d1284=\"\">\n                        <span class=\"btn-log xiusta\" @click=\"showLogin('login')\" _v-146d1284=\"\">\n                            登录\n                        </span>\n                        <span class=\"btn-reg xiusta\" @click=\"showLogin('registe')\" _v-146d1284=\"\">\n                            注册\n                        </span>\n                    </li>\n                    <!-- 主播区域独立配置 -->\n                    <li class=\"pers\" id=\"anchorInfo\" ms-if=\"isShowBroad == true\" ms-visible=\"isShowBroad == true\" style=\"display:none;\" _v-146d1284=\"\">\n                        <img class=\"pho\" alt=\"\" ms-src=\"'+ head_info.uid +'.jpg'}}\" tppabs=\"http://www.xiu8.com/{{'http://image.cache.xiu8.com/avatar/110/110/'+ head_info.uid +'.jpg'}}\" ms-mouseenter=\"showAnchorTip($event)\" ms-mouseleave=\"showAnchorTip($event)\" _v-146d1284=\"\">\n                        <span class=\"a-name\" ms-text=\"head_info.unn\" _v-146d1284=\"\">\n                        </span>\n                        <span class=\"u-atten\" _v-146d1284=\"\">\n                            关注\n                        </span>\n                        <span style=\"display:none;\" class=\"u-atten-c\" _v-146d1284=\"\">\n                            已关注\n                        </span>\n                    </li>\n                    <li ms-class=\"{{tipPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a href=\"javascript:void(0);\" ms-click=\"showPanel('tip')\" _v-146d1284=\"\">\n                            消息\n                            <i class=\"number\" style=\"display:none;\" ms-visible=\"tipPanel_num>0\" ms-text=\"tipPanel_num>99 ? '99+' : tipPanel_num\" _v-146d1284=\"\">\n                            </i>\n                        </a>\n                    </li>\n                    <li ms-class=\"{{lobbyPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a href=\"javascript:void(0);\" ms-click=\"showPanel('lobby')\" _v-146d1284=\"\">\n                            广场\n                        </a>\n                        <div class=\"dlg-sq\" style=\"display: none\" id=\"js-dlg-sq\" _v-146d1284=\"\">\n                            <button class=\"btn\" _v-146d1284=\"\">\n                                点击\n                            </button>\n                        </div>\n                    </li>\n                    <li ms-class=\"{{signPanel_flag==true ? 'curr' : ''}}\" _v-146d1284=\"\">\n                        <a id=\"js-show-sign\" href=\"javascript:void(0)\" ms-click=\"showPanel('sign')\" _v-146d1284=\"\">\n                            签到\n                            <i class=\"point\" style=\"display: none\" _v-146d1284=\"\">\n                            </i>\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a href=\"vip-1.htm\" tppabs=\"http://www.xiu8.com/mall\" target=\"_blank\" _v-146d1284=\"\">\n                            商城\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"userRole == 6\" ms-visible=\"userRole == 6\" _v-146d1284=\"\">\n                        <a ms-click=\"showBroadPanel()\" _v-146d1284=\"\">\n                            管理\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"userRole == 1\" ms-visible=\"userRole == 1\" _v-146d1284=\"\">\n                        <a ms-click=\"showSysPanel()\" _v-146d1284=\"\">\n                            管理\n                        </a>\n                    </li>\n                    <li class=\"f-dn\" ms-if=\"family_role == 1 || family_role == 3\" ms-visible=\"family_role == 1 || family_role == 3\" _v-146d1284=\"\">\n                        <a ms-click=\"showFPanel()\" _v-146d1284=\"\">\n                            隐身\n                        </a>\n                    </li>\n                    <!-- 贴吧返回提示 -->\n                    <li class=\"women-live\" ms-visible=\"isTbLive == true\" style=\"display: none;\" _v-146d1284=\"\">\n                        <a href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                            美女直播吧\n                        </a>\n                        <div class=\"dlg-sq dlg-ld\" id=\"tbLive\" style=\"display: none\" _v-146d1284=\"\">\n                            <button class=\"btn\" _v-146d1284=\"\">\n                                点击\n                            </button>\n                        </div>\n                    </li>\n                </ul>\n            </div>\n            <div class=\"module-area\" _v-146d1284=\"\">\n                <ul id=\"m_area\" _v-146d1284=\"\">\n                    <li class=\"app-down\" id=\"appIcon\" _v-146d1284=\"\">\n                        <a target=\"_blank\" href=\"#\" class=\"down\" _v-146d1284=\"\">\n                            <i class=\"u-show\" _v-146d1284=\"\">\n                            </i>\n                            下载\n                        </a>\n                        <div id=\"QRCode\" class=\"sub-dlg\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"#\" _v-146d1284=\"\">\n                                <img style=\"vertical-align: middle;\" src=\"http://www.xiu8.com/assets/images/room/er-code.jpg\" tppabs=\"http://www.xiu8.com/assets/images/room/er-code.jpg\" _v-146d1284=\"\">\n                            </a>\n                            <p class=\"txt pt10 t-c\" _v-146d1284=\"\">\n                                秀吧手机端\n                                <br _v-146d1284=\"\">\n                                轻松扫一扫\n                            </p>\n                        </div>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"service\" id=\"BZQQservice\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            客服\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"help\" target=\"_blank\" href=\"help-t=0.htm\" tppabs=\"http://www.xiu8.com/help?t=0\" _v-146d1284=\"\">\n                            帮助\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </div>\n</div>\n<div class=\"menu-dlg f-dn\" ms-controller=\"lobbyModuleController\" ms-css-height=\"{{setHeight}}px\" ms-if=\"lobby_flag == true\" ms-visible=\"lobby_flag\" _v-146d1284=\"\">\n    <div class=\"dlg-tab\" _v-146d1284=\"\">\n        <a href=\"javascript:void(0);\" onclick=\"hidePanel.hide()\" class=\"more xiusta\" stadata=\"{en:'lobby_close_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n            收起\n        </a>\n        <ul class=\"f-cb\" id=\"lobbyNav\" _v-146d1284=\"\">\n            <li class=\"cur\" _v-146d1284=\"\">\n                美女广场\n            </li>\n            <li ms-if=\"isShowCollect == true\" ms-visible=\"isShowCollect == true\" style=\"display:none;\" _v-146d1284=\"\">\n                我的关注\n            </li>\n        </ul>\n    </div>\n    <div class=\"bd an-list lobbyScroll\" _v-146d1284=\"\">\n        <div class=\"scrollbar\" _v-146d1284=\"\">\n            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"jscroll-c viewport\" id=\"lobbyBox\" ms-css-height=\"{{lobbyHeight}}px\" _v-146d1284=\"\">\n            <ol class=\"wholearea\" style=\"position: absolute;\" id=\"lobby_list\" _v-146d1284=\"\">\n            </ol>\n        </div>\n    </div>\n</div>\n<div class=\"menu-msg f-dn\" ms-controller=\"tipPanelController\" ms-css-height=\"{{tipPanelHeight}}px\" ms-if=\"showTip==true\" ms-visible=\"showTip\" _v-146d1284=\"\">\n    <h3 class=\"f-cb\" _v-146d1284=\"\">\n        <span _v-146d1284=\"\">\n            我的消息\n        </span>\n    </h3>\n    <div class=\"bd tippanel-scroll\" _v-146d1284=\"\">\n        <div class=\"scrollbar\" _v-146d1284=\"\">\n            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                    </div>\n                </div>\n            </div>\n        </div>\n        <div class=\"jscroll-c viewport\" id=\"tipBox\" ms-css-height=\"{{tipHeight}}px\" _v-146d1284=\"\">\n            <ul class=\"wholearea\" style=\"position: absolute;\" id=\"tipPanel-ul\" _v-146d1284=\"\">\n            </ul>\n        </div>\n    </div>\n</div>\n<div class=\"room-bg Anchor-room\" _v-146d1284=\"\">\n    <!-- 直播间页面-开始 -->\n    <div class=\"g-room\" id=\"groom\" _v-146d1284=\"\">\n        <div class=\"g-bd\" _v-146d1284=\"\">\n            <!-- flash特效：超级礼物、座驾、流光 -->\n            <div id=\"domAnimation\" style=\"position:relative; width: 1px;height: 1px;z-index:13; top:1px;left:1px;\" ms-controller=\"baseAnimation\" _v-146d1284=\"\">\n                <div style=\"position: absolute;top:35px;left:58px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domCar\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div style=\"position: absolute;top:0px;left: 0px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domSupper\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div style=\"position: absolute;top:260px;left: 160px;width:1px;height: 1px;\" _v-146d1284=\"\">\n                    <div id=\"domgiftEffect\" _v-146d1284=\"\">\n                    </div>\n                </div>\n                <div id=\"cateran\" style=\"position: absolute;top:0px;left:0px;width:1px;height:1px;\" _v-146d1284=\"\">\n                </div>\n                <div id=\"ignitionBoy\" style=\"position: absolute;top:24px;left:60px;width:1px;height:1px;\" _v-146d1284=\"\">\n                </div>\n            </div>\n            <div class=\"g-sd\" _v-146d1284=\"\">\n                <!-- 主播个人信息 -->\n                <!-- 主播信息模板 -->\n                <div class=\"AR-infor\" ms-controller=\"broadInfo\" id=\"broadInfo\" _v-146d1284=\"\">\n                    <dl class=\"f-cb\" _v-146d1284=\"\">\n                        <dt _v-146d1284=\"\">\n                            <span id=\"broadHeaddress\" _v-146d1284=\"\">\n                            </span>\n                            <div class=\"photo\" _v-146d1284=\"\">\n                                <div class=\"cav\" _v-146d1284=\"\">\n                                    <canvas height=\"84\" width=\"84\" _v-146d1284=\"\">\n                                    </canvas>\n                                </div>\n                                <img alt=\"{{room.nickname}}\" :src=\"room.pic\" _v-146d1284=\"\">\n                            </div>\n                        </dt>\n                        <dd _v-146d1284=\"\">\n                            <div class=\"name\" _v-146d1284=\"\">\n                                {{room.nickname}}\n                            </div>\n                            <p class=\"attention\" id=\"g_coll\" _v-146d1284=\"\">\n                                <span class=\"u-atten xiusta\" @click=\"focus\" v-if=\" judgeSub == '' \" _v-146d1284=\"\">\n                                    关注\n                                </span>\n                                <span v-show=\" judgeSub != '' \" @click=\"focus('unsubscribe')\" @mouseover=\"changeFocusState('over', $event)\" @mouseleave=\"changeFocusState('leave', $event)\" class=\"u-atten-c\" _v-146d1284=\"\">\n                                    已关注\n                                </span>\n                                <span class=\"num\" _v-146d1284=\"\">\n                                    {{room.sub_count}}人\n                                </span>\n                            </p>\n                        </dd>\n                    </dl>\n                    <div class=\"M-progress\" _v-146d1284=\"\">\n                        <div class=\"slider\" style=\"width:{{Math.floor(room.artist_exp / room.level_exp * 100)}}%;\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"num\" _v-146d1284=\"\">\n                            还差{{ room.level_exp - room.artist_exp }}秀币\n                        </div>\n                        <span class=\"having\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al{{(parseInt(room.artist_level)+1)>9?parseInt(room.artist_level) + 1:'0'+(parseInt(room.artist_level)+1)}}\" ms-class=\"\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                        <span class=\"had\" _v-146d1284=\"\">\n                            <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al{{parseInt(room.next_level) + 1>9?parseInt(room.next_level) + 1:'0'+(parseInt(room.next_level)+1)}}\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                    </div>\n                    <div class=\"txt\" _v-146d1284=\"\">\n                        <p class=\"u-icon\" id=\"medalList\" _v-146d1284=\"\">\n                            徽章：\n                        </p>\n                    </div>\n                    <div class=\"hot-sign\" _v-146d1284=\"\">\n                        热力榜：第&nbsp;\n                        <em _v-146d1284=\"\">\n                            {{room.rank}}\n                        </em>\n                        &nbsp;名\n                    </div>\n                    <!-- <div class=\"signs\">\n                        <img src=\"http://image.cache.xiu8.com/family/120/120/11692.jpg\" tppabs=\"http://image.cache.xiu8.com/family/120/120/11692.jpg\" width=\"24\" height=\"24\"/>\n                        混血娱乐\n                    </div> -->\n                </div>\n                <!-- 守护主播 -->\n                <!-- 守护模板 -->\n                <div id=\"guardaAea\" class=\"guard-anchor\" _v-146d1284=\"\">\n                    <div class=\"title\" _v-146d1284=\"\">\n                        <a class=\"more a_graud_more\" style=\"display:none\" _v-146d1284=\"\">\n                            更多\n                        </a>\n                        <a target=\"_blank\" href=\"#\" tppabs=\"http://www.xiu8.com/mall/buyGuard?recvId=925075&amp;roomId=925075\" class=\"u-watch u-watch-g js-update-bdid\" _v-146d1284=\"\">\n                            守护团\n                        </a>\n                        开通\n                        <span class=\"sp_graud_no\" _v-146d1284=\"\">\n                        {{knight.length}}\n                        </span>\n                        人\n                    </div>\n                    <div class=\"u-list\" _v-146d1284=\"\">\n                        <ul class=\"f-cb js-graud-four\" _v-146d1284=\"\">\n                            <template v-for=\"index in [0,1,2,3]\">\n                                <template v-if=\"!!knight[index]\">\n                                    <li _v-146d1284=\"\">\n                                        <span class=\"txt\" _v-146d1284=\"\">亲密度<br _v-146d1284=\"\">1057480</span>\n                                        <span class=\"bg\" _v-146d1284=\"\"></span>\n                                        <img style=\"width: 57px;height: 57px\" alt=\"\" :src=\"knight[index].pic\" _v-146d1284=\"\"><span class=\"f-toe\" _v-146d1284=\"\">{{knight[index].nickname}}</span>\n                                    </li>\n                                </template>\n                                <template v-else=\"\">\n                                    <li _v-146d1284=\"\">\n                                        <a class=\"u-wait\" target=\"_blank\" href=\"javascript:;\" _v-146d1284=\"\">\n                                            <img width=\"57\" height=\"57\" alt=\"虚位以待\" src=\"http://www.xiu8.com/assets/images/public/trans.gif\" tppabs=\"http://www.xiu8.com/assets/images/public/trans.gif\" _v-146d1284=\"\">\n                                        </a>\n                                    </li>\n                                </template>\n                                \n                            </template>\n                        </ul>\n                    </div>\n                </div>\n                <!-- 用户列表 -->\n                <!-- 用户列表 -->\n                <div class=\"AR-user\" ms-controller=\"usreList\" _v-146d1284=\"\">\n                    <div class=\"m-tab f-cb\" style=\"height: 34px\" _v-146d1284=\"\">\n                        <ol _v-146d1284=\"\">\n                            <li class=\"curr\" _v-146d1284=\"\">\n                                <span _v-146d1284=\"\">\n                                    当前用户&nbsp;\n                                </span>\n                                <span ms-text=\"userNum\" _v-146d1284=\"\">\n                                    {{userList.length}}\n                                </span>\n                            </li>\n                            <li ms-class=\"{{showType === 2 ? 'curr' : ''}}\" ms-click=\"changeTag(2)\" _v-146d1284=\"\">\n                                <span _v-146d1284=\"\">\n                                    \n                                </span>\n                            </li>\n                            <li class=\"last\" _v-146d1284=\"\">\n                            </li>\n                        </ol>\n                    </div>\n                    <div class=\"bd uscroll\" ms-mouseenter=\"userShowscroll($event)\" ms-mouseleave=\"userShowscroll($event)\" _v-146d1284=\"\">\n                        <div class=\"scrollbar\" ms-visible=\"showSC\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                        <div class=\"jscroll-c viewport\" style=\"height: 343px\" _v-146d1284=\"\">\n                            <ul class=\"u-list wholearea\" id=\"ulist\" style=\"overflow-y: scroll; height: 100%; overflow-x: hidden;\" _v-146d1284=\"\">\n\n                                <li v-for=\"u in userList\" _v-146d1284=\"\">\n                                    <img class=\"pho\" :src=\"u.pic\" alt=\"{{u.nickname}}\" _v-146d1284=\"\">\n                                    <p _v-146d1284=\"\"><span class=\"user-name\" style=\"color: \" _v-146d1284=\"\">{{u.nickname}}</span><em _v-146d1284=\"\"></em></p>\n                                    <p class=\"mis\" _v-146d1284=\"\"><em class=\"ul ul{{parseInt(u.userlevel) + 1 > 9 ? parseInt(u.userlevel)+1 : '0'+(parseInt(u.userlevel)+1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em></p>\n                                </li>\n                            </ul>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <!-- 主内容的左栏 -->\n            <div id=\"roomCenter\" class=\"g-mn\" _v-146d1284=\"\">\n                <div class=\"m-room\" _v-146d1284=\"\">\n                    <!-- 视频位置 -->\n                    <div class=\"video-barrage\" id=\"js-barrage\" _v-146d1284=\"\">\n                        <div id=\"bPlayer\" v-el=\"player\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                    <div class=\"live-room\" id=\"videoView\" _v-146d1284=\"\">\n                        <div class=\"upper-l\" _v-146d1284=\"\">\n                            <span class=\"Charm-nub\" id=\"charmWrap\" _v-146d1284=\"\">\n                                <span class=\"n-bg\" _v-146d1284=\"\">\n                                    <i class=\"Charm-heart\" _v-146d1284=\"\">\n                                    </i>\n                                    <span class=\"js-charmNum\" _v-146d1284=\"\">\n                                    </span>\n                                </span>\n                            </span>\n                            <span id=\"charmAdd\" class=\"Charm-add\" _v-146d1284=\"\">\n                            </span>\n                        </div>\n                        <div id=\"charmDetail\" class=\"Charm-dlg f-dn\" _v-146d1284=\"\">\n                            <p _v-146d1284=\"\">\n                                魅力值总计：\n                                <strong class=\"js-charmNum\" _v-146d1284=\"\">\n                                </strong>\n                            </p>\n                            <p class=\"js-info\" _v-146d1284=\"\">\n                            </p>\n                            <p class=\"t-r xq\" _v-146d1284=\"\">\n                                <a href=\"rank.htm\" tppabs=\"http://www.xiu8.com/rank\" target=\"_blank\" _v-146d1284=\"\">\n                                    查看详情\n                                </a>\n                            </p>\n                        </div>\n                        <div id=\"commNews\" class=\"comm-news f-cb\" _v-146d1284=\"\">\n                        </div>\n                        <div id=\"guideLogin\" href=\"#\" class=\"atv-r5\" style=\"display: none;\" _v-146d1284=\"\">\n                            <span class=\"link\" id=\"gCloseBtn\" style=\"display: none;\" _v-146d1284=\"\">\n                            </span>\n                            <ul _v-146d1284=\"\">\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-1 xiusta\" stadata=\"{en:'login_show_room_GP_xiu',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-2 xiusta\" stadata=\"{en:'login_show_room_GP_BD',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-3 xiusta\" stadata=\"{en:'login_show_room_GP_QQ',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                    </a>\n                                </li>\n                                <li _v-146d1284=\"\">\n                                    <a class=\"lk-4 xiusta\" stadata=\"{en:'login_show_room_TGP_BD',xst:'c',et:'mc',tm:'more',v:1}\" _v-146d1284=\"\">\n                                        <em class=\"login-icon ba-ic\" _v-146d1284=\"\">\n                                        </em>\n                                        百度登录\n                                    </a>\n                                </li>\n                            </ul>\n                        </div>\n                        <div id=\"v_Player\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"upper-l\" id=\"video-top\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"btm-l\" id=\"video-letfbot\" _v-146d1284=\"\">\n                        </div>\n                        <div class=\"btm-r\" id=\"video-bottom\" _v-146d1284=\"\">\n                        </div>\n                        <!-- 在线主播 -->\n                        <div class=\"live-extra\" id=\"randomBroad\" v-show=\"livestate.status == 0\" _v-146d1284=\"\">\n                            <div class=\"Anchor-rest t-c\" style=\"padding-top:60px;\" _v-146d1284=\"\">\n                                <span class=\"txt\" _v-146d1284=\"\">\n                                    主播正在休息\n                                </span>\n                            </div>\n                            <div class=\"cap f-cb f14\" _v-146d1284=\"\">\n                                <a class=\"trans js-trans\" target=\"_blank\" href=\"/lobby\" _v-146d1284=\"\">\n                                    换一换\n                                </a>\n                                <a target=\"_blank\" href=\"/lobby\" _v-146d1284=\"\">\n                                    更多精彩推荐\n                                </a>\n                            </div>\n                            <div class=\"an-list\" _v-146d1284=\"\">\n                                <ul class=\"js-list\" _v-146d1284=\"\">\n                                </ul>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n                <div id=\"roomStar\" class=\"room-Star\" style=\"display:none;\" _v-146d1284=\"\">\n                    <!--<ul>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                        <li class=\"none\">\n                            <span class=\"txt\">\n                                <em>\n                                    亲密度&nbsp;\n                                </em>\n                                0\n                            </span>\n                            <div class=\"dlg-f-room\" style=\"display: none\">\n                            </div>\n                        </li>\n                    </ul>\n                     <div class=\"atv-enter atv-enter-pst\" id=\"star-right\">\n                        <i class=\"u-hd js_laba_game xiusta\" id=\"laba-btn\" style=\"display:none;cursor: pointer;\" stadata=\"{en:'game_laba',xst:'c',et:'mc',tm:'more',v:1}\">\n                        </i>\n                    </div> \n                    <div id=\"ristIco\" class=\"rist-ico\">\n                    </div>-->\n                </div>\n                <!-- 道具框 -->\n                <div class=\"m-gift-box f-cb\" ms-controller=\"gifts\" id=\"baseGift\" style=\"top: inherit;\" _v-146d1284=\"\">\n                    <div class=\"atv-fly-enter f-dn\" _v-146d1284=\"\">\n                        <div class=\"act-year-fly\" _v-146d1284=\"\">\n                            <strong _v-146d1284=\"\">\n                                未开启\n                            </strong>\n                        </div>\n                        <div class=\"act-fly-div f-dn\" _v-146d1284=\"\">\n                            <h3 _v-146d1284=\"\">\n                                加速飞碟主要规则介绍\n                            </h3>\n                            <p _v-146d1284=\"\">\n                                今天可加速次数：\n                                <em id=\"fly-count\" _v-146d1284=\"\">\n                                    3次\n                                </em>\n                                <br _v-146d1284=\"\">\n                                1.晋级赛至总决赛比赛期间，比赛主播每次晋\n                                <br _v-146d1284=\"\">\n                                升1名可触发加速飞碟1次\n                                <br _v-146d1284=\"\">\n                                2.加速飞碟每次触发持续时间为10分钟\n                                <br _v-146d1284=\"\">\n                            </p>\n                            <p class=\"t-r\" _v-146d1284=\"\">\n                                <a href=\"http://bad_redirect\" target=\"_blank\" _v-146d1284=\"\">\n                                    更多规则详情\n                                </a>\n                            </p>\n                        </div>\n                    </div>\n                    <div class=\"m-tab f-cb\" _v-146d1284=\"\">\n                        <ul id=\"typelist\" _v-146d1284=\"\">\n                            <li v-for=\"gift in giftList\" :class=\"{'curr' : gift.curr}\" @click=\"giftTypeChange(gift.type)\" _v-146d1284=\"\"> {{gift.name}} </li>\n                        </ul>\n                    </div>\n                    <div class=\"bd f-cb g-scroll\" id=\"gift_box\" _v-146d1284=\"\">\n                        <div class=\"scrollbar\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                            </div>\n                        </div>\n                        <div class=\"jscroll-c viewport\" id=\"gift_wrap\" style=\"height:138px;\" _v-146d1284=\"\">\n                            <span class=\"icon arrow-l xiusta\" stadata=\"{en:'gift_left_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" id=\"lg_btn\" ms-click=\"arrowLeft()\" _v-146d1284=\"\">\n                            </span>\n                            <span class=\"icon arrow-r xiusta\" stadata=\"{en:'gift_right_btn_room',xst:'c',et:'mc',tm:'more',v:1}\" id=\"rg_btn\" ms-click=\"arrowRight\" _v-146d1284=\"\">\n                            </span>\n                            <div class=\"gifts-wrap wholearea\" style=\"position: absolute;\" _v-146d1284=\"\">\n                                <ul id=\"giftList\" _v-146d1284=\"\">\n                                    <!-- 千纸鹤特殊道具 -->\n                                    <li v-for=\"g in gift\" @click=\"currGift($event, g)\" @mouseover=\"moverGiftEvent(g, $event)\" @mouseleave=\"moverGiftEvent(null, $event)\" title=\"{{g.giftname}}\" _v-146d1284=\"\">\n                                        <em class=\"giftIcon gift_{{g.id}}\" _v-146d1284=\"\">\n                                        </em>\n                                        <!--<i class=\"number\" id=\"origamiNum\">\n                                            \n                                        </i>-->\n                                    </li>\n                                </ul>\n                            </div>\n                        </div>\n                    </div>\n                    <div class=\"ft\" _v-146d1284=\"\">\n                        <div class=\"t-user-list\" style=\"display: none;\" ms-visible=\"showSenderList\" _v-146d1284=\"\">\n                            <ul _v-146d1284=\"\">\n                                <li class=\"f-toe\" ms-repeat=\"sendList\" ms-click=\"setReceive($val)\" _v-146d1284=\"\">\n                                   \n                                </li>\n                            </ul>\n                        </div>\n                        <span class=\"num mr10\" _v-146d1284=\"\">\n                            数量\n                            <input class=\"ml10 ipt-txt qucknum\" type=\"text\" maxlength=\"4\" v-model=\"giftNum\" value=\"1\" _v-146d1284=\"\">\n                            <a class=\"icon shape qucknum\" href=\"javascript:void(0)\" @click=\"targeQuick()\" _v-146d1284=\"\">\n                            </a>\n                        </span>\n                        <span class=\"to-pers\" _v-146d1284=\"\">\n                            给\n                            <input size=\"23\" class=\"ml10 ipt-txt senderInput\" type=\"text\" readonly=\"readonly\" value=\"{{room.nickname}}\" _v-146d1284=\"\">\n                        </span>\n                        <a class=\"u-btn-1 u-send ml10 xiusta\" @click=\"sendGift\" _v-146d1284=\"\">\n                            发送礼物\n                        </a>\n                        <a id=\"btn-pay\" href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                            充值\n                        </a>\n                        <!-- 弹出选项 -->\n                        <div class=\"t-num-list f-dn\" style=\"display:{{showQuick?'block':'none'}}\" _v-146d1284=\"\">\n                            <ul _v-146d1284=\"\">\n\t\t\t\t                <li v-for=\"q in quickList\" @click=\"setQuick(q)\" _v-146d1284=\"\">{{q}}</li>\n                            </ul>\n                        </div>\n                    </div>\n                </div>\n                <!-- 礼物栏 -->\n            </div>\n            <!-- 中间-视频直播-礼物部分 -->\n            <div class=\"g-r-area\" _v-146d1284=\"\">\n                <div class=\"g-marg\" _v-146d1284=\"\">\n                    <!-- 排行榜 -->\n                    <div class=\"m-billboard\" _v-146d1284=\"\">\n                        <div class=\"m-tab f-cb\" _v-146d1284=\"\">\n                            <ul id=\"js-room-rank\" _v-146d1284=\"\">\n                                <li class=\"first js-li-rank\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-a\" _v-146d1284=\"\">\n                                            </i>\n                                            排行\n                                        </span>\n                                    </div>\n                                    <div id=\"js-rank-tab\" class=\"dlg dlg-star-ba f-dn\" ms-controller=\"roomRank\" _v-146d1284=\"\">\n                                        <div class=\"tab f-cb\" _v-146d1284=\"\">\n                                            <span class=\"curr\" _v-146d1284=\"\">\n                                                日\n                                            </span>\n                                            <span _v-146d1284=\"\">\n                                                周\n                                            </span>\n                                            <span _v-146d1284=\"\">\n                                                月\n                                            </span>\n                                        </div>\n                                        <!-- 本日之星 -->\n                                        <div class=\"bd\" style=\"display: block\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本日夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_day.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_day\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.xb\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.uid}}.jpg{{(typeof item.uiut !== 'undefined' &amp;&amp; item.uiut) ? '?v='+item.uiut : '' }}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.fuo.unn.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fuo.ulv >= 10 ? 'ul'+item.fuo.ulv : 'ul0'+item.fuo.ulv}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.fuo.uvl >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_day.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                        <!-- 本周之星 -->\n                                        <div class=\"bd bd-2\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本周夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_week.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_week\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.amount\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.user_id}}.jpg{{(typeof item.imgVersion !=='undefined' &amp;&amp; item.imgVersion)  ? '?v='+item.imgVersion : ''}}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.nickname.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fl >= 10 ? 'ul'+item.fl : 'ul0'+item.fl}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.isvip >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_week.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                        <!-- 本月之星 -->\n                                        <div class=\"bd bd-3\" _v-146d1284=\"\">\n                                            <div class=\"til f-cb\" _v-146d1284=\"\">\n                                                <span class=\"til-rank\" _v-146d1284=\"\">\n                                                    排名\n                                                </span>\n                                                <span class=\"til-star\" _v-146d1284=\"\">\n                                                    本月夺榜之星\n                                                </span>\n                                                <span class=\"til-count\" _v-146d1284=\"\">\n                                                    贡献值\n                                                </span>\n                                            </div>\n                                            <ul class=\"u-list\" ms-if=\"rank_month.length >0\" _v-146d1284=\"\">\n                                                <li ms-repeat-item=\"rank_month\" _v-146d1284=\"\">\n                                                    <em ms-class=\"{{$index < 3?  'rank-'+($index+1)  : 'rank-o' }}\" ms-text=\"$index+1\" _v-146d1284=\"\">\n                                                    </em>\n                                                    <span class=\"count\" ms-text=\"item.amount\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <img class=\"pho\" width=\"35\" height=\"35\" ms-src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/50/50/{{item.user_id}}.jpg{{(typeof item.imgVersion !=='undefined' &amp;&amp; item.imgVersion)  ? '?v='+item.imgVersion : ''}}\" alt=\"\" _v-146d1284=\"\">\n                                                    <span class=\"user-name f-toe\" ms-text=\"item.nickname.hexToDec()\" _v-146d1284=\"\">\n                                                    </span>\n                                                    <p class=\"mis\" _v-146d1284=\"\">\n                                                        <em class=\"ul\" ms-class=\"{{item.fl >= 10 ? 'ul'+item.fl : 'ul0'+item.fl}}\" align=\"absmiddle\" _v-146d1284=\"\">\n                                                        </em>\n                                                        <em class=\"ulvip vip\" align=\"absmiddle\" ms-if=\"item.isvip >0\" _v-146d1284=\"\">\n                                                        </em>\n                                                    </p>\n                                                </li>\n                                            </ul>\n                                            <div class=\"jscroll-c no-fans\" ms-if=\"rank_month.length == 0\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </li>\n                                <li class=\"js-li-rank\" id=\"js-game-list\" data-type=\"game\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-b\" _v-146d1284=\"\">\n                                            </i>\n                                            水果忍者\n                                            <i id=\"g-new\" _v-146d1284=\"\">\n                                            </i>\n                                        </span>\n                                    </div>\n                                    <div class=\"dlg dlg-star-ba pub-game\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar\" id=\"gameScroll-bar\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                    </div>\n                                                </div>\n                                            </div>\n                                        </div>\n                                        <div class=\"jscroll-c viewport\" id=\"game-content\" _v-146d1284=\"\">\n                                            <ol class=\"f-cb list pub-game wholearea\" id=\"game-list\" _v-146d1284=\"\">\n                                            </ol>\n                                        </div>\n                                    </div>\n                                </li>\n                                <li class=\"js-li-rank\" data-type=\"active\" _v-146d1284=\"\">\n                                    <div class=\"options\" _v-146d1284=\"\">\n                                        <span class=\"t-name\" _v-146d1284=\"\">\n                                            <i class=\"i-c\" _v-146d1284=\"\">\n                                            </i>\n                                            活动\n                                        </span>\n                                        <sup id=\"actNum\" style=\"display: none;\" _v-146d1284=\"\">\n                                        </sup>\n                                    </div>\n                                    <div class=\"dlg dlg-star-ba pub-activity\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar\" id=\"actScroll-bar\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                    </div>\n                                                </div>\n                                            </div>\n                                        </div>\n                                        <div class=\"jscroll-c viewport\" id=\"act-content\" _v-146d1284=\"\">\n                                            <ol class=\"f-cb list pub-game wholearea\" id=\"act-list\" _v-146d1284=\"\">\n                                            </ol>\n                                        </div>\n                                    </div>\n                                </li>\n                            </ul>\n                        </div>\n                    </div>\n                    <!-- 文字滚动条 -->\n                    <div class=\"m-top-line\" id=\"js-top-line\" _v-146d1284=\"\">\n                        <div class=\"dlg-msg\" style=\"display: none\" _v-146d1284=\"\">\n                            <p _v-146d1284=\"\">\n                                每条头条拥有\n                                <span _v-146d1284=\"\">\n                                    3分钟\n                                </span>\n                                保护期;\n                            </p>\n                            <p _v-146d1284=\"\">\n                                保护期间，\n                                <span _v-146d1284=\"\">\n                                    消费高于\n                                </span>\n                                当前头条,即刻取替其展示;\n                            </p>\n                            <p _v-146d1284=\"\">\n                                保护结束，消费满足\n                                <span _v-146d1284=\"\">\n                                    50,000秀币\n                                </span>\n                                即可抢得头条。\n                            </p>\n                        </div>\n                        <p class=\"js-top-animation\" _v-146d1284=\"\">\n                            <span class=\"date f-r\" style=\"margin-top: 12px\" _v-146d1284=\"\">\n                                <span class=\"js-runtime\" v-if=\"!!top\" _v-146d1284=\"\">\n                                    {{moment(top.time).add(3, \"minutes\").diff(moment())}}\n                                </span>\n                                <i class=\"icon icon-q\" _v-146d1284=\"\">\n                                </i>\n                            </span>\n                            <i class=\"icon u-topl\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"js-hl-top fonts\" style=\"line-height: 35px;\" v-if=\"!!top\" _v-146d1284=\"\">\n                                <a href=\"/{{top.room.room_id}}\" target=\"_blank\" style=\"color:#e9d70e;\" title=\"送了{{top.total}}个{{top.gift.giftname}},价值{{top.coin}}秀币\" _v-146d1284=\"\">{{top.user.nickname}}  给  {{top.room.nickname}} 送了{{top.total}}个</a><em class=\"giftIcon-s gift-s-{{top.gift.id}}\" _v-146d1284=\"\"></em>\n                            </span>\n                        </p>\n                        <ul class=\"js-hl-list\" style=\"height: auto;width: 100%\" v-if=\"!!top23 &amp;&amp; top23.length > 0\" _v-146d1284=\"\">\n                            <li v-for=\"t in top23\" _v-146d1284=\"\">\n                                <a target=\"_blank\" href=\"/{{t.room.room_id}}\" style=\"color:#FFFFFF;\" _v-146d1284=\"\">{{moment(t.time).format(\"hh:mm\")}}&nbsp;{{t.user.nickname}} 给 {{t.room.nickname}} 送了 {{t.total}} 个 {{t.gift.giftname}}&nbsp;&nbsp;<em class=\"giftIcon-s gift-s-{{t.gift.id}}\" _v-146d1284=\"\"></em></a>\n                            </li>\n                        </ul>\n                    </div>\n                    <!-- 聊天功能区(包含座当场礼物及活动) -->\n                    <!-- 聊天功能区 -->\n                    <div class=\"m-pub-box\" id=\"USER_CHART\" ms-controller=\"userChart\" _v-146d1284=\"\">\n                        <div id=\"CHART_BOX\" ms-visible=\"showPubChartList\" ms-css-height=\"{{setHeight}}px\" class=\"pub-list public-chat-box curr\" _v-146d1284=\"\">\n                            <div id=\"luckyBag\" class=\"new-pack\" style=\"display: none\" _v-146d1284=\"\">\n                                <span class=\"close\" _v-146d1284=\"\">\n                                </span>\n                                <span class=\"nub\" _v-146d1284=\"\">\n                                </span>\n                            </div>\n                            <div id=\"luckyDlg\" class=\"new-pack-dlg\" style=\"display: none\" _v-146d1284=\"\">\n                                <p _v-146d1284=\"\">\n                                    用户通过水果忍者游戏下注每达到标准\n                                    游戏币，即可获得1个神秘礼物，主播\n                                    可通过1个神秘礼物开启一次神秘福袋\n                                    开启福袋获得随机奖项.\n                                </p>\n                                <div class=\"t-r\" _v-146d1284=\"\">\n                                    <a href=\"langyalist.htm\" tppabs=\"http://www.xiu8.com/act/langyalist\" target=\"_blank\" _v-146d1284=\"\">\n                                        查看详情\n                                    </a>\n                                </div>\n                            </div>\n                            <div id=\"WORLD_NOTICE\" class=\"the-tran-side\" style=\"cursor:pointer;display:none;overflow:hidden;\" _v-146d1284=\"\">\n                                <p class=\"wri-words\" _v-146d1284=\"\">\n                                    <a _v-146d1284=\"\">\n                                        <span class=\"yan\" _v-146d1284=\"\">\n                                        </span>\n                                        <i class=\"wenzi\" _v-146d1284=\"\">\n                                        </i>\n                                        <span class=\"time\" _v-146d1284=\"\">\n                                        </span>\n                                    </a>\n                                </p>\n                            </div>\n                            <div id=\"PUB_CHART\" class=\"public-chat\" ms-css-height=\"{{setHeight-104}}px\" style=\"height: 350px;overflow: hidden;\" ms-mouseenter=\"clearOrScroll('pub',true,this)\" ms-mouseleave=\"clearOrScroll('pub',false,this)\" _v-146d1284=\"\">\n                                <div class=\"scrollbar\" ms-visible=\"showPubSC\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div id=\"PUB_SCROLL\" class=\"jscroll-c viewport\" style=\"height: 350px;overflow: auto;padding-bottom:0;\" _v-146d1284=\"\">\n                                    <ul class=\"wholearea\" style=\"display: none; position: absolute;\" v-el:chartpane=\"\" _v-146d1284=\"\">\n                                        <!-- <li class=\"grey\">欢迎&nbsp;&nbsp;<span></span>&nbsp;<span class=\"user-name\" style=\"\" ftid=\"9996137666809\">游客666809</span>&nbsp;进入房间</li>\n                                        <li><span>01:21</span><span class=\"namegroup\">&nbsp;<span><em class=\"ul ul03\" align=\"absmiddle\"></em><em class=\"ulvip grf_3\"></em></span><span class=\"user-name\" style=\"\" ftid=\"196016592\">梦想哆哆家的大少爷</span>&nbsp;</span>说：点歌要点火山的，点歌伤不起</li>\n                                        <li><span>21:59</span><span class=\"namegroup\">&nbsp;<span></span><span class=\"user-name\" style=\"\" ftid=\"199576977\">观心盘，浮屠船</span>&nbsp;</span>送&nbsp;<span class=\"gf-num\">1个</span>&nbsp;神秘钥匙&nbsp;<em class=\"giftIcon gift_300\"></em></li> -->\n                                        <template v-for=\"chart in chartWarp\">\n                                            <template v-if=\"chart.type=='join'\">\n                                                <!--<li class=\"grey\">欢迎&nbsp;&nbsp;<span></span>&nbsp;<span class=\"user-name\" style=\"\" ftid=\"9996137666809\">{{chart.nickname}}</span>&nbsp;进入房间</li>-->\n                                                <li _v-146d1284=\"\">\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">欢迎&nbsp;&nbsp;&nbsp;&nbsp;\n                                                        <span _v-146d1284=\"\">\n                                                            <em class=\"ul ul{{parseInt(chart.userlevel) + 1 >9?parseInt(chart.userlevel) + 1:'0'+ (parseInt(chart.userlevel) + 1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em>\n                                                            <!--<em class=\"ulvip grf_3\"></em>-->\n                                                        </span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"196016592\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>&nbsp;进入房间</li>\n                                                \n                                            </template>\n                                            <template v-if=\"chart.type == 'msg'\">\n                                                <li _v-146d1284=\"\">\n                                                    <span _v-146d1284=\"\">{{chart.time}}</span>\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">&nbsp;\n                                                        <span _v-146d1284=\"\">\n                                                            <em class=\"ul ul{{parseInt(chart.userlevel) + 1 >9?parseInt(chart.userlevel)+1:'0'+(parseInt(chart.userlevel)+1)}}\" align=\"absmiddle\" _v-146d1284=\"\"></em>\n                                                            <!--<em class=\"ulvip grf_3\"></em>-->\n                                                        </span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"196016592\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>说：{{chart.message}}</li>\n                                            </template>\n                                            <template v-if=\"chart.type == 'gift' \">\n                                                <li _v-146d1284=\"\">\n                                                    <span _v-146d1284=\"\">{{chart.time}}</span>\n                                                    <span class=\"namegroup\" _v-146d1284=\"\">&nbsp;\n                                                        <span _v-146d1284=\"\"></span>\n                                                        <span class=\"user-name\" style=\"\" ftid=\"199576977\" _v-146d1284=\"\">{{chart.nickname}}</span>&nbsp;\n                                                    </span>送&nbsp;<span class=\"gf-num\" _v-146d1284=\"\">{{chart.total}}个</span>&nbsp;{{chart.gift.giftname}}&nbsp;\n                                                    <em class=\"giftIcon gift_{{chart.gift.id}}\" _v-146d1284=\"\"></em>\n                                                </li>\n                                            </template>\n                                        </template>\n                                    </ul>\n                                </div>\n                                <!-- 聊天操作框 -->\n                                <div id=\"PUB_CLEAN_SCROLL\" class=\"pub-ed-msg\" ms-visible=\"showPubClearOrScroll\" style=\"z-index=1000;display:none;pisition:fix;\" _v-146d1284=\"\">\n                                    <a ms-visible=\"isOpenEffect\" ms-click=\"closeEffect(true)\" _v-146d1284=\"\">\n                                        <i class=\"icon open-eff\" _v-146d1284=\"\">\n                                        </i>\n                                        特效开\n                                    </a>\n                                    <a ms-visible=\"!isOpenEffect\" ms-click=\"closeEffect(false)\" _v-146d1284=\"\">\n                                        <i class=\"icon close-eff\" _v-146d1284=\"\">\n                                        </i>\n                                        特效关\n                                    </a>\n                                    <a ms-click=\"cleanScreen(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-CLS\" _v-146d1284=\"\">\n                                        </i>\n                                        清屏\n                                    </a>\n                                    <a ms-visible=\"isPubCanScroll\" ms-click=\"stopScroll(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-roll\" _v-146d1284=\"\">\n                                        </i>\n                                        滚屏\n                                    </a>\n                                    <a ms-visible=\"!isPubCanScroll\" ms-click=\"stopScroll(this,'pub')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-lock\" _v-146d1284=\"\">\n                                        </i>\n                                        锁屏\n                                    </a>\n                                </div>\n                                <a href=\"javascript:void(0)\" id=\"yPack\" class=\"f-dn\" _v-146d1284=\"\">\n                                </a>\n                            </div>\n                            <div id=\"DIV_LINE\" class=\"rolling\" _v-146d1284=\"\">\n                                <i class=\"icon u-resize\" _v-146d1284=\"\">\n                                </i>\n                            </div>\n                            <div id=\"PRV_CHART_BOX\" ms-mouseenter=\"clearOrScroll('prv',true,this)\" ms-mouseleave=\"clearOrScroll('prv',false,this)\" class=\"chat_room\" style=\"height: 96px;\" _v-146d1284=\"\">\n                                <div class=\"scrollbar\" ms-visible=\"showPrvSC\" _v-146d1284=\"\">\n                                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div id=\"PRV_CHART\" class=\"chat_room_box viewport\" style=\"height: 72px;overflow: hidden;\" _v-146d1284=\"\">\n                                    <ul class=\"wholearea\" style=\"display:none;position: absolute;\" ms-visible=\"showPrvChart\" attr=\"private\" _v-146d1284=\"\">\n                                        <li _v-146d1284=\"\"><span class=\"user-name\" _v-146d1284=\"\">哆哆大美妞&nbsp;</span>对&nbsp;<span class=\"user-name\" _v-146d1284=\"\">您&nbsp;</span>说：新人求关注</li>\n                                    </ul>\n                                </div>\n                                <!-- 聊天操作框 -->\n                                <div id=\"PRV_CLEAN_SCROLL\" class=\"pub-ed-msg\" ms-visible=\"showPrvClearOrScroll\" style=\"display:none;\" _v-146d1284=\"\">\n                                    <a ms-click=\"cleanScreen(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-CLS\" _v-146d1284=\"\">\n                                        </i>\n                                        清屏\n                                    </a>\n                                    <a ms-visible=\"isPrvCanScroll\" ms-click=\"stopScroll(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-roll\" _v-146d1284=\"\">\n                                        </i>\n                                        滚屏\n                                    </a>\n                                    <a ms-visible=\"!isPrvCanScroll\" ms-click=\"stopScroll(this,'prv')\" _v-146d1284=\"\">\n                                        <i class=\"icon u-lock\" _v-146d1284=\"\">\n                                        </i>\n                                        锁屏\n                                    </a>\n                                </div>\n                            </div>\n                        </div>\n                        <!-- 聊天区 -->\n                        <div _v-146d1284=\"\">\n                            <div class=\"to-said\" style=\"display:none;\" id=\"CHART_OPERATION\" ms-visible=\"showChatOperation\" _v-146d1284=\"\">\n                                <div class=\"t-user-list\" id=\"TALK_TO_USER\" ms-visible=\"showTalkToUserList\" _v-146d1284=\"\">\n                                    <ul _v-146d1284=\"\">\n                                        <li class=\"f-toe\" ms-repeat-item=\"talkToUserList\" ms-click=\"talkToClick(this)\" ms-attr-attr=\"item.uid\" ms-text=\"item.uname\" _v-146d1284=\"\">\n                                        </li>\n                                    </ul>\n                                </div>\n                                <span class=\"num\" _v-146d1284=\"\">\n                                    <em ms-visible=\"showTalkToUnit\" _v-146d1284=\"\">\n                                        <input id=\"TALK_TO\" readonly=\"readonly\" class=\"all\" ms-click=\"talkToInputClick(false)\" autocomplete=\"off\" type=\"text\" attr=\"0\" value=\"所有人\" size=\"24\" _v-146d1284=\"\">\n                                        <a id=\"TALK_TO_ARROW\" title=\"点击\" class=\"icon shape\" ms-click=\"talkToInputClick(true)\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                                        </a>\n                                    </em>\n                                </span>\n                                <span ms-visible=\"showTalkToUnit\" class=\"checkbox\" style=\"cursor: pointer;\" _v-146d1284=\"\">\n                                    <input id=\"QUITELY_CHECKBOX\" type=\"checkbox\" autocomplete=\"off\" _v-146d1284=\"\">\n                                    <span ms-click=\"clickQuitely(event)\" _v-146d1284=\"\">\n                                        悄悄说\n                                    </span>\n                                </span>\n                            </div>\n                            <!-- 表情框 -->\n                            <div id=\"dFace\" class=\"face-list msg_face\" style=\"display: none; bottom: 40px;\" _v-146d1284=\"\">\n                                <div id=\"msg-face\" class=\"tab\" _v-146d1284=\"\">\n                                    <div id=\"dFtype\" class=\"tab-t\" style=\"z-index: 1;\" _v-146d1284=\"\">\n                                    </div>\n                                    <div class=\"tab-c\" style=\"overflow: hidden;\" _v-146d1284=\"\">\n                                        <div class=\"normalFaceList list\" style=\"overflow: hidden; display: block;\" _v-146d1284=\"\">\n                                            <div id=\"NOR_FACE_SCROLL\" class=\"scrollbar\" _v-146d1284=\"\">\n                                                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                                                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                                                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                                                        </div>\n                                                    </div>\n                                                </div>\n                                            </div>\n                                            <div class=\"viewport\" style=\"height: 92px; position: absolute;\" _v-146d1284=\"\">\n                                                <ul class=\"face_list wholearea\" style=\"position: absolute;\" id=\"face_list\" _v-146d1284=\"\">\n                                                </ul>\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                            </div>\n                            <!-- 切换区-礼物模块 -->\n                            <div class=\"watch-chat-box\" id=\"TALK_DIV\" style=\"z-index:4;\" _v-146d1284=\"\">\n                                <div ms-click=\"talkDivClick(this)\" style=\"left:0px;\" id=\"TALK_TO_LIST\" ms-visible=\"showTalkDiv\" class=\"t-speak-list\" _v-146d1284=\"\">\n                                    <ul _v-146d1284=\"\">\n                                        <li ms-mousedown=\"talkType('world')\" _v-146d1284=\"\">\n                                            世界说\n                                        </li>\n                                        <li ms-mousedown=\"talkType('barrage')\" _v-146d1284=\"\">\n                                            弹幕\n                                        </li>\n                                        <li ms-mousedown=\"talkType('pub')\" _v-146d1284=\"\">\n                                            聊天\n                                        </li>\n                                        <a id=\"msgtemp\" _v-146d1284=\"\">\n                                        </a>\n                                    </ul>\n                                </div>\n                                <div class=\"inputk\" _v-146d1284=\"\">\n                                    <div class=\"to-pers\" _v-146d1284=\"\">\n                                        <a ms-click=\"faceButtonClick\" id=\"FACE_ICON\" title=\"表情\" class=\"icon u-face\" href=\"javascript:void(0)\" _v-146d1284=\"\">\n                                        </a>\n                                        <a href=\"javascript:;\" id=\"TALK_TO_BUTTON\" class=\"icon u-speak\" ms-click=\"talkToButtonClick\" ms-html=\"talkToButtonText\" _v-146d1284=\"\">\n                                            世界说\n                                            <i class=\"icon u-opt\" _v-146d1284=\"\">\n                                            </i>\n                                        </a>\n                                        <input class=\"ipt-txt xiusta\" v-model=\"message\" id=\"CHART_MESSAGE\" @keyup.enter=\"chartSendMessage\" type=\"text\" placeholder=\"点击这里可以调戏主播！\" _v-146d1284=\"\">\n                                    </div>\n                                </div>\n                                <button id=\"SEND_MSG_BUTTON\" @click=\"chartSendMessage\" class=\"u-btn-1 u-send xiusta\" _v-146d1284=\"\">\n                                    发送\n                                </button>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <!-- 左侧内容部分 -->\n        </div>\n    </div>\n    <!-- 主播、超管权限 -->\n    <!-- 主播、超管管理菜单 -->\n    <!-- 主播管理 -->\n    <div style=\"top: 100px;left: 20%;margin-left:0px;display: none;\" class=\"dlg-w dlg-admin\" id=\"domBroadPanel\" ms-controller=\"roomManager\" ms-visible=\"showBroadM\" ms-if=\"isBroad\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeMPannel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                主播管理\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat=\"Tab\" ms-class=\"{{showTab == $index ? 'curr':''}}\" ms-click=\"changTab($index)\" _v-146d1284=\"\">\n                        {{el}}\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a target=\"_blank\" href=\"help.htm\" tppabs=\"http://www.xiu8.com/help\" style=\"color:#FFF;\" _v-146d1284=\"\">\n                            直播帮助\n                        </a>\n                    </li>\n                </ul>\n                <!-- 公告设置面板 -->\n                <div class=\"d-tab-con the-an-set\" ms-if=\"showTab == 0\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            房间公告\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            最多不超过20个字\n                        </span>\n                    </div>\n                    <ul class=\"f-cbli\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePb\" placeholder=\"请输入文字 不超过20个字\" maxlength=\"20\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePU\" placeholder=\"公告文字链接\" maxlength=\"40\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                    </ul>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            私聊文字\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            最多不超过20个字\n                        </span>\n                    </div>\n                    <ul class=\"\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <span class=\"s-name\" _v-146d1284=\"\">\n                                <input type=\"text\" class=\"edit-ipt\" ms-value=\"\" ms-duplex=\"noticePrv\" placeholder=\"欢迎来到我的房间\" _v-146d1284=\"\">\n                            </span>\n                        </li>\n                    </ul>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"updateNotice()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 装扮空间 -->\n                <div class=\"d-tab-con dr-space\" ms-if=\"showTab == 100\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            设置头像照片\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            图片格式为jpg,不大于1M\n                        </span>\n                    </div>\n                    <div class=\"photo-upload\" _v-146d1284=\"\">\n                        <button class=\"photo-upload-btn\" _v-146d1284=\"\">\n                            选择您的照片\n                        </button>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 聊天设置 -->\n                <div class=\"d-tab-con chat-settings\" ms-if=\"showTab == 1\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            游客进出提示\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"r_visitor\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                开启\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"r_visitor\" type=\"radio\" value=\"0\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                关闭\n                            </b>\n                        </span>\n                    </div>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            公聊设置\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <select name=\"r_public_lv\" _v-146d1284=\"\">\n                            <option ms-repeat=\"pubcList\" ms-value=\"$index\" _v-146d1284=\"\">\n                                {{el}}\n                            </option>\n                        </select>\n                    </div>\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            私聊设置\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            以下爵位私聊信息不接收。\n                        </span>\n                    </div>\n                    <div class=\"the-title\" _v-146d1284=\"\">\n                        <select name=\"s_public_lv\" _v-146d1284=\"\">\n                            <option ms-repeat=\"sayLvList\" ms-value=\"$index\" _v-146d1284=\"\">\n                                {{el}}\n                            </option>\n                        </select>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"updateRoomPrint()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 礼物特效 -->\n                <div class=\"d-tab-con gift-special\" ms-if=\"showTab == 200\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            选择为不提示\n                        </b>\n                    </div>\n                    <div class=\"rodio-top\" _v-146d1284=\"\">\n                        <div class=\"radio \" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(1)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                超级礼物特效\n                            </label>\n                        </div>\n                        <div class=\"radio\" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(2)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                礼物组合特效\n                            </label>\n                        </div>\n                        <div class=\"radio\" _v-146d1284=\"\">\n                            <input class=\"check\" type=\"checkbox\" value=\"\" ms-click=\"gifts_on_of(3)\" _v-146d1284=\"\">\n                            <label _v-146d1284=\"\">\n                                普通礼物特效\n                            </label>\n                        </div>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"gifts_on_of(0)\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n                <!-- 直播状态 -->\n                <div class=\"d-tab-con live\" ms-if=\"showTab == 2\" _v-146d1284=\"\">\n                    <div class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            选择状态\n                        </b>\n                    </div>\n                    <div class=\"radio\" _v-146d1284=\"\">\n                        <input name=\"video_status\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            直播\n                        </b>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"video_status\" type=\"radio\" value=\"2\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                录像\n                            </b>\n                        </span>\n                    </div>\n                    <div class=\"ft choice\" _v-146d1284=\"\">\n                        <span class=\"u-btn-1 u-point\" ms-click=\"setVideoStatus()\" _v-146d1284=\"\">\n                            提交\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 超管管理 -->\n    <div class=\"dlg-w dlg-admin\" style=\"top:100px;left:30%;margin-left:0px;display:none;\" id=\"domSysPanel\" ms-controller=\"sysManager\" ms-visible=\"showSysPanel\" ms-if=\"isAdmin\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeSysPanel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                超级管理\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat=\"sysTab\" ms-class=\"{{showsysIndex == $index ? 'curr':''}}\" ms-click=\"changsysTab($index)\" _v-146d1284=\"\">\n                        {{el}}\n                    </li>\n                </ul>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 0\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            直播状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"video_status_sys\" type=\"radio\" value=\"1\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                直播\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"video_status_sys\" type=\"radio\" value=\"2\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                录像\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setVideoStatus_sys()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 1\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            警告内容\n                        </strong>\n                        <span class=\"gray9\" _v-146d1284=\"\">\n                            （最多不超过200字）\n                        </span>\n                    </p>\n                    <p _v-146d1284=\"\">\n                        <textarea style=\"height:60px\" class=\"ipt textare\" id=\"txtWarning\" ms-duplex=\"warningTxt\" _v-146d1284=\"\">                        </textarea>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setWarning()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 2\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            选择状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"invisible\" type=\"radio\" value=\"0\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                显身\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"invisible\" type=\"radio\" value=\"1\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                隐身\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setInvisible()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n                <div class=\"d-tab-con d-room-set\" ms-if=\"showsysIndex == 3\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <input type=\"text\" class=\"ipt ipt-txt\" size=\"6\" maxlength=\"3\" id=\"txtLockTime\" ms-duplex=\"lockTime\" _v-146d1284=\"\">\n                        <span class=\"ml10\" _v-146d1284=\"\">\n                            分钟\n                        </span>\n                    </p>\n                    <p class=\"d-txt\" _v-146d1284=\"\">\n                        <b _v-146d1284=\"\">\n                            备注\n                        </b>\n                        &nbsp;&nbsp;&nbsp;\n                        <span _v-146d1284=\"\">\n                            （最多不超过200字）\n                        </span>\n                    </p>\n                    <p class=\"photo-upload\" _v-146d1284=\"\">\n                        <textarea style=\"height:60px\" class=\"ipt textare\" id=\"txtLockMsg\" ms-duplex=\"lockMsg\" _v-146d1284=\"\">                        </textarea>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"stopLive()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 家族族长和副族长管理 -->\n    <div class=\"dlg-w dlg-admin\" style=\"top:100px;left:30%;margin-left:0px;display:none;\" id=\"domFm\" ms-controller=\"familyManager\" ms-visible=\"isShowFM\" ms-if=\"isFadmin\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"targeFPanel()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                隐身设置\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"dlg-admin-box\" _v-146d1284=\"\">\n                <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                    <li class=\"curr\" _v-146d1284=\"\">\n                        隐身设置\n                    </li>\n                </ul>\n                <div class=\"d-tab-con d-room-set\" _v-146d1284=\"\">\n                    <p _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            选择状态\n                        </strong>\n                    </p>\n                    <p class=\"radio\" _v-146d1284=\"\">\n                        <span class=\"radio-op\" _v-146d1284=\"\">\n                            <input name=\"Finvisible\" type=\"radio\" value=\"0\" checked=\"checked\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                显身\n                            </b>\n                        </span>\n                        <span class=\"radio-cl\" _v-146d1284=\"\">\n                            <input name=\"Finvisible\" type=\"radio\" value=\"1\" _v-146d1284=\"\">\n                            <b _v-146d1284=\"\">\n                                隐身\n                            </b>\n                        </span>\n                    </p>\n                    <p class=\"ft choice\" _v-146d1284=\"\">\n                        <button class=\"u-btn-1 u-point\" ms-click=\"setFInvisible()\" _v-146d1284=\"\">\n                            提交\n                        </button>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 用户权限菜单 -->\n    <div class=\"dlg-w dlg-u-card\" style=\"top: 0px; left: 0px; display: none; position: absolute;z-index=13;\" id=\"divTips\" ms-controller=\"userTips\" ms-css-top=\"{{tips_top}}px\" ms-css-left=\"{{tips_left}}px\" ms-css-display=\"{{tips_visible === true ? 'block':'none'}}\" ms-mouseenter=\"mouseHanlder($event)\" ms-mouseleave=\"mouseHanlder($event)\" _v-146d1284=\"\">\n        <div class=\"card-infor\" _v-146d1284=\"\">\n            <dl class=\"f-cb user-infor\" _v-146d1284=\"\">\n                <dt class=\"photo\" _v-146d1284=\"\">\n                    <img ms-src=\"'+userId+'.jpg'}}{{uiutId}}\" tppabs=\"http://www.xiu8.com/{{'http://image.cache.xiu8.com/avatar/110/110/'+userId+'.jpg'}}{{uiutId}}\" alt=\"\" _v-146d1284=\"\">\n                </dt>\n                <dd _v-146d1284=\"\">\n                    <p class=\"name\" _v-146d1284=\"\">\n                        {{ nickName }}\n                    </p>\n                    <p class=\"num\" ms-if=\"isleave == true\" ms-visible=\"isleave == true\" ms-title=\"{{ userId }}\" _v-146d1284=\"\">\n                        ({{ coolNumber }})\n                    </p>\n                    <div class=\"mis\" ms-if=\"isleave == true\" ms-visible=\"isleave == true\" _v-146d1284=\"\">\n                        {{ getICON(userId) | html }}\n                    </div>\n                </dd>\n            </dl>\n            <div class=\"u-action\" _v-146d1284=\"\">\n                <p class=\"user-icon\" id=\"tip-medal\" _v-146d1284=\"\">\n                </p>\n                <ul class=\"clearfix f-cb\" _v-146d1284=\"\">\n                    <li ms-repeat-item=\"power\" ms-click=\"powerCmdPublish(item.cmd,userId,nickName)\" _v-146d1284=\"\">\n                        <a _v-146d1284=\"\">\n                            <em class=\"icon\" ms-class=\"{{item.ico}}\" _v-146d1284=\"\">\n                            </em>\n                            {{item.name}}\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </div>\n    <!-- 浮动层 -->\n    <!-- 守护特权 -->\n    <div id=\"guardPrivi\" class=\"dlg-w dlg-to-watch-privi f-dn\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                加入守护团拥有特权\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <div class=\"guardian-privi\" _v-146d1284=\"\">\n                <div class=\"d-con\" _v-146d1284=\"\">\n                    <ul class=\"u-list f-cb\" _v-146d1284=\"\">\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-car\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-1.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-1.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属豪车\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-place\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-2.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-2.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属座位\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-sole\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-3.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-3.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                专属徽章\n                            </span>\n                        </li>\n                        <li _v-146d1284=\"\">\n                            <i class=\"d-manage\" _v-146d1284=\"\">\n                                <img width=\"70\" src=\"http://www.xiu8.com/assets/images/room/u-b-4.png\" tppabs=\"http://www.xiu8.com/assets/images/room/u-b-4.png\" alt=\"\" _v-146d1284=\"\">\n                            </i>\n                            <span class=\"f-toe\" _v-146d1284=\"\">\n                                房间管理\n                            </span>\n                        </li>\n                    </ul>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 守护浮动面板 -->\n    <div id=\"guardAll\" class=\"dlg-w dlg-to-watch f-dn\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"u-watch\" id=\"addGuardLink\" style=\"margin-right: 20px;\" target=\"_blank\" href=\"#\" _v-146d1284=\"\">\n                +守护TA\n            </a>\n            <a class=\"d-close\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                守护团 开通\n                <span class=\"sp_graud_no\" _v-146d1284=\"\">\n                </span>\n                人\n            </span>\n        </div>\n        <div class=\"dlg-bd gruadSC\" _v-146d1284=\"\">\n            <div class=\"scrollbar\" _v-146d1284=\"\">\n                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <div class=\"d-con jscroll-c viewport\" style=\"max-height: 348px;overflow: hidden;\" _v-146d1284=\"\">\n                <ul class=\"u-list f-cb wholearea js-graud-list\" style=\"position: relative;\" _v-146d1284=\"\">\n                </ul>\n            </div>\n        </div>\n    </div>\n    <!-- 贴条 -->\n    <div id=\"domStickers\" style=\"top:258px;left:25%;margin-left:120px;display: none;\" class=\"dlg-w dlg-stickers\" ms-controller=\"stickers\" ms-visible=\"isShow\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"hideStickers()\" _v-146d1284=\"\">\n            </a>\n            <span class=\"hd-name\" _v-146d1284=\"\">\n                贴条\n            </span>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <ul class=\"m-tab f-cb\" _v-146d1284=\"\">\n                <li ms-repeat=\"stickerType\" ms-class=\"{{ stickerType[$index].id == currShow ? 'curr':'' }}\" ms-click=\"changeType(stickerType[$index].id)\" _v-146d1284=\"\">\n                    {{stickerType[$index].name }}\n                </li>\n            </ul>\n            <div class=\"d-tab-con f-cb\" _v-146d1284=\"\">\n                <ul class=\"vy_list\" id=\"notes_list_ul\" _v-146d1284=\"\">\n                    <li ms-repeat=\"showList\" ms-class=\"{{  $val.id  === currGiftId  ? 'cur' : '' }}\" ms-click=\"selectStickers($val.id)\" _v-146d1284=\"\">\n                        <em ms-class=\"{{className+ $val.id }}\" ms-title=\"{{$val.gold +'秀币，持续5分钟'}}\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                </ul>\n            </div>\n        </div>\n        <div class=\"dlg-ft t-c\" _v-146d1284=\"\">\n            <button class=\"u-btn-1\" ms-click=\"sendStickers()\" _v-146d1284=\"\">\n                确定\n            </button>\n        </div>\n    </div>\n    <!-- 弹出层 -->\n    <div class=\"dlg dlg-txt f-dn\" style=\"top: 420px; margin-left: -480px; left: 50%;\" _v-146d1284=\"\">\n        剩余守护天数：\n        <strong _v-146d1284=\"\">\n            320\n        </strong>\n        天\n    </div>\n    <!-- 道具鼠标提示框 -->\n    <div class=\"dlg dlg-gift\" id=\"domgt\" style=\"min-width:300px;\" v-show=\"moverGift != null\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <em class=\"giftImg-b gift-b-{{moverGift&amp;&amp;moverGift.id}}\" _v-146d1284=\"\">\n                </em>\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    {{ moverGift &amp;&amp; moverGift.giftname}}\n                    <template v-if=\"moverGift.gifttype == 0\">\n                        <strong class=\"pl10\" _v-146d1284=\"\">\n                            还有10秒可获得一个千纸鹤\n                        </strong>\n                    </template>\n                    <template v-else=\"\">\n                        <strong class=\"pl10\" _v-146d1284=\"\">\n                            {{moverGift &amp;&amp; moverGift.coin}}秀币\n                        </strong>\n                    </template>\n                    \n                    <br _v-146d1284=\"\">\n                    <!--<span ms-if=\"currGiftObj.luck == 1\" class=\"c_62\">\n                        最高可中1000倍大奖。\n                    </span>-->\n                </p>\n                <template v-if=\"moverGift.gifttype == 0\">\n                    <p class=\"pt10\" _v-146d1284=\"\">\n                        普通用户3分钟可获得一个,送出可为\n                        <br _v-146d1284=\"\">\n                        主播增加魅力值\n                    </p>\n                </template>\n                <template v-else=\"\">\n                    <p class=\"pt10\" _v-146d1284=\"\">\n                        一次赠送\n                        <em _v-146d1284=\"\">\n                            0\n                        </em>\n                        个触发\n                        <em _v-146d1284=\"\">\n                            0\n                        </em>\n                        级流光效果\n                    </p>\n                    <!--<p ms-if=\"currGiftObj.send ==0\" class=\"pt10\">\n                        不能直接使用，系统自动扣除\n                    </p>-->\n                </template>\n                \n            </dd>\n        </dl>\n    </div>\n    <!-- 千纸鹤鼠标提示框 -->\n    <div class=\"dlg dlg-gift\" id=\"origami\" style=\"top:500px; min-width:300px; display: none;\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <img width=\"70\" height=\"70\" src=\"http://image.cache.xiu8.com/goods/317_b.png\" tppabs=\"http://image.cache.xiu8.com/goods/317_b.png\" alt=\"千纸鹤\" _v-146d1284=\"\">\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    千纸鹤\n                    <strong class=\"js-type pl10\" _v-146d1284=\"\">\n                    </strong>\n                </p>\n                <p class=\"pt10\" _v-146d1284=\"\">\n                    普通用户3分钟可获得一个,送出可为\n                    <br _v-146d1284=\"\">\n                    主播增加魅力值\n                    <a href=\"origami.htm\" tppabs=\"http://www.xiu8.com/help/origami\" target=\"_blank\" style=\"color:#127adf \" _v-146d1284=\"\">\n                        查看详情\n                    </a>\n                </p>\n            </dd>\n        </dl>\n    </div>\n    <!-- 关注成功 -->\n    <div style=\"display:none;top: 50%;left:50%;margin: -110px 0 0 -190px;\" id=\"tipsM\" class=\"dlg-w dlg-prompt dlg-attention\" ms-controller=\"broadInfo\" ms-visible=\"showOKTips\" _v-146d1284=\"\">\n        <div class=\"dlg-hd f-cb\" _v-146d1284=\"\">\n            <a class=\"d-close\" ms-click=\"closeTipsM\" _v-146d1284=\"\">\n                &nbsp;\n            </a>\n        </div>\n        <div class=\"dlg-bd\" _v-146d1284=\"\">\n            <h3 class=\"h-title c_e02\" _v-146d1284=\"\">\n                关注成功！\n            </h3>\n            <p _v-146d1284=\"\">\n                安装手机端可收到主播开播通知更有豪礼相送！\n                <br _v-146d1284=\"\">\n                添加到主播到桌面，精彩随时看.\n                <a class=\"u-icon-atten\" href=\"#\" target=\"_blank\" _v-146d1284=\"\">\n                    <img src=\"http://www.xiu8.com/assets/images/room/tips-pic.png\" tppabs=\"http://www.xiu8.com/assets/images/room/tips-pic.png\" _v-146d1284=\"\">\n                </a>\n            </p>\n        </div>\n    </div>\n    <!-- 主播tips -->\n    <div class=\"dlg-w dlg-u-card\" ms-controller=\"broadInfo\" style=\"top: 534px; left: 923px; display: none; position:absolute\" id=\"bdInfotip\" _v-146d1284=\"\">\n        <div class=\"card-infor\" _v-146d1284=\"\">\n            <dl class=\"f-cb user-infor\" _v-146d1284=\"\">\n                <dt class=\"photo\" _v-146d1284=\"\">\n                    <img width=\"57\" height=\"57\" src=\"/images/avatar.jpg\" tppabs=\"http://image.cache.xiu8.com/avatar/110/110/925075.jpg\" alt=\"\" _v-146d1284=\"\">\n                </dt>\n                <dd _v-146d1284=\"\">\n                    <p class=\"name\" _v-146d1284=\"\">\n                        混血↘↙笑笑\n                    </p>\n                    <p class=\"num\" _v-146d1284=\"\">\n                        (925075)\n                    </p>\n                    <div class=\"mis\" _v-146d1284=\"\">\n                        <em align=\"absmiddle\" class=\"ul ul01\" _v-146d1284=\"\">\n                        </em>\n                        <a target=\"_blank\" href=\"11692-1.htm\" tppabs=\"http://www.xiu8.com/clan/myfamily/11692\" _v-146d1284=\"\">\n                            <img alt=\"家族\" src=\"http://image.cache.xiu8.com/medal-family/11692.png\" tppabs=\"http://image.cache.xiu8.com/medal-family/11692.png\" style=\"height: 16px; vertical-align: middle;\" _v-146d1284=\"\">\n                        </a>\n                        <a target=\"_blank\" href=\"help-t=1.htm\" tppabs=\"http://www.xiu8.com/help?t=1\" class=\"al al01\" align=\"absmiddle\" _v-146d1284=\"\">\n                        </a>\n                    </div>\n                </dd>\n            </dl>\n            <div class=\"u-action\" _v-146d1284=\"\">\n                <p class=\"user-icon\" id=\"bdTipMedalList\" _v-146d1284=\"\">\n                </p>\n                <p class=\"user-txt c_7d pb5\" _v-146d1284=\"\">\n                    <span style=\"display:inline-block;width:42%\" _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            地址：\n                        </strong>\n                        未知省份\n                    </span>\n                    <span class=\"ml15\" id=\"tipsStartTime\" _v-146d1284=\"\">\n                        <strong _v-146d1284=\"\">\n                            开播：\n                        </strong>\n                        暂未开播\n                    </span>\n                </p>\n                <div class=\"void f-cb\" _v-146d1284=\"\">\n                    <strong class=\"f-l\" _v-146d1284=\"\">\n                        公告：\n                    </strong>\n                    <span class=\"f-r\" id=\"bdTipsNotice\" _v-146d1284=\"\">\n                        欢迎大家来到我的直播间\n                    </span>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 勋章提示框 -->\n    <div style=\"top:260px;left:20%; z-index:9999;display: none\" class=\"dlg dlg-w dlg-meta2\" id=\"medalTips\" _v-146d1284=\"\">\n    </div>\n    <!-- 主播上下麦 -->\n    <div class=\"dlg-f-room dlg-f-room3\" ms-controller=\"broadList\" style=\"display:none;\" ms-visible=\"showPannel\" _v-146d1284=\"\">\n        <div class=\"hd\" _v-146d1284=\"\">\n            <span class=\"close f-dn\" ms-click=\"togglePannel()\" _v-146d1284=\"\">\n                X\n            </span>\n            当前房间在线主播\n        </div>\n        <div class=\"bscroll\" _v-146d1284=\"\">\n            <div class=\"scrollbar\" _v-146d1284=\"\">\n                <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                        </div>\n                    </div>\n                </div>\n            </div>\n            <div class=\"jscroll-cd viewport\" _v-146d1284=\"\">\n                <div class=\"jslist-b wholearea\" _v-146d1284=\"\">\n                    <p ms-repeat=\"bl\" _v-146d1284=\"\">\n                        <span class=\"name\" ms-text=\"el.unn.hexToDec()\" _v-146d1284=\"\">\n                        </span>\n                        <a ms-if=\"el.uid != bid\" ms-click=\"changeVideo(1,el.uid)\" _v-146d1284=\"\">\n                            上麦\n                        </a>\n                    </p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <!-- 最热工会模板|热力榜 -->\n    <div class=\"hot-bar-sp f-dn\" _v-146d1284=\"\">\n        <h3 class=\"b1 b2\" _v-146d1284=\"\">\n        </h3>\n        <div class=\"bd\" _v-146d1284=\"\">\n            <p _v-146d1284=\"\">\n                本轮时间：\n                <em id=\"act-time\" _v-146d1284=\"\">\n                    12:10\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                当前排名：\n                <em id=\"act-rank\" _v-146d1284=\"\">\n                    第20+名\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                距上一名主播：\n                <em id=\"act-name\" _v-146d1284=\"\">\n                    某某某\n                </em>\n            </p>\n            <p _v-146d1284=\"\">\n                距上一名相差：\n                <em id=\"act-money\" _v-146d1284=\"\">\n                    123355\n                </em>\n                秀币\n            </p>\n            <p style=\"padding-top: 17px\" _v-146d1284=\"\">\n                榜单规则：根据主播\n                <em _v-146d1284=\"\">\n                    10分钟\n                </em>\n                收到的秀币数量进行排名;\n            </p>\n            <p _v-146d1284=\"\">\n                榜单奖励：官方首页推荐，直播间\n                <em _v-146d1284=\"\">\n                    爆红包\n                </em>\n                ，主播可以额外获得经验值奖励;\n            </p>\n            <p class=\"t-r\" _v-146d1284=\"\">\n                <a class=\"xq\" href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" target=\"_blank\" _v-146d1284=\"\">\n                    查看详情\n                </a>\n            </p>\n        </div>\n    </div>\n    <!-- 勋章tips -->\n    <div id=\"POP_TIPS\" style=\"display: none;height: auto;width:188px;\" class=\"dlg dlg-w dlg-meta\" _v-146d1284=\"\">\n        <dl class=\"d-imgtxt f-cb\" _v-146d1284=\"\">\n            <dt _v-146d1284=\"\">\n                <img width=\"31\" height=\"31\" _v-146d1284=\"\">\n            </dt>\n            <dd class=\"d-txt\" _v-146d1284=\"\">\n                <h2 class=\"js-tipName\" _v-146d1284=\"\">\n                </h2>\n                <p _v-146d1284=\"\">\n                    <i class=\"js-tipTitle\" _v-146d1284=\"\">\n                    </i>\n                    <a href=\"javascript:void(0)\" style=\"display: none\" target=\"_blank\" class=\"hz_link\" _v-146d1284=\"\">\n                        活动详情\n                    </a>\n                </p>\n            </dd>\n        </dl>\n    </div>\n    <!-- 登陆框 -->\n    <div id=\"_login_window_form\" _v-146d1284=\"\">\n    </div>\n    <div id=\"js-sign\" style=\"display: none\" class=\"sign-in\" _v-146d1284=\"\">\n        <span class=\"b-close\" _v-146d1284=\"\">\n        </span>\n        <div class=\"sign-in-box\" _v-146d1284=\"\">\n            <div class=\"time-box\" _v-146d1284=\"\">\n                <div class=\"hd f-cb\" _v-146d1284=\"\">\n                    <span class=\"date js-year-month\" _v-146d1284=\"\">\n                    </span>\n                    <a href=\"javascript:void(0)\" id=\"js-btn-sign\" class=\"sign-btn\" _v-146d1284=\"\">\n                        签到\n                    </a>\n                </div>\n                <ul class=\"time f-cb\" _v-146d1284=\"\">\n                    <li class=\"week\" _v-146d1284=\"\">\n                        一\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        二\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        三\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        四\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        五\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        六\n                    </li>\n                    <li class=\"week\" _v-146d1284=\"\">\n                        日\n                    </li>\n                </ul>\n                <ul style=\"height: 240px;\" class=\"js-days time f-cb\" _v-146d1284=\"\">\n                </ul>\n            </div>\n            <div class=\"Continuous\" _v-146d1284=\"\">\n                <span class=\"Speed\" _v-146d1284=\"\">\n                    <i class=\"js-scale scale\" _v-146d1284=\"\">\n                    </i>\n                </span>\n                <ul _v-146d1284=\"\">\n                    <li class=\"a\" _v-146d1284=\"\">\n                        连续3天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-01\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"b\" _v-146d1284=\"\">\n                        连续5天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-02\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"c\" _v-146d1284=\"\">\n                        连续7天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-03\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"d\" _v-146d1284=\"\">\n                        连续15天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-04\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"d\" _v-146d1284=\"\">\n                        连续25天\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-05\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                    <li class=\"e\" _v-146d1284=\"\">\n                        全勤\n                        <br _v-146d1284=\"\">\n                        <em class=\"gift-icons gift-icons-06\" _v-146d1284=\"\">\n                        </em>\n                    </li>\n                </ul>\n            </div>\n        </div>\n        <div class=\"sign-txt\" _v-146d1284=\"\">\n            <p _v-146d1284=\"\">\n                您已连续签到\n                <strong class=\"js-sign-num\" _v-146d1284=\"\">\n                </strong>\n                天\n            </p>\n            <p class=\"t-c\" style=\"height:64px;\" _v-146d1284=\"\">\n                <em id=\"js-con-gift\" _v-146d1284=\"\">\n                </em>\n            </p>\n            <p class=\"t-c js-desc-con\" style=\"height: 40px;\" _v-146d1284=\"\">\n            </p>\n            <div class=\"quanq\" _v-146d1284=\"\">\n                <p _v-146d1284=\"\">\n                    当月全勤有机会获得神秘礼包\n                </p>\n                <a href=\"javascript:void(0)\" id=\"js-open-gift\" class=\"btn-open btn-open-dis\" _v-146d1284=\"\">\n                </a>\n            </div>\n        </div>\n        <!-- 签到提示 -->\n        <div id=\"js-sign-tips\" style=\"display: none\" class=\"sign-tips\" _v-146d1284=\"\">\n            <div class=\"bd\" _v-146d1284=\"\">\n                <ul _v-146d1284=\"\">\n                </ul>\n                <div class=\"t-c\" _v-146d1284=\"\">\n                    <a class=\"js-close-gift btn\" href=\"javascript:void(0)\" _v-146d1284=\"\">\n                        确 定\n                    </a>\n                </div>\n            </div>\n        </div>\n        <div class=\"sign-tips-mark\" style=\"display: none\" _v-146d1284=\"\">\n        </div>\n    </div>\n    <div class=\"ft-wrap f-dn\" _v-146d1284=\"\">\n        <div class=\"f-bg\" _v-146d1284=\"\">\n        </div>\n        <div class=\"footer-login\" _v-146d1284=\"\">\n            <span class=\"tit-img\" _v-146d1284=\"\">\n            </span>\n            <ul class=\"zb-list\" id=\"run-girl\" _v-146d1284=\"\">\n            </ul>\n            <div class=\"other\" _v-146d1284=\"\">\n                <a href=\"javascript:void(0);\" class=\"trans-btn\" id=\"exchange-btn\" _v-146d1284=\"\">\n                    换批妹纸\n                </a>\n                <a href=\"index-1.htm\" tppabs=\"http://www.xiu8.com/\" class=\"more-btn xiusta\" stadata=\"{en:'bPanel_btn_more',xst:'c',et:'mc',tm:'more',v:1}\" target=\"_blank\" _v-146d1284=\"\">\n                    更多艺人\n                </a>\n            </div>\n            <div class=\"F-login\" _v-146d1284=\"\">\n                <ol _v-146d1284=\"\">\n                    <li _v-146d1284=\"\">\n                        <a class=\"xiu-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            秀吧登录\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"bai-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            百度登录\n                        </a>\n                    </li>\n                    <li _v-146d1284=\"\">\n                        <a class=\"QQ-btn\" href=\"javascript:void(0);\" _v-146d1284=\"\">\n                            QQ登录\n                        </a>\n                    </li>\n                </ol>\n                <i class=\"txt\" _v-146d1284=\"\">\n                    一键注册赢取百元大礼包！\n                </i>\n            </div>\n            <a class=\"ft-close\" _v-146d1284=\"\">\n                <i class=\"icn-close\" _v-146d1284=\"\">\n                </i>\n            </a>\n        </div>\n    </div>\n    <div class=\"ristPanel\" id=\"ristPanel\" _v-146d1284=\"\">\n        <div class=\"ristLogo\" _v-146d1284=\"\">\n        </div>\n        <a href=\"javascript:\" data-fn=\"closePl\" class=\"js-risk ristPanelClosed\" _v-146d1284=\"\">\n        </a>\n        <div id=\"ristInner\" _v-146d1284=\"\">\n        </div>\n        <div class=\"rist-rule-box\" _v-146d1284=\"\">\n            <div class=\"rist-rule-font rist-uscroll\" _v-146d1284=\"\">\n                <div class=\"scrollbar\" _v-146d1284=\"\">\n                    <div class=\"scrollbar-track\" _v-146d1284=\"\">\n                        <div class=\"scrollbar-thumb\" _v-146d1284=\"\">\n                            <div class=\"scrollbar-thumb-end\" _v-146d1284=\"\">\n                            </div>\n                        </div>\n                    </div>\n                </div>\n                <div class=\"jscroll-c viewport\" _v-146d1284=\"\">\n                    <ul class=\"rist-rule-list wholearea\" _v-146d1284=\"\">\n                        <li class=\"t\" _v-146d1284=\"\">\n                            活动规则：\n                        </li>\n                        <li _v-146d1284=\"\">\n                            1、用户发起冒险时，则会扣除用户冒险所需花的秀币；如主播拒绝冒险，系统会返还秀币;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            2、主播点击“接受”冒险，无论答题成功或失败，均可获得用户发起冒险的50%秀币;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            3、主播答题失败，需要接受惩罚；\n                        </li>\n                        <li class=\"t mgt30\" _v-146d1284=\"\">\n                            玩法介绍：\n                        </li>\n                        <li _v-146d1284=\"\">\n                            1、用户选择难度越高花费的秀币越多，同时主播受到的惩罚等级越高;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            2、用户选择难度后，惩罚内容根据选择的难度系统随机选择惩罚项;\n                        </li>\n                        <li _v-146d1284=\"\">\n                            3、用户选择题目类型后，试题内容根据选择的题目类型系统随机选择题目;\n                        </li>\n                    </ul>\n                </div>\n            </div>\n            <a href=\"javascript:\" data-fn=\"closeRule\" class=\"js-risk rist-btn-byel\" _v-146d1284=\"\">\n                <span class=\"rist-ft-yrzx\" _v-146d1284=\"\">\n                </span>\n            </a>\n        </div>\n    </div>\n</div>\n\t</div>\n    <dialog :show.sync=\"isShowDialog\" :content.sync=\"dialogContent\" _v-146d1284=\"\"></dialog>\n    <login :display.sync=\"logined\" _v-146d1284=\"\"></login>\n";
 
 /***/ }
 ]);
