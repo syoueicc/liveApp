@@ -871,7 +871,7 @@
                         <p class="js-top-animation">
                             <span class="date f-r" style="margin-top: 12px">
                                 <span class="js-runtime" v-if="!!top">
-                                    {{moment(top.time).add(3, "minutes").diff(moment())}}
+                                    {{topTime}}
                                 </span>
                                 <i class="icon icon-q">
                                 </i>
@@ -2180,7 +2180,8 @@ export default {
             showQuick: false,
             quickList: [10, 66, 99, 188, 520, 1314, 9999],
             top: null,
-            top23: null
+            top23: null,
+            topTime: ""
 		}
 	},
     ready() {
@@ -2253,18 +2254,25 @@ export default {
         })
         this.socket.on("update Top", function(top) {
             self.top = top;
-        })
-    },
-    computed: {
-        getToptimes() {
-            if( _.isEmpty(top) ) return "";
-            let minutes = moment( top.time ).add(3, "minutes").diff(moment());
-            if(minutes <= 0) return "00:00";
-            minutes = parseInt(minutes / 1000);
-            //const 
-        }
+        });
+
+        setInterval(function() {
+            self.topTime = self.getToptimes();
+        }, 1000);
     },
     methods: {
+        getToptimes() {
+            if( _.isEmpty(this.top) ) return "";
+            let seconds = moment( this.top.time ).add(3, "minutes").diff(moment());
+            if(seconds <= 0) return "00:00";
+            seconds = parseInt(seconds / 1000);
+            let minutes = parseInt(seconds / 60);
+            seconds = seconds - minutes*60;
+            minutes = minutes > 9 ? minutes : "0"+minutes;
+            seconds = seconds > 9 ? seconds : "0"+seconds;
+            return minutes+" :"+seconds;
+            //const 
+        },
         moment: moment,
         targeQuick() {
             this.showQuick = !this.showQuick;

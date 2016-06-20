@@ -42,6 +42,7 @@ io.on('connection', function(socket) {
 
 	socket.on('send gift', function(gift, total, user, _room) {
 		const coin = parseInt(gift.coin) * parseInt(total);
+		
 		switch(true) {
 			case coin >= (100*1000) && _.isEmpty(top1):
 				top1 = {
@@ -54,7 +55,7 @@ io.on('connection', function(socket) {
 				};
 				io.sockets.emit("update Top", top1);
 				break;
-			case coin >= (100*1000) && (!!top1.titme && moment().isAfter( moment(top1.titme).add(3, "minutes") || coin > top1.coin ) ):
+			case coin >= (100*1000) && (!!top1 && !!top1.time && moment().isAfter( moment(top1.time).add(3, "minutes") ) || coin > top1.coin ):
 				top1 = {
 					coin: coin,
 					gift: gift,
@@ -78,11 +79,13 @@ io.on('connection', function(socket) {
 				io.sockets.emit("update Top23", top23);
 				break;
 			default:
-				io.to(roomid).emit("send message", {
-					gift: gift,
-					total: total,
-					type: "gift"
-				});
+				io.to(roomid).emit("send message", _.extend({}, {
+						gift: gift,
+						total: total,
+						type: "gift"
+					},
+					user
+				) );
 				break;
 
 		}
