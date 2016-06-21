@@ -65,15 +65,25 @@ export const refreshRoom = ({dispatch}, room_id) => {
 	})
 }
 
-export const subscribe = ({dispatch}, artist_id) => {
+export const subscribe = ({dispatch}, artist_id, room_id) => {
 	httper(`/php/Subscribe/dosub?artist_id=${artist_id}`).then((response) => {
-		if(response.data.code == 0) dispatch("SUBSCRIBE", response.data.data);
+		if(response.data.code == 0) {
+			dispatch("SUBSCRIBE", response.data.data);
+			httper(`/php/room/getArtistInfo?room_id=${room_id}`).then((res) => {
+				if(res.data.code == 0) dispatch("REFRESHROOM", res.data.data);
+			})
+		}
 	})
 }
 
-export const unsubscribe = ({dispatch}, artist_id) => {
+export const unsubscribe = ({dispatch}, artist_id, room_id) => {
 	httper(`/php/Subscribe/undosub?artist_id=${artist_id}`).then((response) => {
-		if(response.data.code == 0) dispatch("UNSUBSCRIBE", response.data.data);
+		if(response.data.code == 0) {
+			dispatch("UNSUBSCRIBE", response.data.data);
+			httper(`/php/room/getArtistInfo?room_id=${room_id}`).then((res) => {
+				if(res.data.code == 0) dispatch("REFRESHROOM", res.data.data);
+			})
+		}
 	})
 }
 

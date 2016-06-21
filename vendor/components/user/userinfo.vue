@@ -19,8 +19,8 @@
 		<b v-if="user.artist_info != ''">
 		<a href="javascript:void(0)" :class="{cur: curr == 'artist'}" @click="changeTab('artist')">直播设置</a><u>｜</u> 
 		</b>
-		<!--<a href="javascript:void(0)" :class="{cur: curr == 'more'}" @click="changeTab('more')">更多资料</a><u>｜</u> 
-		<a href="javascript:void(0)" :class="{cur: curr == 'img'}" @click="changeTab('img')">头像更改</a>-->
+		<a href="javascript:void(0)" :class="{cur: curr == 'more'}" @click="changeTab('more')">更多资料</a><u>｜</u> 
+		<!--<a href="javascript:void(0)" :class="{cur: curr == 'img'}" @click="changeTab('img')">头像更改</a>-->
 	</div>
 
 <div id="form1" v-if="curr == 'info'">

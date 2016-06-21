@@ -305,7 +305,7 @@
                                 {{room.nickname}}
                             </div>
                             <p class="attention" id="g_coll">
-                                <span class="u-atten xiusta"   @click="focus" v-if=" judgeSub == '' ">
+                                <span class="u-atten xiusta"   @click="focus('')" v-if=" judgeSub == '' ">
                                     关注
                                 </span>
                                 <span v-show=" judgeSub != '' " @click="focus('unsubscribe')" @mouseover="changeFocusState('over', $event)" @mouseleave="changeFocusState('leave', $event)" class="u-atten-c">
@@ -2181,7 +2181,9 @@ export default {
             quickList: [10, 66, 99, 188, 520, 1314, 9999],
             top: null,
             top23: null,
-            topTime: ""
+            topTime: "",
+            playSuperGift: [],
+            isPlay: false
 		}
 	},
     ready() {
@@ -2258,6 +2260,14 @@ export default {
 
         setInterval(function() {
             self.topTime = self.getToptimes();
+
+            if(_.size(self.playSuperGift) > 0 && self.isPlay == false) {
+                const g = self.playSuperGift.shift();
+                self.isPlay = true;
+                self.playGiftSwf(g, function() {
+                    self.isPlay = false;
+                });
+            }
         }, 1000);
     },
     methods: {
@@ -2355,11 +2365,15 @@ export default {
                 //this.socket.emit('send message', _.extend({type: "gift", gift: "千纸鹤", giftid: 310}, this.user) );
             }
         },
-        sendGiftSwf(gift, artist_id) {
-            swfobject.embedSWF(gift.swf, "domgiftEffect", "500", "420", "10.0.0", null, null, {wmode: "transparent"}, {loop: "loop"});
+        playGiftSwf(gift, cb) {
+            swfobject.embedSWF(gift.swf, "domSupper", "940", "500", "10.0.0", null, null, {wmode: "transparent"}, {loop: "loop"});
             _.delay( function() {
-                $("#domgiftEffect").replaceWith("<div id='domgiftEffect'></div>")
+                $("#domSupper").replaceWith("<div id='domSupper'></div>");
+                if( typeof cb == "function" ) cb();
             }, (parseInt(gift.swf_time) + 1) * 1000 );
+        },
+        sendGiftSwf(gift, artist_id) {
+            this.playSuperGift.push(gift);
         },
         focus(type) {
             if(this.user == null) {
@@ -2367,9 +2381,9 @@ export default {
                 window.location.href="/";
             }else{
                 if(_.isEmpty(type)) {
-                    this.subscribe(_.result(this.room, "artist_id"));
+                    this.subscribe(_.result(this.room, "artist_id"), this.room_id);
                 }else {
-                    this.unsubscribe(_.result(this.room, "artist_id"));
+                    this.unsubscribe(_.result(this.room, "artist_id"), this.room_id);
                 }
                 
             }
