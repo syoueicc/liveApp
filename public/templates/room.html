@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <link rel="shortcut icon" href="/images/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+	<title>来播laibo</title>
+	<link rel="stylesheet" type="text/css" href="/sheetstyles/commons-x8.css" />
+	<link rel="stylesheet" type="text/css" href="/sheetstyles/room-x8.css" />
+	<script type="text/javascript">
+		window.__initdata__ = <%-JSON.stringify(store)%>
+	</script>
+</head>
+<body>
+	<div id="app">
+		<room></room>
+	</div>
+	
+	<script type="text/javascript" src="/javascripts/swfobject.js"></script>
+	<script type="text/javascript" src="/javascripts/jwplayer/jwplayer.bak.js"></script>
+	<script src="//cdn.bootcss.com/jquery/2.2.1/jquery.min.js"></script>
+	<script src="//cdn.bootcss.com/socket.io/1.4.5/socket.io.min.js"></script>
+</body>
+</html>
