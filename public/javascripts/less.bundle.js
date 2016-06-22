@@ -1,4 +1,4 @@
-webpackJsonp([1,4],[
+webpackJsonp([1],[
 /* 0 */
 /***/ function(module, exports) {
 

@@ -1,6 +1,7 @@
 var path = require('path'),
 	webpack = require('webpack'),
 	ExtractTextPlugin = require('extract-text-webpack-plugin'),
+	HtmlWebpackPlugin = require('html-webpack-plugin'),
 	autoprefixer = require('autoprefixer'),
 	precss       = require('precss'),
 	node_modules_dir = path.join(__dirname, 'node_modules'),
@@ -17,18 +18,37 @@ var path = require('path'),
 			// vendor: ['vue', 'lodash']
 		},
 		output: {
-			path: path.join(__dirname, '/public/javascripts'),
-			publicPath: '/public',
-			filename: '[name].bundle.js'
+			path: 'public',
+			publicPath: '/',
+			filename: 'javascripts/[name].bundle.js'
 		},
 		plugins: [
-			new webpack.optimize.CommonsChunkPlugin('commons.bundle.js'),
+			new webpack.optimize.CommonsChunkPlugin('javascripts/commons.bundle.js'),
 			/*new webpack.optimize.UglifyJsPlugin({
 	            compress: {
 	                warnings: false
 	            }
 	        }),*/
-	        new ExtractTextPlugin('../sheetstyles/styles.css', { allChunks: false})
+	        new ExtractTextPlugin('sheetstyles/styles.css', { allChunks: false}),
+
+			new HtmlWebpackPlugin({
+				template: "public/templates/index.html",
+				filename: "../views/index.html",
+				excludeChunks: ['room', 'user'],
+				hash: true
+			}),
+			new HtmlWebpackPlugin({
+				template: "public/templates/room.html",
+				filename: "../views/room.html",
+				excludeChunks: ['app', 'user'],
+				hash: true
+			}),
+			new HtmlWebpackPlugin({
+				template: "public/templates/user.html",
+				filename: "../views/user.html",
+				excludeChunks: ['room', 'app'],
+				hash: true
+			})
 		],
 		resolve:{
 			extensions:['','.js','.json', '.vue'],
@@ -68,7 +88,8 @@ var path = require('path'),
 					//loader: ExtractTextPlugin.extract('style!css!postcss!sass' )
 					loader: ExtractTextPlugin.extract('style-loader', 'css-loader'/*?' + JSON.stringify({discardComments: {removeAll: true}})*/ + '!postcss-loader!less-loader' )
 					//loader: 'style!css!sass'
-				}
+				},
+				{ test: /\.html$/, loader: 'html-loader' }
 			]
 		},
 		postcss: function () {
